@@ -1,0 +1,108 @@
+definitions:
+  memory_db.NotesModel:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  notes.CreateNoteDTO:
+    properties:
+      message:
+        type: string
+    type: object
+host: localhost:8000
+info:
+  contact: {}
+  description: Swagger docs for Ephemeral Notes API.
+  title: Ephemeral Notes API
+  version: "1.0"
+paths:
+  /notes:
+    post:
+      consumes:
+      - application/json
+      description: Create a note with a message
+      parameters:
+      - description: Note input
+        in: body
+        name: note
+        required: true
+        schema:
+          $ref: '#/definitions/notes.CreateNoteDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/memory_db.NotesModel'
+        "400":
+          description: Invalid JSON
+          schema:
+            type: string
+        "500":
+          description: Failed to create note
+          schema:
+            type: string
+      summary: Create a new note
+      tags:
+      - notes
+  /notes/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing note
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Deleted successfully
+          schema:
+            type: string
+        "400":
+          description: Invalid note ID
+          schema:
+            type: string
+        "500":
+          description: Failed to delete note
+          schema:
+            type: string
+      summary: Delete a note by ID
+      tags:
+      - notes
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single note using its ID
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/memory_db.NotesModel'
+        "400":
+          description: Invalid note ID
+          schema:
+            type: string
+        "404":
+          description: Note not found
+          schema:
+            type: string
+      summary: Get a note by ID
+      tags:
+      - notes
+swagger: "2.0"
