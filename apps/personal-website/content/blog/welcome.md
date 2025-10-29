@@ -1,0 +1,24 @@
+---
+title: "Welcome to My Terminal"
+date: "2024-01-15"
+slug: "welcome"
+---
+
+# Welcome to My Terminal
+
+Hey there! Welcome to my personal site. I built this terminal-style interface because I believe in keeping things simple and functional.
+
+## Why a Terminal?
+
+As a backend engineer who spends most of my time in the command line, this felt like the most natural way to present my work. Plus, it's just cool.
+
+## What You'll Find Here
+
+- Technical deep-dives into backend architecture
+- DevOps best practices and war stories
+- Cloud infrastructure patterns
+- Occasional rants about code quality
+
+Feel free to explore using the commands. There might be some hidden gems if you're curious enough.
+
+Happy exploring!

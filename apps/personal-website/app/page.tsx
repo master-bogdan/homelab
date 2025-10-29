@@ -1,6 +1,7 @@
-import React from "react";
-import RetroTerminal from "../components/RetroTerminal";
+"use client"
 
-export default function HomePage() {
-  return <RetroTerminal />;
+import { Terminal } from "@/components/terminal/Terminal"
+
+export default function Home() {
+  return <Terminal />
 }
