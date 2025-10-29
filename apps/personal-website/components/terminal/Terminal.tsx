@@ -99,15 +99,15 @@ export const Terminal: React.FC = () => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 2,
+        padding: { xs: 1, sm: 2 },
       }}
     >
       <Container
         maxWidth={false}
         sx={{
-          maxWidth: "120ch",
+          maxWidth: { xs: "100%", sm: "90ch", md: "120ch" },
           backgroundColor: "#0a0a0a",
-          padding: 3,
+          padding: { xs: 1.5, sm: 2, md: 3 },
           border: "1px solid #333",
           borderRadius: "4px",
           boxShadow: "0 0 20px rgba(0, 255, 0, 0.1)",
@@ -116,12 +116,14 @@ export const Terminal: React.FC = () => {
         <Box
           ref={outputRef}
           sx={{
-            minHeight: "60vh",
-            maxHeight: "80vh",
+            minHeight: { xs: "50vh", sm: "60vh" },
+            maxHeight: { xs: "70vh", sm: "80vh" },
             overflowY: "auto",
+            overflowX: "auto",
             mb: 2,
             "&::-webkit-scrollbar": {
               width: "8px",
+              height: "8px",
             },
             "&::-webkit-scrollbar-track": {
               background: "#1a1a1a",
@@ -141,7 +143,14 @@ export const Terminal: React.FC = () => {
           )}
           {currentOutput && (
             <Box sx={{ mt: 2 }}>
-              <Box sx={{ fontFamily: "monospace", fontSize: "14px", color: "#888888", mb: 1 }}>
+              <Box
+                sx={{
+                  fontFamily: "monospace",
+                  fontSize: { xs: "12px", sm: "14px" },
+                  color: "#888888",
+                  mb: 1,
+                }}
+              >
                 $ {currentOutput.command}
               </Box>
               <TypewriterOutput>{currentOutput.output}</TypewriterOutput>

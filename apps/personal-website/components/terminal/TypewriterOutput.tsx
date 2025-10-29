@@ -78,11 +78,16 @@ export const TypewriterOutput: React.FC<TypewriterOutputProps> = ({ children, sp
       const result: React.ReactNode[] = []
       let remaining = remainingChars
 
-      for (const child of node) {
+      for (let i = 0; i < node.length; i++) {
         if (remaining <= 0) break
+        const child = node[i]
         const [slicedChild, newRemaining] = sliceContent(child, remaining)
         if (slicedChild !== null) {
-          result.push(slicedChild)
+          if (isValidElement(slicedChild)) {
+            result.push(cloneElement(slicedChild as React.ReactElement, { key: i }))
+          } else {
+            result.push(slicedChild)
+          }
         }
         remaining = newRemaining
       }

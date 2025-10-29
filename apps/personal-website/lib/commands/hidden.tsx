@@ -3,28 +3,82 @@ import { Box, Typography } from "@mui/material"
 
 export const neofetchCommand = (): React.ReactNode => {
   return (
-    <Box>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00aaff" }}>
-        {`
-                   _,met$$$$$gg.          bogdan@homelab
-                ,g$$$$$$$$$$$$$$$P.       ---------------
-              ,g$$P"     """Y$$.".        OS: Ubuntu 22.04 LTS x86_64
-             ,$$P'              \`$$$.     Host: Personal Portfolio
-            ',$$P       ,ggs.     \`$$b:   Kernel: 6.2.0-terminal
-            \`d$$'     ,$P"'   .    $$$    Uptime: ${Math.floor(performance.now() / 1000)} seconds
-             $$P      d$'     ,    $$P    Shell: bash 5.1.16
-             $$:      $$.   -    ,d$$'    Terminal: xterm-256color
-             $$;      Y$b._   _,d$P'      CPU: TypeScript Engine (8) @ 3.9GHz
-             Y$$.    \`.\`"Y$$$$P"'         Memory: ${Math.floor(Math.random() * 2000 + 1000)}MiB / 16384MiB
-             \`$$b      "-.__              
-              \`Y$$                        
-               \`Y$$.                      
-                 \`$$b.                    
-                   \`Y$$b.
-                      \`"Y$b._
-                          \`"""
-        `}
-      </Typography>
+    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+      <Box sx={{ flex: "0 0 auto" }}>
+        <Typography component="pre" sx={{ fontFamily: "monospace", fontSize: "14px", color: "#dd4814", m: 0 }}>
+          {`       _,met$$$$$gg.
+    ,g$$$$$$$$$$$$$$$P.
+  ,g$$P"     """Y$$.".
+ ,$$P'              \`$$$.
+',$$P       ,ggs.     \`$$b:
+\`d$$'     ,$P"'   .    $$$
+ $$P      d$'     ,    $$P
+ $$:      $$.   -    ,d$$'
+ $$;      Y$b._   _,d$P'
+ Y$$.    \`.\`"Y$$$$P"'
+ \`$$b      "-.__
+  \`Y$$
+   \`Y$$.
+     \`$$b.
+       \`Y$$b.
+          \`"Y$b._
+              \`""""`}
+        </Typography>
+      </Box>
+      <Box sx={{ flex: "1 1 auto", minWidth: "300px" }}>
+        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00aaff", fontWeight: "bold" }}>
+          bogdan@homelab
+        </Typography>
+        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#888888" }}>---------------</Typography>
+        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+          <Box component="span" sx={{ color: "#00aaff" }}>
+            OS:
+          </Box>{" "}
+          Ubuntu 22.04 LTS x86_64
+        </Typography>
+        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+          <Box component="span" sx={{ color: "#00aaff" }}>
+            Host:
+          </Box>{" "}
+          Personal Portfolio
+        </Typography>
+        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+          <Box component="span" sx={{ color: "#00aaff" }}>
+            Kernel:
+          </Box>{" "}
+          6.2.0-terminal
+        </Typography>
+        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+          <Box component="span" sx={{ color: "#00aaff" }}>
+            Uptime:
+          </Box>{" "}
+          {Math.floor(performance.now() / 1000)} seconds
+        </Typography>
+        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+          <Box component="span" sx={{ color: "#00aaff" }}>
+            Shell:
+          </Box>{" "}
+          bash 5.1.16
+        </Typography>
+        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+          <Box component="span" sx={{ color: "#00aaff" }}>
+            Terminal:
+          </Box>{" "}
+          xterm-256color
+        </Typography>
+        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+          <Box component="span" sx={{ color: "#00aaff" }}>
+            CPU:
+          </Box>{" "}
+          TypeScript Engine (8) @ 3.9GHz
+        </Typography>
+        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+          <Box component="span" sx={{ color: "#00aaff" }}>
+            Memory:
+          </Box>{" "}
+          {Math.floor(Math.random() * 2000 + 1000)}MiB / 16384MiB
+        </Typography>
+      </Box>
     </Box>
   )
 }

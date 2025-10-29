@@ -26,11 +26,12 @@ export const QuickCommands: React.FC<QuickCommandsProps> = ({ commands, onComman
           onClick={() => onCommand(cmd)}
           sx={{
             fontFamily: "monospace",
-            fontSize: "12px",
+            fontSize: { xs: "10px", sm: "12px" },
             backgroundColor: "#1a1a1a",
             color: "#00aaff",
             border: "1px solid #00aaff",
             cursor: "pointer",
+            height: { xs: "24px", sm: "32px" },
             "&:hover": {
               backgroundColor: "#2a2a2a",
               borderColor: "#00ff00",

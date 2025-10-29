@@ -11,11 +11,12 @@ export const Banner: React.FC = () => {
         component="pre"
         sx={{
           fontFamily: "monospace",
-          fontSize: "12px",
+          fontSize: { xs: "6px", sm: "8px", md: "12px" },
           color: "#00aaff",
           lineHeight: 1.2,
           whiteSpace: "pre",
           margin: 0,
+          overflow: "hidden",
         }}
       >
         {ASCII_BANNER}

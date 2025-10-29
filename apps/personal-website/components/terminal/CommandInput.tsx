@@ -58,7 +58,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onCommand, disabled 
           position: "relative",
           flex: 1,
           fontFamily: "monospace",
-          fontSize: "14px",
+          fontSize: { xs: "12px", sm: "14px" },
           color: "#00ff00",
           display: "flex",
           alignItems: "center",
@@ -89,7 +89,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onCommand, disabled 
           component="span"
           sx={{
             fontFamily: "monospace",
-            fontSize: "14px",
+            fontSize: { xs: "12px", sm: "14px" },
             color: "#00ff00",
             whiteSpace: "pre",
           }}
@@ -99,8 +99,8 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onCommand, disabled 
             component="span"
             sx={{
               display: "inline-block",
-              width: "10px",
-              height: "18px",
+              width: { xs: "8px", sm: "10px" },
+              height: { xs: "16px", sm: "18px" },
               backgroundColor: cursorVisible ? "#00ff00" : "transparent",
               marginLeft: "2px",
               verticalAlign: "middle",
