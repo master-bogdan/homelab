@@ -3,12 +3,11 @@ import type { Metadata } from "next"
 import { ThemeProvider } from "@mui/material/styles"
 import CssBaseline from "@mui/material/CssBaseline"
 import { theme } from "@/lib/theme"
-import "@styles/globals.css" // Import globals.css here
+import "@/styles/globals.css"
 
 export const metadata: Metadata = {
-  title: "Bogdan Shchavinskyi - Terminal Portfolio",
+  title: "Bogdan Shchavinskyi - Personal Website",
   description: "Senior Software Engineer | Backend | Platform | DevOps",
-  generator: "v0.app",
 }
 
 export default function RootLayout({

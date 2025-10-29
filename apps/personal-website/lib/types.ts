@@ -8,6 +8,6 @@ export interface CommandOutput {
 export interface Command {
   name: string
   description: string
-  execute: () => React.ReactNode
+  execute: (args: string[]) => React.ReactNode
   hidden?: boolean
 }

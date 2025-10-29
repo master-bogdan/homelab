@@ -17,6 +17,7 @@ export const blogCommand = (args?: string[]): React.ReactNode => {
             <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00ff00" }}>
               {index + 1}.{" "}
               <Link
+                key={post.slug}
                 component="button"
                 onClick={() => {
                   // Trigger blog command with slug
@@ -60,7 +61,7 @@ export const blogCommand = (args?: string[]): React.ReactNode => {
   if (!post) {
     return (
       <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ff0000" }}>
-        Error: Post '{slug}' not found. Use 'blog' to list all posts.
+        Error: Post &apos;{slug}&apos; not found. Use &apos;blog&apos; to list all posts.
       </Typography>
     )
   }

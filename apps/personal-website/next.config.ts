@@ -1,22 +1,14 @@
+// next.config.ts
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  poweredByHeader: false,
+  compress: true,
+  reactCompiler: true,
+  output: "standalone",
   images: {
     unoptimized: true,
-  },
-  webpack: (config) => {
-    config.module.rules.push({
-      test: /\.md$/,
-      type: "asset/source",
-    })
-    return config
   },
 }
 

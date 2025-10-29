@@ -42,7 +42,7 @@ export const sudoCommand = (): React.ReactNode => {
         sudo: 3 incorrect password attempts
       </Typography>
       <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00ff00", mt: 1 }}>
-        Just kidding! You don't need sudo here. 😉
+        Just kidding! You don&apos;t need sudo here. 😉
       </Typography>
     </Box>
   )

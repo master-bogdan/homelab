@@ -10,43 +10,32 @@ export const contactsCommand = (): React.ReactNode => {
       <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff", mb: 0.5 }}>
         Email:{" "}
         <Link
-          href="mailto:bogdan@example.com"
+          href="mailto:bshchavinskyi@gmail.com"
           sx={{ color: "#00ff00", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
         >
-          bogdan@example.com
+          bshchavinskyi@gmail.com
         </Link>
       </Typography>
       <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff", mb: 0.5 }}>
         GitHub:{" "}
         <Link
-          href="https://github.com/bogdan"
+          href="https://github.com/master-bogdan"
           target="_blank"
           rel="noopener noreferrer"
           sx={{ color: "#00ff00", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
         >
-          github.com/bogdan
+          github.com/master-bogdan
         </Link>
       </Typography>
       <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff", mb: 0.5 }}>
         LinkedIn:{" "}
         <Link
-          href="https://linkedin.com/in/bogdan"
+          href="https://www.linkedin.com/in/b-shchavinskyi-fullstack"
           target="_blank"
           rel="noopener noreferrer"
           sx={{ color: "#00ff00", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
         >
-          linkedin.com/in/bogdan
-        </Link>
-      </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
-        Twitter:{" "}
-        <Link
-          href="https://twitter.com/bogdan"
-          target="_blank"
-          rel="noopener noreferrer"
-          sx={{ color: "#00ff00", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
-        >
-          @bogdan
+          linkedin.com/in/b-shchavinskyi-fullstack
         </Link>
       </Typography>
     </Box>

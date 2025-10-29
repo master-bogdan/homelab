@@ -31,3 +31,13 @@ export const CYCLING_WORDS = ["developer", "engineer", "architect", "builder", "
 
 export const PROMPT_USER = "bogdan"
 export const PROMPT_HOST = "homelab"
+
+export const COMMANDS = [
+  { name: "whoami", description: "Display information about me" },
+  { name: "projects", description: "List featured projects" },
+  { name: "blog", description: "Read my blog posts" },
+  { name: "contacts", description: "Get contact information" },
+  { name: "resume", description: "Download my resume" },
+  { name: "clear", description: "Clear the terminal" },
+  { name: "help", description: "Show this help message" },
+]

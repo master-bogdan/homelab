@@ -9,7 +9,7 @@ export const resumeCommand = (): React.ReactNode => {
         Download my resume:
       </Typography>
       <Link
-        href="/resume.pdf"
+        href="/Bogdan_Shchavinskyi_Senior_Software_Engineer_CV.pdf"
         download
         sx={{
           fontFamily: "monospace",
@@ -22,7 +22,15 @@ export const resumeCommand = (): React.ReactNode => {
         [Download PDF]
       </Link>
       <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#888888", mt: 2 }}>
-        Or view online at: linkedin.com/in/bogdan
+        Or view online at:
+        <Link
+          href="https://www.linkedin.com/in/b-shchavinskyi-fullstack"
+          target="_blank"
+          rel="noopener noreferrer"
+          sx={{ color: "#00ff00", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}
+        >
+          linkedin.com/in/b-shchavinskyi-fullstack
+        </Link>
       </Typography>
     </Box>
   )

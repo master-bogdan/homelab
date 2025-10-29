@@ -17,39 +17,6 @@ export const Terminal: React.FC = () => {
   const [currentOutput, setCurrentOutput] = useState<CommandOutput | null>(null)
   const outputRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (outputRef.current) {
-      outputRef.current.scrollTop = outputRef.current.scrollHeight
-    }
-  }, [currentOutput])
-
-  useEffect(() => {
-    const handleCustomCommand = (event: Event) => {
-      const customEvent = event as CustomEvent<string>
-      if (customEvent.detail) {
-        handleCommand(customEvent.detail)
-      }
-    }
-
-    window.addEventListener("terminal-command", handleCustomCommand)
-    return () => {
-      window.removeEventListener("terminal-command", handleCustomCommand)
-    }
-  }, [])
-
-  const handleBootComplete = () => {
-    setIsBooting(false)
-    setShowBanner(true)
-    setTimeout(() => {
-      const helpOutput = commandRegistry.help.execute([])
-      setCurrentOutput({
-        command: "help",
-        output: helpOutput,
-        timestamp: new Date(),
-      })
-    }, 500)
-  }
-
   const handleCommand = (input: string) => {
     const [commandName, ...args] = input.toLowerCase().split(" ")
 
@@ -83,12 +50,45 @@ export const Terminal: React.FC = () => {
           <Box sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ff0000" }}>
             Command not found: {commandName}
             <br />
-            Type 'help' for available commands.
+            Type &apos;help&apos; for available commands.
           </Box>
         ),
         timestamp: new Date(),
       })
     }
+  }
+
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight
+    }
+  }, [currentOutput])
+
+  useEffect(() => {
+    const handleCustomCommand = (event: Event) => {
+      const customEvent = event as CustomEvent<string>
+      if (customEvent.detail) {
+        handleCommand(customEvent.detail)
+      }
+    }
+
+    window.addEventListener("terminal-command", handleCustomCommand)
+    return () => {
+      window.removeEventListener("terminal-command", handleCustomCommand)
+    }
+  }, [])
+
+  const handleBootComplete = () => {
+    setIsBooting(false)
+    setShowBanner(true)
+    setTimeout(() => {
+      const helpOutput = commandRegistry.help.execute([])
+      setCurrentOutput({
+        command: "help",
+        output: helpOutput,
+        timestamp: new Date(),
+      })
+    }, 500)
   }
 
   return (
@@ -105,7 +105,7 @@ export const Terminal: React.FC = () => {
       <Container
         maxWidth={false}
         sx={{
-          maxWidth: "100ch",
+          maxWidth: "120ch",
           backgroundColor: "#0a0a0a",
           padding: 3,
           border: "1px solid #333",

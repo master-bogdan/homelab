@@ -1,6 +1,7 @@
 import type React from "react"
 import { Box, Typography } from "@mui/material"
 import { commandRegistry } from "../commandRegistry"
+import { COMMANDS } from '../constants'
 
 export const helpCommand = (args: string[]): React.ReactNode => {
   const showHidden = args.includes("--hidden")
@@ -13,8 +14,8 @@ export const helpCommand = (args: string[]): React.ReactNode => {
         <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ff00ff", mb: 1 }}>
           🎉 Secret Hidden Commands:
         </Typography>
-        {hiddenCommands.map((cmd, index) => (
-          <Box key={index} sx={{ display: "flex", mb: 0.5 }}>
+        {hiddenCommands.map((cmd) => (
+          <Box key={cmd.name} sx={{ display: "flex", mb: 0.5 }}>
             <Typography
               sx={{
                 fontFamily: "monospace",
@@ -37,24 +38,22 @@ export const helpCommand = (args: string[]): React.ReactNode => {
     )
   }
 
-  const commands = [
-    { name: "whoami", description: "Display information about me" },
-    { name: "projects", description: "List featured projects" },
-    { name: "blog", description: "Read my blog posts" },
-    { name: "contacts", description: "Get contact information" },
-    { name: "resume", description: "Download my resume" },
-    { name: "clear", description: "Clear the terminal" },
-    { name: "help", description: "Show this help message" },
-  ]
-
   return (
     <Box>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00aaff", mb: 1 }}>
+      <Typography
+        key="available-commands-title"
+        sx={{
+          fontFamily: "monospace",
+          fontSize: "14px",
+          color: "#00aaff",
+          mb: 1,
+        }}>
         Available Commands:
       </Typography>
-      {commands.map((cmd, index) => (
-        <Box key={index} sx={{ display: "flex", mb: 0.5 }}>
+      {COMMANDS.map((cmd) => (
+        <Box key={cmd.name} sx={{ display: "flex", mb: 0.5 }}>
           <Typography
+            key={cmd.name}
             sx={{
               fontFamily: "monospace",
               fontSize: "14px",
@@ -64,7 +63,13 @@ export const helpCommand = (args: string[]): React.ReactNode => {
           >
             {cmd.name}
           </Typography>
-          <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+          <Typography
+            key={cmd.description}
+            sx={{
+              fontFamily: "monospace",
+              fontSize: "14px",
+              color: "#ffffff"
+            }}>
             - {cmd.description}
           </Typography>
         </Box>
