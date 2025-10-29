@@ -53,7 +53,6 @@ export const helpCommand = (args: string[]): React.ReactNode => {
       {COMMANDS.map((cmd) => (
         <Box key={cmd.name} sx={{ display: "flex", mb: 0.5 }}>
           <Typography
-            key={cmd.name}
             sx={{
               fontFamily: "monospace",
               fontSize: "14px",
@@ -64,7 +63,6 @@ export const helpCommand = (args: string[]): React.ReactNode => {
             {cmd.name}
           </Typography>
           <Typography
-            key={cmd.description}
             sx={{
               fontFamily: "monospace",
               fontSize: "14px",
