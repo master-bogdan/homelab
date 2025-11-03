@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: notes-api-service
+  name: ephermal-notes-api-service
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
-    app: notes-api
+    app: ephermal-notes-api
   ports:
     - protocol: TCP
       port: 80
