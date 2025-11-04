@@ -7,7 +7,13 @@ spec:
   parentRefs:
     - name: homelab-gw
       namespace: networking
-  hostnames: ["homelab.notes.api.localtest.me"]
+  hostnames:
+    - homelab.notes.api.10-102-79-188.sslip.io
   rules:
-    - matches: [{ path: { type: PathPrefix, value: "/" } }]
-      backendRefs: [{ name: ephermal-notes-api-service, port: 80 }]
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ephermal-notes-api-service
+          port: 80

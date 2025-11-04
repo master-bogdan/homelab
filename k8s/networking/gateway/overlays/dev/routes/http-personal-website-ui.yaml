@@ -7,7 +7,9 @@ spec:
   parentRefs:
     - name: homelab-gw
       namespace: networking
-  hostnames: ["homelab.localtest.me"]
+  hostnames:
+    - homelab.10-102-79-188.sslip.io
   rules:
-    - matches: [{ path: { type: PathPrefix, value: "/" } }]
-      backendRefs: [{ name: personal-website-ui, port: 80 }]
+    - backendRefs:
+        - name: personal-website-ui
+          port: 80

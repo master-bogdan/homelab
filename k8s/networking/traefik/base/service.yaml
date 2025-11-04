@@ -4,7 +4,7 @@ metadata:
   name: traefik
   namespace: networking
 spec:
-  type: LoadBalancer
+  type: NodePort            # base stays neutral; dev overlay will set LoadBalancer
   selector:
     app: traefik
   ports:
