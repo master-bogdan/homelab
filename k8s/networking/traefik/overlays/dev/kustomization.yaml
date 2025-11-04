@@ -1,0 +1,12 @@
+# k8s/networking/traefik/overlays/dev/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: networking
+resources:
+  - ../../base
+patches:
+  - path: svc-lb.yaml
+    target:
+      kind: Service
+      name: traefik
+      namespace: networking
