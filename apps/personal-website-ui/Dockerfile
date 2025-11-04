@@ -44,4 +44,4 @@ COPY --from=builder --chown=nextjs:nodejs /app/content ./content
 
 USER nextjs
 
-CMD ["node", ".next/standalone/server.js"]
+CMD ["node", "server.js"]
