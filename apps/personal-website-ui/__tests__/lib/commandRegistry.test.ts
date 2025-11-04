@@ -10,7 +10,7 @@ describe("Command Registry", () => {
   })
 
   it("contains hidden commands", () => {
-    const hiddenCommands = ["motd", "fortune", "skills", "theme"]
+    const hiddenCommands = ["neofetch", "sudo", "hack", "fortune", "cowsay", "matrix", "rickroll", "coffee"]
     hiddenCommands.forEach((cmd) => {
       expect(commandRegistry[cmd]).toBeDefined()
       expect(commandRegistry[cmd].hidden).toBe(true)
@@ -21,8 +21,8 @@ describe("Command Registry", () => {
     const visibleCommands = getVisibleCommands()
     expect(visibleCommands).toContain("whoami")
     expect(visibleCommands).toContain("help")
-    expect(visibleCommands).not.toContain("motd")
-    expect(visibleCommands).not.toContain("fortune")
+    expect(visibleCommands).not.toContain("neofetch")
+    expect(visibleCommands).not.toContain("sudo")
   })
 
   it("all commands have required properties", () => {
