@@ -1,0 +1,71 @@
+image:
+  repository: n8nio/n8n
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 5678
+  name: http
+
+ingress:
+  enabled: false
+
+db:
+  type: postgresdb
+
+externalPostgresql:
+  host: ""
+  port: 5432
+  database: ""
+  username: ""
+  existingSecret: ""
+
+externalRedis:
+  host: ""
+  port: 6379
+  username: ""
+  existingSecret: ""
+
+worker:
+  mode: queue
+  count: 2
+  concurrency: 10
+
+webhook:
+  mode: queue
+  count: 2
+  url: ""
+
+encryptionKey: ""
+existingEncryptionKeySecret: ""  
+
+main:
+  persistence:
+    enabled: true
+    volumeName: "n8n-main-data"
+    mountPath: "/home/node/.n8n"
+    size: 10Gi
+    accessMode: ReadWriteOnce
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
+diagnostics:
+  enabled: false
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  labels:
+    release: prometheus
+  include:
+    defaultMetrics: true
+    apiEndpoints: true
+    queueMetrics: true

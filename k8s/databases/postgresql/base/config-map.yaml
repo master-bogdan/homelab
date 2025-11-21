@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init-sql
+data:
+  10-n8n.sql: |
+    CREATE USER n8n_dev WITH ENCRYPTED PASSWORD 'n8n-dev-password';
+    CREATE DATABASE n8n_dev OWNER n8n_dev;
+    GRANT ALL PRIVILEGES ON DATABASE n8n_dev TO n8n_dev;

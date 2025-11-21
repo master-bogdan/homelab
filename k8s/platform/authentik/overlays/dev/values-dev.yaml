@@ -10,16 +10,15 @@ authentik:
   log_level: info
 
   postgresql:
-    host: "postgresql-service.databases.svc.cluster.local"
+    host: "postgresql-service.dev-db.svc.cluster.local"
     port: 5432
     name: "authentik"
     user: "authentik"
     password: "change_me_pass"
 
   redis:
-    host: "redis-service.databases.svc.cluster.local"
+    host: "redis-service.dev-db.svc.cluster.local"
     port: 6379
-    # If you use a password in redis:
     password: "superssecret"
 
   # Email – can be stubbed in dev

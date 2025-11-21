@@ -23,6 +23,8 @@ spec:
           volumeMounts:
             - name: postgresql-data
               mountPath: /var/lib/postgresql/data
+            - name: postgresql-init
+              mountPath: /docker-entrypoint-initdb.d
           resources:
             requests:
               memory: "256Mi"
@@ -34,3 +36,6 @@ spec:
         - name: postgresql-data
           persistentVolumeClaim:
             claimName: postgresql-pvc
+        - name: postgresql-init
+          configMap:
+            name: postgresql-init-sql

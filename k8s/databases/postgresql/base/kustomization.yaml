@@ -6,3 +6,4 @@ resources:
   - volume.yaml
   - deploy.yaml
   - service.yaml
+  - configmap-init.yaml
