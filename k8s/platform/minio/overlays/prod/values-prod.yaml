@@ -1,0 +1,33 @@
+mode: standalone
+
+auth:
+  forcePassword: true
+  usePasswordFiles: true
+  useSecret: true
+
+  defaultBuckets: "personal-website, logs"
+
+persistence:
+  enabled: true
+  size: 10Gi
+  # storageClass: ""           # your prod StorageClass for Hetzner
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "1Gi"
+
+service:
+  type: ClusterIP
+  ports:
+    api: 9000
+
+consoleService:
+  type: ClusterIP
+  port: 9001
+
+tls:
+  enabled: false
