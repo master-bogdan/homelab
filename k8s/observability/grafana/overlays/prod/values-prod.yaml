@@ -1,0 +1,37 @@
+adminUser: ""
+adminPassword: ""
+
+persistence:
+  enabled: true
+  size: 10Gi
+  accessModes:
+    - ReadWriteOnce
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        isDefault: true
+        url: "http://prometheus-server.observability.svc.cluster.local"
+        editable: false
+
+# later Authentik OIDC block here
+# grafana.ini:
+#   auth.generic_oauth:
+#     enabled: true
+#     name: Authentik
+#     client_id: ...
+#     client_secret: ...
+#     auth_url: ...
+#     token_url: ...
+#     api_url: ...

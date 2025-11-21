@@ -1,0 +1,26 @@
+adminUser: "admin"
+adminPassword: "dev-admin"
+
+persistence:
+  enabled: true
+  size: 2Gi
+  accessModes:
+    - ReadWriteOnce
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        isDefault: true
+        url: "http://prometheus-server.observability.svc.cluster.local"
+        editable: true

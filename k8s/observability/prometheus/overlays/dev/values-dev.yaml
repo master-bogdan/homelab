@@ -1,0 +1,27 @@
+server:
+  persistentVolume:
+    enabled: true
+    size: 5Gi
+    accessModes:
+      - ReadWriteOnce
+
+  retention: "7d"
+
+  service:
+    type: ClusterIP
+    port: 80
+
+alertmanager:
+  enabled: true
+  persistentVolume:
+    enabled: true
+    size: 2Gi
+
+pushgateway:
+  enabled: false
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
