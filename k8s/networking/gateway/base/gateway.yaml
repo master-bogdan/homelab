@@ -9,4 +9,15 @@ spec:
     - name: http
       protocol: HTTP
       port: 80
-      allowedRoutes: { namespaces: { from: All } }
+      allowedRoutes:
+        namespaces:
+          from: All
+    # - name: https
+    #   protocol: HTTPS
+    #   port: 443
+    #   allowedRoutes:
+    #     namespaces:
+    #       from: All
+      tls:
+        mode: Terminate
+        certificateRefs: []   # fill later when you have real certs
