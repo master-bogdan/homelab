@@ -4,13 +4,13 @@ authentik:
     enabled: true
 
   postgresql:
-    host: "postgresql-service.databases.svc.cluster.local"
+    host: ""
     port: 5432
     name: "authentik"
     user: "authentik"
 
   redis:
-    host: "redis-service.databases.svc.cluster.local"
+    host: ""
     port: 6379
 
 postgresql:

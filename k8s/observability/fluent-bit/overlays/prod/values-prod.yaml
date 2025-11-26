@@ -50,7 +50,6 @@ config:
         Host            opensearch.observability.svc.cluster.local
         Port            9200
         TLS             On
-        TLS.Verify      Off
         HTTP_User       ${ES_USER}
         HTTP_Passwd     ${ES_PASSWORD}
         Index           logs-prod

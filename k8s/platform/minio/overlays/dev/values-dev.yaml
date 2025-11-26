@@ -7,7 +7,7 @@ auth:
   usePasswordFiles: true
   useSecret: true
 
-  defaultBuckets: "personal-website, logs"
+  defaultBuckets: "personal-website,logs"
 
 persistence:
   enabled: true
