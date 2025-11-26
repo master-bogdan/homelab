@@ -1,0 +1,42 @@
+fullnameOverride: traefik-dev
+
+service:
+  enabled: true
+  type: NodePort
+  ports:
+    web:
+      port: 80
+      nodePort: 30080
+    websecure:
+      port: 443
+      nodePort: 30443
+
+providers:
+  kubernetesGateway:
+    enabled: true
+    experimentalChannel: true
+
+  kubernetesIngress:
+    enabled: false
+  kubernetesCRD:
+    enabled: false
+
+additionalArguments:
+  - "--entrypoints.web.address=:80"
+  - "--entrypoints.websecure.address=:443"
+
+ports:
+  traefik:
+    expose: true
+    protocol: TCP
+    port: 9000
+    nodePort: 30900
+    exposeInIngress: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

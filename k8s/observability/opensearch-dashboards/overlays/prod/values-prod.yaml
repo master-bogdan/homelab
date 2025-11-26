@@ -1,0 +1,37 @@
+fullnameOverride: opensearch-dashboards-prod
+
+opensearchHosts:
+  - "https://opensearch.observability.svc.cluster.local:9200"
+
+opensearchUsername: "${OPENSEARCH_DASHBOARDS_USERNAME}"
+opensearchPassword: "${OPENSEARCH_DASHBOARDS_PASSWORD}"
+
+extraEnvs:
+  - name: OPENSEARCH_DASHBOARDS_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-auth-prod
+        key: username
+  - name: OPENSEARCH_DASHBOARDS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-auth-prod
+        key: password
+
+opensearchSecurity:
+  enabled: true
+
+service:
+  type: ClusterIP
+  port: 5601
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "1Gi"
+
+ingress:
+  enabled: false

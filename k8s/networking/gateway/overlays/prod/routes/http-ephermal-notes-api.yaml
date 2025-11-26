@@ -1,16 +1,19 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: ephermal-notes
-  namespace: prod
+  name: http-ephermal-notes-api
+  namespace: networking
 spec:
   parentRefs:
     - name: homelab-gw
       namespace: networking
-  hostnames: ["notes.example.com"]  # TODO: your real domain
+      sectionName: http
   rules:
     - matches:
-        - path: { type: PathPrefix, value: "/" }
+        - path:
+            type: PathPrefix
+            value: /api/notes
       backendRefs:
-        - name: ephermal-notes-api-service
+        - name: ephermal-notes-api
+          namespace: apps
           port: 80

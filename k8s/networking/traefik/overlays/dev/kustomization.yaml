@@ -1,12 +1,21 @@
-# k8s/networking/traefik/overlays/dev/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+
 namespace: networking
+
+commonLabels:
+  app.kubernetes.io/name: traefik
+  app.kubernetes.io/instance: traefik-dev
+  env: dev
+
 resources:
   - ../../base
-patches:
-  - path: svc-lb.yaml
-    target:
-      kind: Service
-      name: traefik
-      namespace: networking
+
+helmCharts:
+  - name: traefik
+    repo: https://traefik.github.io/charts
+    version: "34.2.1"
+    releaseName: traefik
+    namespace: networking
+    includeCRDs: true
+    valuesFile: values-dev.yaml

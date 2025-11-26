@@ -1,0 +1,60 @@
+authentik:
+  log_level: info
+  error_reporting:
+    enabled: true
+
+  postgresql:
+    host: ""
+    port: 5432
+    name: "authentik"
+    user: "authentik"
+
+  redis:
+    host: ""
+    port: 6379
+
+postgresql:
+  enabled: false
+redis:
+  enabled: false
+
+server:
+  env:
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: secret-key
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: db-password
+    - name: AUTHENTIK_REDIS__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: redis-password
+    - name: AUTHENTIK_EMAIL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: smtp-password
+
+worker:
+  env:
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: secret-key
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: db-password
+    - name: AUTHENTIK_REDIS__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: redis-password

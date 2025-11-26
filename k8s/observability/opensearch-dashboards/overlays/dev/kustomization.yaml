@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: observability
+
+commonLabels:
+  app.kubernetes.io/name: opensearch-dashboards
+  app.kubernetes.io/instance: opensearch-dashboards-dev
+  env: dev
+
+resources: []
+
+helmCharts:
+  - name: opensearch-dashboards
+    repo: https://opensearch-project.github.io/helm-charts/
+    version: "3.3.0"
+    releaseName: opensearch-dashboards
+    namespace: observability
+    includeCRDs: false
+    valuesFile: values-dev.yaml

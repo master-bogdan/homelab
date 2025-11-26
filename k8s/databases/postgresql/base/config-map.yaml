@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init-sql
+data:
+  10-n8n.sql: |
+    DO
+    $do$
+    BEGIN
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'n8n_dev') THEN
+        CREATE USER n8n_dev WITH ENCRYPTED PASSWORD 'n8n-dev-password';
+      END IF;
+    END
+    $do$;
+
+    DO
+    $do$
+    BEGIN
+      IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'n8n_dev') THEN
+        CREATE DATABASE n8n_dev OWNER n8n_dev;
+      END IF;
+    END
+    $do$;

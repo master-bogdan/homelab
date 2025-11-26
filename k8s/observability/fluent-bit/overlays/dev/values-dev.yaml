@@ -1,0 +1,46 @@
+fullnameOverride: fluent-bit-dev
+
+kind: DaemonSet
+
+service:
+  type: ClusterIP
+
+config:
+  service: |
+    [SERVICE]
+        Flush        5
+        Daemon       Off
+        Log_Level    info
+        Parsers_File parsers.conf
+
+  inputs: |
+    [INPUT]
+        Name              tail
+        Path              /var/log/containers/*.log
+        Parser            cri
+        Tag               kube.*
+        Mem_Buf_Limit     5MB
+        Skip_Long_Lines   On
+        Refresh_Interval  10
+
+  filters: |
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Kube_URL            https://kubernetes.default.svc:443
+        Merge_Log           On
+        Kube_Tag_Prefix     kube.var.log.containers.
+        Kube_meta_preload_cache_num  1000
+
+  outputs: |
+    [OUTPUT]
+        Name            opensearch
+        Match           kube.*
+        Host            opensearch-cluster-master.observability.svc.cluster.local
+        Port            9200
+        Index           logs-dev
+        Type            _doc
+        Logstash_Format On
+        Suppress_Type_Name On
+        Replace_Dots    On
+        Retry_Limit     False

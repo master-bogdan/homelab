@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: observability
+
+commonLabels:
+  app.kubernetes.io/name: opensearch
+  app.kubernetes.io/instance: opensearch-dev
+  env: dev
+
+resources: []
+
+helmCharts:
+  - name: opensearch
+    repo: https://opensearch-project.github.io/helm-charts/
+    version: "2.30.1"
+    releaseName: opensearch
+    namespace: observability
+    includeCRDs: true
+    valuesFile: values-dev.yaml
