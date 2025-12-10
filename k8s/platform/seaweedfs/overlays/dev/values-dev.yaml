@@ -1,0 +1,55 @@
+# Use upstream SeaweedFS image (or Chainguard’s hardened one if you want)
+image:
+  repository: chrislusf/seaweedfs
+  tag: "3.92"
+  pullPolicy: IfNotPresent
+
+# --- Master servers ---
+master:
+  enabled: true
+  replicas: 1
+
+  persistence:
+    enabled: true
+    storageClass: standard
+    size: 1Gi
+
+# --- Volume servers ---
+volume:
+  enabled: true
+  replicas: 1
+
+  persistence:
+    enabled: true
+    storageClass: standard
+    size: 1Gi
+
+# --- Filer (SeaweedFS metadata + APIs) ---
+filer:
+  enabled: true
+  replicas: 1
+
+  persistence:
+    enabled: true
+    storageClass: standard
+    size: 1Gi
+
+  extraArgs:
+    - "-s3"
+
+# --- Separate S3 gateway section (chart-specific) ---
+s3:
+  enabled: true
+  service:
+    type: ClusterIP
+    port: 8333
+
+  createBuckets:
+    - name: personal-website
+      anonymousRead: true  # static site bucket
+    - name: internal-artifacts
+      anonymousRead: false
+
+# --- Metrics (optional for observability integration later) ---
+metrics:
+  enabled: true
