@@ -41,7 +41,7 @@ externalRedis:
   host: redis-service.dev-db.svc.cluster.local
   port: 6379
   username: default
-  password: redis-dev-password
+  password: superssecret
 
 # --- Queue mode (minimal) ---
 worker:
