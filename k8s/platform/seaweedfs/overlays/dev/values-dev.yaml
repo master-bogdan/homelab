@@ -47,8 +47,22 @@ s3:
   createBuckets:
     - name: personal-website
       anonymousRead: true  # static site bucket
+      collections:
+        - name: public
     - name: internal-artifacts
       anonymousRead: false
+
+# --- Network Policies ---
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: networking
+      ports:
+        - protocol: TCP
+          port: 8333
 
 # --- Metrics (optional for observability integration later) ---
 metrics:

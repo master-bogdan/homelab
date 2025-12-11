@@ -9,7 +9,13 @@ spec:
       namespace: networking
       sectionName: http
   rules:
-    - matches:
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: authentik-forward-auth
+      matches:
         - path:
             type: PathPrefix
             value: /grafana/

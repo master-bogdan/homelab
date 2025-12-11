@@ -7,15 +7,13 @@ spec:
   parentRefs:
     - name: homelab-gw
       namespace: networking
-      sectionName: https
-  hostnames:
-    - my-cool-site.example.com
+      sectionName: http
   rules:
     - matches:
         - path:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: seaweedfs-filter
+        - name: seaweedfs-filer
           namespace: platform
           port: 8888
