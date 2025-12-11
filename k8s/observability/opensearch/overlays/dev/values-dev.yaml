@@ -5,16 +5,15 @@ config:
     cluster.name: homelab-opensearch-dev
     network.host: 0.0.0.0
 
-  # Disable security plugin for dev to avoid TLS/users complexity
-  plugins.security.disabled: true
+    # Disable security plugin for dev to avoid TLS/users complexity
+    plugins.security.disabled: true
 
-# Persist data
 persistence:
   enabled: true
   size: 5Gi
   accessModes:
     - ReadWriteOnce
-  # storageClass: ""
+
 resources:
   requests:
     cpu: "200m"

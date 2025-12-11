@@ -7,8 +7,9 @@ REGISTRY          ?= docker.io/masterbogdan0
 TAG               ?= latest
 ENV               ?= dev              # dev | prod
 APP               ?=                  # single app name, e.g. personal-website-ui
-MINIKUBE          ?=                  # set 1 to use "minikube kubectl --"
-MINIKUBE_PROFILE  ?= homelab-dev      # profile name for minikube
+
+# Use kubectl-integrated kustomize by default (works with --enable-helm)
+KUSTOMIZE         ?= kubectl kustomize
 
 # ---- Paths ----
 APPS_DIR              := apps
@@ -39,11 +40,11 @@ OPENSEARCH_DASH_DIR   := $(OBSERVABILITY_DIR)/opensearch-dashboards
 # ---- Discover apps ----
 APPS                  := $(notdir $(wildcard $(APPS_DIR)/*))
 
-# ---- kubectl (optionally via minikube) ----
-KUBECTL               := $(if $(MINIKUBE),minikube kubectl --,kubectl)
+# ---- kubectl (cluster-agnostic) ----
+KUBECTL               := kubectl
 
 # ============================
-# Kustomize helpers
+# Kustomize helpers (deploy/delete)
 # ============================
 
 # Apply kustomization: prefer overlays/$(ENV), fallback to base
@@ -73,19 +74,71 @@ define k8s_delete_or_base
 endef
 
 # ============================
+# HELM+KUSTOMIZE helpers (for helmCharts)
+# ============================
+
+# Apply using kubectl kustomize --enable-helm | kubectl apply
+define k8s_apply_helm_or_base
+	set -e; ROOT="$(1)"; \
+	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
+	  echo "🚀 Applying (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
+	  $(KUSTOMIZE) --enable-helm "$${ROOT}/overlays/$(ENV)" | $(KUBECTL) apply -f -; \
+	else \
+	  echo "🚀 Applying (helm+kustomize): $${ROOT}/base"; \
+	  $(KUSTOMIZE) --enable-helm "$${ROOT}/base" | $(KUBECTL) apply -f -; \
+	fi
+endef
+
+# Delete using kubectl kustomize --enable-helm | kubectl delete
+define k8s_delete_helm_or_base
+	set -e; ROOT="$(1)"; \
+	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
+	  echo "🔥 Deleting (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
+	  $(KUSTOMIZE) --enable-helm "$${ROOT}/overlays/$(ENV)" | $(KUBECTL) delete -f - --ignore-not-found; \
+	else \
+	  echo "🔥 Deleting (helm+kustomize): $${ROOT}/base"; \
+	  $(KUSTOMIZE) --enable-helm "$${ROOT}/base" | $(KUBECTL) delete -f - --ignore-not-found; \
+	fi
+endef
+
+# ============================
 # Validation helpers (dry-run)
 # ============================
 
-# Validate kustomization with server-side dry-run
+# Validate normal kustomization with client-side dry-run, no schema/API required
 define k8s_dry_run_or_base
 	set -e; ROOT="$(1)"; \
 	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
 	  echo "🧪 Dry-run: $${ROOT}/overlays/$(ENV)"; \
-	  $(KUBECTL) apply -k "$${ROOT}/overlays/$(ENV)" --dry-run=server -o yaml >/dev/null; \
+	  $(KUBECTL) apply -k "$${ROOT}/overlays/$(ENV)" --dry-run=client --validate=false -o yaml >/dev/null; \
 	else \
 	  echo "🧪 Dry-run: $${ROOT}/base"; \
-	  $(KUBECTL) apply -k "$${ROOT}/base" --dry-run=server -o yaml >/dev/null 2>/dev/null || \
-	  $(KUBECTL) apply -f "$${ROOT}/base" --dry-run=server -o yaml >/dev/null; \
+	  $(KUBECTL) apply -k "$${ROOT}/base" --dry-run=client --validate=false -o yaml >/dev/null 2>/dev/null || \
+	  $(KUBECTL) apply -f "$${ROOT}/base" --dry-run=client --validate=false -o yaml >/dev/null; \
+	fi
+endef
+
+# Validate helm+kustomize kustomization: build-only (no apply)
+define k8s_dry_run_helm_or_base
+	set -e; ROOT="$(1)"; \
+	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
+	  echo "🧪 Build-only (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
+	  $(KUSTOMIZE) --enable-helm "$${ROOT}/overlays/$(ENV)" >/dev/null; \
+	else \
+	  echo "🧪 Build-only (helm+kustomize): $${ROOT}/base"; \
+	  $(KUSTOMIZE) --enable-helm "$${ROOT}/base" >/dev/null; \
+	fi
+endef
+
+# Validate plain kustomize (no helm) by build-only (no apply) — for CRD-heavy stuff like Gateway
+define k8s_build_only_or_base
+	set -e; ROOT="$(1)"; \
+	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
+	  echo "🧪 Build-only: $${ROOT}/overlays/$(ENV)"; \
+	  $(KUSTOMIZE) "$${ROOT}/overlays/$(ENV)" >/dev/null; \
+	else \
+	  echo "🧪 Build-only: $${ROOT}/base"; \
+	  $(KUSTOMIZE) "$${ROOT}/base" >/dev/null; \
 	fi
 endef
 
@@ -111,24 +164,23 @@ endef
 # PHONY
 # ----------------------------
 .PHONY: help apps-list \
-        docker-build docker-push docker-build-push \
-        docker-build-all docker-push-all docker-build-push-all \
-        minikube-start minikube-stop minikube-delete \
-        deploy-namespaces delete-namespaces validate-namespaces \
-        deploy-app deploy-apps delete-app delete-apps validate-app validate-apps \
-        deploy-networking delete-networking validate-networking \
-        deploy-platform delete-platform validate-platform \
-        deploy-observability delete-observability validate-observability \
-        deploy-databases delete-databases validate-databases \
-        validate-all \
-        deploy-all deploy-all-dev deploy-all-prod \
-        delete-all delete-all-dev delete-all-prod
+	docker-build docker-push docker-build-push \
+	docker-build-all docker-push-all docker-build-push-all \
+	deploy-namespaces delete-namespaces validate-namespaces \
+	deploy-app deploy-apps delete-app delete-apps validate-app validate-apps \
+	deploy-networking delete-networking validate-networking \
+	deploy-platform delete-platform validate-platform \
+	deploy-observability delete-observability validate-observability \
+	deploy-databases delete-databases validate-databases \
+	validate-all \
+	deploy-all deploy-all-dev deploy-all-prod \
+	delete-all delete-all-dev delete-all-prod
 
 # ============================
 # Help
 # ============================
 help:
-	@echo "🎛️  Root targets (ENV=$(ENV))"
+	@echo "🎛  Root targets (ENV=$(ENV))"
 	@echo "  apps-list                          # List discovered apps"
 	@echo ""
 	@echo "🐳 Docker"
@@ -139,31 +191,28 @@ help:
 	@echo "  docker-push-all                    # Push all images"
 	@echo "  docker-build-push-all              # Build + push all images"
 	@echo ""
-	@echo "☸️  Minikube"
-	@echo "  MINIKUBE=1 minikube-start          # Start 3-node minikube cluster"
-	@echo "  MINIKUBE=1 minikube-stop           # Stop minikube cluster"
-	@echo "  MINIKUBE=1 minikube-delete         # Delete minikube cluster"
-	@echo ""
-	@echo "☸️  Kubernetes"
+	@echo "☸  Kubernetes (per layer)"
 	@echo "  deploy-namespaces / delete-namespaces / validate-namespaces"
 	@echo "  deploy-networking  / delete-networking  / validate-networking"
 	@echo "  deploy-platform    / delete-platform    / validate-platform"
 	@echo "  deploy-observability / delete-observability / validate-observability"
-	@echo "  deploy-databases   / delete-databases   / validate-databases (dev only)"
+	@echo "  deploy-databases   / delete-databases   / validate-databases  (dev only)"
+	@echo ""
 	@echo "  deploy-app         APP=<name>      # Build+push APP, then apply k8s"
 	@echo "  delete-app         APP=<name>      # Delete k8s for APP"
 	@echo "  validate-app       APP=<name>      # Dry-run validate k8s for APP"
 	@echo "  deploy-apps / delete-apps / validate-apps (all apps)"
 	@echo ""
 	@echo "🧪 Validation"
-	@echo "  validate-all                      # Dry-run validation for EVERYTHING"
+	@echo "  validate-all                      # Dry-run (client / build-only) for EVERYTHING"
 	@echo ""
 	@echo "🎯 High-level"
-	@echo "  deploy-all ENV=dev                # dev: validate + deploy full stack (with DBs)"
-	@echo "  deploy-all ENV=prod               # prod: validate + deploy full stack (no DBs)"
-	@echo "  delete-all ENV=dev|prod           # Full teardown"
+	@echo "  ENV=dev  make deploy-all          # dev: validate + deploy full stack (with DBs)"
+	@echo "  ENV=prod make deploy-all          # prod: validate + deploy full stack (no DBs)"
+	@echo "  ENV=dev|prod make delete-all      # Full teardown"
 	@echo ""
-	@echo "🔧 Vars: REGISTRY=$(REGISTRY) TAG=$(TAG) ENV=$(ENV) MINIKUBE=$(MINIKUBE) MINIKUBE_PROFILE=$(MINIKUBE_PROFILE)"
+	@echo "🔧 Vars: REGISTRY=$(REGISTRY) TAG=$(TAG) ENV=$(ENV) KUSTOMIZE=$(KUSTOMIZE)"
+	@echo "   kubectl must be configured to point at your cluster (minikube/k3s/k8s)."
 
 apps-list:
 	@echo "$(APPS)"
@@ -209,30 +258,6 @@ docker-build-push-all:
 	@echo "✅ Build+push for all apps"
 
 # ============================
-# Minikube — 3-node cluster (dev)
-# ============================
-minikube-start:
-	@echo "🚀 Starting 3-node minikube cluster (profile=$(MINIKUBE_PROFILE))..."
-	minikube start --profile $(MINIKUBE_PROFILE) \
-	  --nodes=3 \
-	  --driver=docker \
-	  --cpus=4 \
-	  --memory=8192
-	@echo "🔌 Enabling volume-related addons..."
-	minikube --profile $(MINIKUBE_PROFILE) addons enable volumesnapshots
-	minikube --profile $(MINIKUBE_PROFILE) addons enable storage-provisioner
-	minikube --profile $(MINIKUBE_PROFILE) addons enable csi-hostpath-driver
-	@echo "✅ Minikube up. Use: kubectl config use-context $(MINIKUBE_PROFILE)"
-
-minikube-stop:
-	@echo "⏸️  Stopping minikube (profile=$(MINIKUBE_PROFILE))..."
-	minikube stop --profile $(MINIKUBE_PROFILE) || true
-
-minikube-delete:
-	@echo "🗑️  Deleting minikube cluster (profile=$(MINIKUBE_PROFILE))..."
-	minikube delete --profile $(MINIKUBE_PROFILE) || true
-
-# ============================
 # Namespaces (deploy / delete / validate)
 # ============================
 deploy-namespaces:
@@ -241,7 +266,7 @@ deploy-namespaces:
 
 delete-namespaces:
 	$(call k8s_delete_or_base,$(NAMESPACES_DIR))
-	@echo "🗑️  Namespaces deleted for $(ENV)"
+	@echo "🗑  Namespaces deleted for $(ENV)"
 
 validate-namespaces:
 	$(call k8s_dry_run_or_base,$(NAMESPACES_DIR))
@@ -259,28 +284,19 @@ deploy-app:
 deploy-apps:
 	@for app in $(APPS); do \
 	  echo "🚀 Deploying app $$app (env=$(ENV))"; \
-	  APP="$$app" $(MAKE) --no-print-directory docker-build-push; \
-	  APP="$$app" $(KUBECTL) apply -k "$(KUBERNETES_DIR)/apps/$$app/overlays/$(ENV)" 2>/dev/null || \
-	  APP="$$app" $(KUBECTL) apply -k "$(KUBERNETES_DIR)/apps/$$app/base" 2>/dev/null || \
-	  APP="$$app" $(KUBECTL) apply -f "$(KUBERNETES_DIR)/apps/$$app/base"; \
+	  APP="$$app" $(MAKE) --no-print-directory deploy-app; \
 	done
 	@echo "🎉 All apps deployed (env=$(ENV))"
 
 delete-app:
 	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
 	$(call k8s_delete_or_base,$(KUBERNETES_DIR)/apps/$(APP))
-	@echo "🗑️  Deleted app: $(APP) (env=$(ENV))"
+	@echo "🗑  Deleted app: $(APP) (env=$(ENV))"
 
 delete-apps:
 	@for app in $(APPS); do \
 	  echo "🧹 Deleting app $$app (env=$(ENV))"; \
-	  ROOT="$(KUBERNETES_DIR)/apps/$$app"; \
-	  if [ -d "$$ROOT/overlays/$(ENV)" ]; then \
-	    $(KUBECTL) delete -k "$$ROOT/overlays/$(ENV)" --ignore-not-found; \
-	  else \
-	    $(KUBECTL) delete -k "$$ROOT/base" --ignore-not-found 2>/dev/null || \
-	    $(KUBECTL) delete -f "$$ROOT/base" --ignore-not-found; \
-	  fi; \
+	  APP="$$app" $(MAKE) --no-print-directory delete-app; \
 	done
 	@echo "🧹 All apps deleted (env=$(ENV))"
 
@@ -292,13 +308,7 @@ validate-app:
 validate-apps:
 	@for app in $(APPS); do \
 	  echo "🧪 Validating app $$app (env=$(ENV))"; \
-	  ROOT="$(KUBERNETES_DIR)/apps/$$app"; \
-	  if [ -d "$$ROOT/overlays/$(ENV)" ]; then \
-	    $(KUBECTL) apply -k "$$ROOT/overlays/$(ENV)" --dry-run=server -o yaml >/dev/null; \
-	  else \
-	    $(KUBECTL) apply -k "$$ROOT/base" --dry-run=server -o yaml >/dev/null 2>/dev/null || \
-	    $(KUBECTL) apply -f "$$ROOT/base" --dry-run=server -o yaml >/dev/null; \
-	  fi; \
+	  APP="$$app" $(MAKE) --no-print-directory validate-app; \
 	done
 	@echo "✅ All apps manifest validation passed (env=$(ENV))"
 
@@ -306,66 +316,72 @@ validate-apps:
 # Networking (deploy / delete / validate)
 # ============================
 deploy-networking: deploy-namespaces
-	$(call k8s_apply_or_base,$(TRAEFIK_DIR))
+	# Traefik uses helmCharts -> kubectl kustomize --enable-helm
+	$(call k8s_apply_helm_or_base,$(TRAEFIK_DIR))
+	# Gateway is plain kustomize
 	$(call k8s_apply_or_base,$(GATEWAY_DIR))
 	@echo "✅ Networking (Traefik + Gateway) deployed (env=$(ENV))"
 
 delete-networking:
 	$(call k8s_delete_or_base,$(GATEWAY_DIR))
-	$(call k8s_delete_or_base,$(TRAEFIK_DIR))
-	@echo "🗑️  Networking (Traefik + Gateway) deleted (env=$(ENV))"
+	$(call k8s_delete_helm_or_base,$(TRAEFIK_DIR))
+	@echo "🗑  Networking (Traefik + Gateway) deleted (env=$(ENV))"
 
 validate-networking:
-	$(call k8s_dry_run_or_base,$(TRAEFIK_DIR))
-	$(call k8s_dry_run_or_base,$(GATEWAY_DIR))
+	# Traefik: helm+kustomize build-only (no apply)
+	$(call k8s_dry_run_helm_or_base,$(TRAEFIK_DIR))
+	# Gateway: build-only (no apply, avoids CRD discovery issues)
+	$(call k8s_build_only_or_base,$(GATEWAY_DIR))
 	@echo "✅ Networking manifests are valid (env=$(ENV))"
 
 # ============================
 # Platform (deploy / delete / validate)
 # ============================
 deploy-platform: deploy-namespaces
-	$(call k8s_apply_or_base,$(AUTHENTIK_DIR))
-	$(call k8s_apply_or_base,$(N8N_DIR))
-	$(call k8s_apply_or_base,$(SEAWEEDFS_DIR))
+	# Third-party apps use Helm-in-Kustomize
+	$(call k8s_apply_helm_or_base,$(AUTHENTIK_DIR))
+	$(call k8s_apply_helm_or_base,$(N8N_DIR))
+	$(call k8s_apply_helm_or_base,$(SEAWEEDFS_DIR))
 	@echo "🎉 Platform services deployed (env=$(ENV))"
 
 delete-platform:
-	$(call k8s_delete_or_base,$(SEAWEEDFS_DIR))
-	$(call k8s_delete_or_base,$(N8N_DIR))
-	$(call k8s_delete_or_base,$(AUTHENTIK_DIR))
+	$(call k8s_delete_helm_or_base,$(SEAWEEDFS_DIR))
+	$(call k8s_delete_helm_or_base,$(N8N_DIR))
+	$(call k8s_delete_helm_or_base,$(AUTHENTIK_DIR))
 	@echo "🧹 Platform services deleted (env=$(ENV))"
 
 validate-platform:
-	$(call k8s_dry_run_or_base,$(AUTHENTIK_DIR))
-	$(call k8s_dry_run_or_base,$(N8N_DIR))
-	$(call k8s_dry_run_or_base,$(SEAWEEDFS_DIR))
+	$(call k8s_dry_run_helm_or_base,$(AUTHENTIK_DIR))
+	$(call k8s_dry_run_helm_or_base,$(N8N_DIR))
+	$(call k8s_dry_run_helm_or_base,$(SEAWEEDFS_DIR))
 	@echo "✅ Platform manifests are valid (env=$(ENV))"
 
 # ============================
 # Observability (deploy / delete / validate)
 # ============================
 deploy-observability: deploy-namespaces
-	$(call k8s_apply_or_base,$(FLUENTBIT_DIR))
-	$(call k8s_apply_or_base,$(PROMETHEUS_DIR))
-	$(call k8s_apply_or_base,$(GRAFANA_DIR))
-	$(call k8s_apply_or_base,$(OPENSEARCH_DIR))
-	$(call k8s_apply_or_base,$(OPENSEARCH_DASH_DIR))
+	# All observability components are installed via Helm charts wrapped in Kustomize
+	$(call k8s_apply_helm_or_base,$(FLUENTBIT_DIR))
+	$(call k8s_apply_helm_or_base,$(PROMETHEUS_DIR))
+	$(call k8s_apply_helm_or_base,$(GRAFANA_DIR))
+	$(call k8s_apply_helm_or_base,$(OPENSEARCH_DIR))
+	$(call k8s_apply_helm_or_base,$(OPENSEARCH_DASH_DIR))
 	@echo "📊 Observability stack deployed (env=$(ENV))"
 
 delete-observability:
-	$(call k8s_delete_or_base,$(OPENSEARCH_DASH_DIR))
-	$(call k8s_delete_or_base,$(OPENSEARCH_DIR))
-	$(call k8s_delete_or_base,$(GRAFANA_DIR))
-	$(call k8s_delete_or_base,$(PROMETHEUS_DIR))
-	$(call k8s_delete_or_base,$(FLUENTBIT_DIR))
+	$(call k8s_delete_helm_or_base,$(OPENSEARCH_DASH_DIR))
+	$(call k8s_delete_helm_or_base,$(OPENSEARCH_DIR))
+	$(call k8s_delete_helm_or_base,$(GRAFANA_DIR))
+	$(call k8s_delete_helm_or_base,$(PROMETHEUS_DIR))
+	$(call k8s_delete_helm_or_base,$(FLUENTBIT_DIR))
 	@echo "🧻 Observability stack deleted (env=$(ENV))"
 
 validate-observability:
-	$(call k8s_dry_run_or_base,$(FLUENTBIT_DIR))
-	$(call k8s_dry_run_or_base,$(PROMETHEUS_DIR))
-	$(call k8s_dry_run_or_base,$(GRAFANA_DIR))
-	$(call k8s_dry_run_or_base,$(OPENSEARCH_DIR))
-	$(call k8s_dry_run_or_base,$(OPENSEARCH_DASH_DIR))
+	$(call k8s_dry_run_helm_or_base,$(FLUENTBIT_DIR))
+	$(call k8s_dry_run_helm_or_base,$(PROMETHEUS_DIR))
+	$(call k8s_dry_run_helm_or_base,$(GRAFANA_DIR))
+	$(call k8s_dry_run_helm_or_base,$(OPENSEARCH_DIR))
+	$(call k8s_dry_run_helm_or_base,$(OPENSEARCH_DASH_DIR))
 	@echo "✅ Observability manifests are valid (env=$(ENV))"
 
 # ============================
@@ -377,7 +393,7 @@ ifeq ($(ENV),dev)
 	$(call k8s_apply_or_base,$(POSTGRESQL_DIR))
 	@echo "🧰 Databases deployed (env=$(ENV))"
 else
-	@echo "⚠️  deploy-databases skipped: ENV=$(ENV) (no DBs in prod)"
+	@echo "⚠  deploy-databases skipped: ENV=$(ENV) (no DBs in prod)"
 endif
 
 delete-databases:
@@ -386,7 +402,7 @@ ifeq ($(ENV),dev)
 	$(call k8s_delete_or_base,$(REDIS_DIR))
 	@echo "🧨 Databases deleted (env=$(ENV))"
 else
-	@echo "⚠️  delete-databases skipped: ENV=$(ENV) (no DBs in prod)"
+	@echo "⚠  delete-databases skipped: ENV=$(ENV) (no DBs in prod)"
 endif
 
 validate-databases:
@@ -395,7 +411,7 @@ ifeq ($(ENV),dev)
 	$(call k8s_dry_run_or_base,$(POSTGRESQL_DIR))
 	@echo "✅ Database manifests are valid (env=$(ENV))"
 else
-	@echo "⚠️  validate-databases skipped: ENV=$(ENV) (no DBs in prod)"
+	@echo "⚠  validate-databases skipped: ENV=$(ENV) (no DBs in prod)"
 endif
 
 # ============================

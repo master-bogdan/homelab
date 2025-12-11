@@ -25,14 +25,6 @@ additionalArguments:
   - "--entrypoints.web.address=:80"
   - "--entrypoints.websecure.address=:443"
 
-ports:
-  traefik:
-    expose: true
-    protocol: TCP
-    port: 9000
-    nodePort: 30900
-    exposeInIngress: false
-
 resources:
   requests:
     cpu: 100m
