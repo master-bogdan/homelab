@@ -1,3 +1,4 @@
+# --- Basic image & service ---
 image:
   repository: n8nio/n8n
   pullPolicy: IfNotPresent
@@ -10,13 +11,20 @@ service:
 ingress:
   enabled: false
 
-resources:
-  requests:
-    cpu: 100m
-    memory: 256Mi
-  limits:
-    cpu: 500m
-    memory: 512Mi
+main:
+  persistence:
+    enabled: true
+    volumeName: "n8n-main-data"
+    mountPath: "/home/node/.n8n"
+    size: 5Gi
+    accessMode: ReadWriteOnce
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
 
 db:
   type: postgresdb
@@ -34,6 +42,7 @@ externalRedis:
   username: default
   password: redis-secret
 
+# --- Queue mode (minimal) ---
 worker:
   mode: queue
   count: 1
@@ -42,9 +51,10 @@ worker:
 webhook:
   mode: queue
   count: 1
-  url: ""
+  url: ""                                       # you can set later once Gateway URL is known
 
 encryptionKey: "DEV_ENCRYPTION_KEY_32_CHARS_1234"
 
 diagnostics:
   enabled: false
+

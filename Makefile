@@ -7,9 +7,7 @@ REGISTRY          ?= docker.io/masterbogdan0
 TAG               ?= latest
 ENV               ?= dev              # dev | prod
 APP               ?=                  # single app name, e.g. personal-website-ui
-
-# Use kubectl-integrated kustomize by default (works with --enable-helm)
-KUSTOMIZE         ?= kubectl kustomize
+KUSTOMIZE         ?= kustomize        # standalone kustomize binary (must support --enable-helm)
 
 # ---- Paths ----
 APPS_DIR              := apps
@@ -41,6 +39,7 @@ OPENSEARCH_DASH_DIR   := $(OBSERVABILITY_DIR)/opensearch-dashboards
 APPS                  := $(notdir $(wildcard $(APPS_DIR)/*))
 
 # ---- kubectl (cluster-agnostic) ----
+# kubectl must already be configured to talk to the target cluster
 KUBECTL               := kubectl
 
 # ============================
@@ -77,27 +76,15 @@ endef
 # HELM+KUSTOMIZE helpers (for helmCharts)
 # ============================
 
-# Apply using kubectl kustomize --enable-helm | kubectl apply
+# Apply with kustomize --enable-helm (Traefik, Prom/Grafana/OS, etc.)
 define k8s_apply_helm_or_base
 	set -e; ROOT="$(1)"; \
 	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
 	  echo "🚀 Applying (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
-	  $(KUSTOMIZE) --enable-helm "$${ROOT}/overlays/$(ENV)" | $(KUBECTL) apply -f -; \
+	  $(KUSTOMIZE) build --enable-helm "$${ROOT}/overlays/$(ENV)" | $(KUBECTL) apply -f -; \
 	else \
 	  echo "🚀 Applying (helm+kustomize): $${ROOT}/base"; \
-	  $(KUSTOMIZE) --enable-helm "$${ROOT}/base" | $(KUBECTL) apply -f -; \
-	fi
-endef
-
-# Delete using kubectl kustomize --enable-helm | kubectl delete
-define k8s_delete_helm_or_base
-	set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-	  echo "🔥 Deleting (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
-	  $(KUSTOMIZE) --enable-helm "$${ROOT}/overlays/$(ENV)" | $(KUBECTL) delete -f - --ignore-not-found; \
-	else \
-	  echo "🔥 Deleting (helm+kustomize): $${ROOT}/base"; \
-	  $(KUSTOMIZE) --enable-helm "$${ROOT}/base" | $(KUBECTL) delete -f - --ignore-not-found; \
+	  $(KUSTOMIZE) build --enable-helm "$${ROOT}/base" | $(KUBECTL) apply -f -; \
 	fi
 endef
 
@@ -118,27 +105,15 @@ define k8s_dry_run_or_base
 	fi
 endef
 
-# Validate helm+kustomize kustomization: build-only (no apply)
+# Validate helm+kustomize kustomization (Traefik, observability, etc.) as *build-only*
 define k8s_dry_run_helm_or_base
 	set -e; ROOT="$(1)"; \
 	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
 	  echo "🧪 Build-only (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
-	  $(KUSTOMIZE) --enable-helm "$${ROOT}/overlays/$(ENV)" >/dev/null; \
+	  $(KUBECTL) kustomize --enable-helm "$${ROOT}/overlays/$(ENV)" >/dev/null; \
 	else \
 	  echo "🧪 Build-only (helm+kustomize): $${ROOT}/base"; \
-	  $(KUSTOMIZE) --enable-helm "$${ROOT}/base" >/dev/null; \
-	fi
-endef
-
-# Validate plain kustomize (no helm) by build-only (no apply) — for CRD-heavy stuff like Gateway
-define k8s_build_only_or_base
-	set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-	  echo "🧪 Build-only: $${ROOT}/overlays/$(ENV)"; \
-	  $(KUSTOMIZE) "$${ROOT}/overlays/$(ENV)" >/dev/null; \
-	else \
-	  echo "🧪 Build-only: $${ROOT}/base"; \
-	  $(KUSTOMIZE) "$${ROOT}/base" >/dev/null; \
+	  $(KUBECTL) kustomize --enable-helm "$${ROOT}/base" >/dev/null; \
 	fi
 endef
 
@@ -174,7 +149,8 @@ endef
 	deploy-databases delete-databases validate-databases \
 	validate-all \
 	deploy-all deploy-all-dev deploy-all-prod \
-	delete-all delete-all-dev delete-all-prod
+	delete-all delete-all-dev delete-all-prod \
+	clean-charts
 
 # ============================
 # Help
@@ -204,12 +180,13 @@ help:
 	@echo "  deploy-apps / delete-apps / validate-apps (all apps)"
 	@echo ""
 	@echo "🧪 Validation"
-	@echo "  validate-all                      # Dry-run (client / build-only) for EVERYTHING"
+	@echo "  clean-charts                       # Delete all k8s/**/charts before regen"
+	@echo "  validate-all                       # Clean charts + dry-run/build-only EVERYTHING"
 	@echo ""
 	@echo "🎯 High-level"
-	@echo "  ENV=dev  make deploy-all          # dev: validate + deploy full stack (with DBs)"
-	@echo "  ENV=prod make deploy-all          # prod: validate + deploy full stack (no DBs)"
-	@echo "  ENV=dev|prod make delete-all      # Full teardown"
+	@echo "  ENV=dev  make deploy-all           # dev: validate + deploy full stack (with DBs)"
+	@echo "  ENV=prod make deploy-all           # prod: validate + deploy full stack (no DBs)"
+	@echo "  ENV=dev|prod make delete-all       # Full teardown"
 	@echo ""
 	@echo "🔧 Vars: REGISTRY=$(REGISTRY) TAG=$(TAG) ENV=$(ENV) KUSTOMIZE=$(KUSTOMIZE)"
 	@echo "   kubectl must be configured to point at your cluster (minikube/k3s/k8s)."
@@ -316,7 +293,7 @@ validate-apps:
 # Networking (deploy / delete / validate)
 # ============================
 deploy-networking: deploy-namespaces
-	# Traefik uses helmCharts -> kubectl kustomize --enable-helm
+	# Traefik uses helmCharts -> kustomize --enable-helm
 	$(call k8s_apply_helm_or_base,$(TRAEFIK_DIR))
 	# Gateway is plain kustomize
 	$(call k8s_apply_or_base,$(GATEWAY_DIR))
@@ -324,33 +301,40 @@ deploy-networking: deploy-namespaces
 
 delete-networking:
 	$(call k8s_delete_or_base,$(GATEWAY_DIR))
-	$(call k8s_delete_helm_or_base,$(TRAEFIK_DIR))
+	$(call k8s_delete_or_base,$(TRAEFIK_DIR))
 	@echo "🗑  Networking (Traefik + Gateway) deleted (env=$(ENV))"
 
 validate-networking:
 	# Traefik: helm+kustomize build-only (no apply)
 	$(call k8s_dry_run_helm_or_base,$(TRAEFIK_DIR))
 	# Gateway: build-only (no apply, avoids CRD discovery issues)
-	$(call k8s_build_only_or_base,$(GATEWAY_DIR))
+	set -e; ROOT="$(GATEWAY_DIR)"; \
+	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
+	  echo "🧪 Build-only: $${ROOT}/overlays/$(ENV)"; \
+	  $(KUBECTL) kustomize "$${ROOT}/overlays/$(ENV)" >/dev/null; \
+	else \
+	  echo "🧪 Build-only: $${ROOT}/base"; \
+	  $(KUBECTL) kustomize "$${ROOT}/base" >/dev/null; \
+	fi
 	@echo "✅ Networking manifests are valid (env=$(ENV))"
 
 # ============================
 # Platform (deploy / delete / validate)
 # ============================
 deploy-platform: deploy-namespaces
-	# Third-party apps use Helm-in-Kustomize
-	$(call k8s_apply_helm_or_base,$(AUTHENTIK_DIR))
-	$(call k8s_apply_helm_or_base,$(N8N_DIR))
-	$(call k8s_apply_helm_or_base,$(SEAWEEDFS_DIR))
+	$(call k8s_apply_or_base,$(AUTHENTIK_DIR))
+	$(call k8s_apply_or_base,$(N8N_DIR))
+	$(call k8s_apply_or_base,$(SEAWEEDFS_DIR))
 	@echo "🎉 Platform services deployed (env=$(ENV))"
 
 delete-platform:
-	$(call k8s_delete_helm_or_base,$(SEAWEEDFS_DIR))
-	$(call k8s_delete_helm_or_base,$(N8N_DIR))
-	$(call k8s_delete_helm_or_base,$(AUTHENTIK_DIR))
+	$(call k8s_delete_or_base,$(SEAWEEDFS_DIR))
+	$(call k8s_delete_or_base,$(N8N_DIR))
+	$(call k8s_delete_or_base,$(AUTHENTIK_DIR))
 	@echo "🧹 Platform services deleted (env=$(ENV))"
 
 validate-platform:
+	# All platform components use helmCharts -> build-only helm+kustomize
 	$(call k8s_dry_run_helm_or_base,$(AUTHENTIK_DIR))
 	$(call k8s_dry_run_helm_or_base,$(N8N_DIR))
 	$(call k8s_dry_run_helm_or_base,$(SEAWEEDFS_DIR))
@@ -369,11 +353,11 @@ deploy-observability: deploy-namespaces
 	@echo "📊 Observability stack deployed (env=$(ENV))"
 
 delete-observability:
-	$(call k8s_delete_helm_or_base,$(OPENSEARCH_DASH_DIR))
-	$(call k8s_delete_helm_or_base,$(OPENSEARCH_DIR))
-	$(call k8s_delete_helm_or_base,$(GRAFANA_DIR))
-	$(call k8s_delete_helm_or_base,$(PROMETHEUS_DIR))
-	$(call k8s_delete_helm_or_base,$(FLUENTBIT_DIR))
+	$(call k8s_delete_or_base,$(OPENSEARCH_DASH_DIR))
+	$(call k8s_delete_or_base,$(OPENSEARCH_DIR))
+	$(call k8s_delete_or_base,$(GRAFANA_DIR))
+	$(call k8s_delete_or_base,$(PROMETHEUS_DIR))
+	$(call k8s_delete_or_base,$(FLUENTBIT_DIR))
 	@echo "🧻 Observability stack deleted (env=$(ENV))"
 
 validate-observability:
@@ -415,9 +399,17 @@ else
 endif
 
 # ============================
+# Charts cleanup
+# ============================
+clean-charts:
+	@echo "🧹 Cleaning local Helm chart cache (k8s/**/charts)..."
+	@find $(KUBERNETES_DIR) -type d -name charts -prune -exec rm -rf {} +
+	@echo "✅ charts/ directories removed"
+
+# ============================
 # Global validation (dry-run only)
 # ============================
-validate-all:
+validate-all: clean-charts
 	@echo "🧪 Validating ALL manifests (ENV=$(ENV))..."
 	@$(MAKE) --no-print-directory validate-namespaces
 	@$(MAKE) --no-print-directory validate-networking

@@ -8,7 +8,6 @@ service:
       port: 80
     websecure:
       port: 443
-
   annotations: {}
 
 providers:
@@ -27,7 +26,8 @@ additionalArguments:
 
 ports:
   traefik:
-    expose: false
+    expose:
+      default: false
 
 resources:
   requests:
