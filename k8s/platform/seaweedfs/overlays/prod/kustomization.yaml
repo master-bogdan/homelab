@@ -16,6 +16,6 @@ helmCharts:
     repo: https://seaweedfs.github.io/seaweedfs/helm
     version: "4.0.392"
     releaseName: seaweedfs
-    namespace: platform-seaweedfs
+    namespace: platform
     includeCRDs: true
     valuesFile: values-prod.yaml

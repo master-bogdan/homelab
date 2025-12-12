@@ -9,7 +9,7 @@ resources:
   - routes/apps/http-ephermal-notes-api.yaml
   - routes/platform/http-authentik.yaml
   - routes/platform/http-n8n.yaml
-  - routes/platform/http-seaweedfs-console.yaml
+  - routes/platform/http-seaweedfs-filer.yaml
   - routes/platform/http-seaweedfs.yaml
   - routes/platform/http-grafana.yaml
   - routes/platform/http-opensearch-dashboards.yaml

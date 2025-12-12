@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: http-seaweedfs-console
+  name: http-seaweedfs-filer
   namespace: networking
 spec:
   parentRefs:
@@ -20,6 +20,6 @@ spec:
             type: PathPrefix
             value: /seaweedfs/
       backendRefs:
-        - name: seaweedfs-console
+        - name: seaweedfs-filer
           namespace: platform
-          port: 9001
+          port: 8888
