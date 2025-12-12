@@ -1,3 +1,5 @@
+# Prometheus values (fixed permissions for /data)
+
 server:
   persistentVolume:
     enabled: true
@@ -11,11 +13,20 @@ server:
     type: ClusterIP
     port: 80
 
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
+    fsGroup: 0
+    fsGroupChangePolicy: "OnRootMismatch"
+
 alertmanager:
   enabled: true
   persistentVolume:
     enabled: true
     size: 2Gi
+    accessModes:
+      - ReadWriteOnce
 
 pushgateway:
   enabled: false
