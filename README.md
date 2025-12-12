@@ -1,4 +1,4 @@
-# Homelab — compact
+# Homelab
 
 Lightweight Kubernetes manifests and local app projects for a home cluster. Uses Kustomize (`base/` + `overlays/{dev,prod}`) for environment-specific deployments.
 
@@ -9,35 +9,42 @@ Lightweight Kubernetes manifests and local app projects for a home cluster. Uses
 - **Docker** (build & push images)
 - **kubectl** with Kustomize support (`kubectl apply -k ...`)
 - **make**
-- **minikube** (for local cluster)
+- **Kubernetes cluster** (Minikube, k3s, k0s, bare metal, etc.) accessible via your active kubecontext
 - Container registry access (default: `REGISTRY=docker.io/masterbogdan0`)
 
-### Start Minikube (3-node cluster)
-
-```bash
-minikube start --profile homelab-dev --nodes=3 --driver=docker --cpus=4 --memory=8192
-```
+> Using Minikube? Start your cluster (example 3-node profile):
+> ```bash
+> minikube start --profile homelab-dev --nodes=3 --driver=docker --cpus=4 --memory=8192
+> ```
 
 ### Example workflow
 
 ```bash
-# 1) Start minikube
-minikube start --profile homelab-dev --nodes=3 --driver=docker --cpus=4 --memory=8192
+# 1) Confirm kubectl points at the cluster (minikube, k3s, etc.)
+kubectl config get-contexts
+kubectl config use-context homelab
 
 # 2) Build & push images for one app
 make docker-build-push APP=ephermal-notes-api REGISTRY=docker.io/yourname TAG=latest
 
-# 3) Deploy namespaces + app (MINIKUBE=1 uses minikube's kubectl)
-make deploy-namespaces ENV=dev MINIKUBE=1
-make deploy-app APP=ephermal-notes-api ENV=dev REGISTRY=docker.io/yourname TAG=latest MINIKUBE=1
+# 3) Deploy namespaces + app
+make deploy-namespaces ENV=dev
+make deploy-app APP=ephermal-notes-api ENV=dev REGISTRY=docker.io/yourname TAG=latest
 
 # 4) Or deploy the full stack (dev — includes databases)
-make deploy-all ENV=dev REGISTRY=docker.io/yourname TAG=latest MINIKUBE=1
+make deploy-all ENV=dev REGISTRY=docker.io/yourname TAG=latest
 
 # Check deployments
 kubectl get pods -A
 kubectl logs -f -n <namespace> <pod>
 ```
+
+## Networking & access control
+
+- **Gateway API + Traefik:** `k8s/networking/gateway` defines the shared `homelab-gw`. Dev overlays ride the HTTP listener for speed, while prod HTTPRoutes bind to the HTTPS listener with TLS terminated by the `homelab-gw-tls` secret.
+- **Authentik forward auth:** The `authentik-forward-auth` middleware (Traefik CR) forwards requests to `authentik-server.platform.svc.cluster.local/outpost.goauthentik.io/auth/traefik` and injects identity headers. Every sensitive platform/observability route (Grafana, n8n, OpenSearch Dashboards, SeaweedFS filer, etc.) references this middleware so users must authenticate; only the personal site and the ephemeral notes API remain public on purpose.
+- **SeaweedFS routing:** `/personal-website` and `/internal-artifacts` continue to flow through the S3 route, while the filer UI now uses `http-seaweedfs-filer` and is SSO-protected. This avoids exposing the filer/console without Authentik.
+- **Namespace scoping:** Both HTTP and HTTPS listeners restrict `allowedRoutes` to the `networking` namespace so misconfigured routes elsewhere cannot bind to the shared gateway.
 
 ## Makefile targets
 
@@ -53,46 +60,46 @@ kubectl logs -f -n <namespace> <pod>
 
 ### Kubernetes (deploy by layer)
 
-Use `ENV=dev` or `ENV=prod` and set `MINIKUBE=1` to use minikube's kubectl context.
+Use `ENV=dev` or `ENV=prod` and make sure `kubectl` points at the intended cluster (Minikube profile, kubeadm, etc.).
 
-**Namespaces:**
-- `make deploy-namespaces ENV=<env> [MINIKUBE=1]`
-- `make delete-namespaces ENV=<env> [MINIKUBE=1]`
+- **Namespaces:**
+- `make deploy-namespaces ENV=<env>`
+- `make delete-namespaces ENV=<env>`
 - `make validate-namespaces ENV=<env>`
 
 **Networking (Traefik + Gateway):**
-- `make deploy-networking ENV=<env> [MINIKUBE=1]`
-- `make delete-networking ENV=<env> [MINIKUBE=1]`
+- `make deploy-networking ENV=<env>`
+- `make delete-networking ENV=<env>`
 - `make validate-networking ENV=<env>`
 
 **Platform (Authentik, n8n, SeaweedFS):**
-- `make deploy-platform ENV=<env> [MINIKUBE=1]`
-- `make delete-platform ENV=<env> [MINIKUBE=1]`
+- `make deploy-platform ENV=<env>`
+- `make delete-platform ENV=<env>`
 - `make validate-platform ENV=<env>`
 
 **Observability (Prometheus, Grafana, OpenSearch, Fluent Bit):**
-- `make deploy-observability ENV=<env> [MINIKUBE=1]`
-- `make delete-observability ENV=<env> [MINIKUBE=1]`
+- `make deploy-observability ENV=<env>`
+- `make delete-observability ENV=<env>`
 - `make validate-observability ENV=<env>`
 
 **Databases (PostgreSQL, Redis — dev only):**
-- `make deploy-databases ENV=<env> [MINIKUBE=1]`
-- `make delete-databases ENV=<env> [MINIKUBE=1]`
+- `make deploy-databases ENV=<env>`
+- `make delete-databases ENV=<env>`
 - `make validate-databases ENV=<env>`
 
-**Applications (personal-website-ui, ephermal-notes-api):**
-- `make deploy-app APP=<name> ENV=<env> [REGISTRY=<r>] [TAG=<t>] [MINIKUBE=1]` — Build, push, then deploy
-- `make delete-app APP=<name> ENV=<env> [MINIKUBE=1]`
+- **Applications (personal-website-ui, ephermal-notes-api):**
+- `make deploy-app APP=<name> ENV=<env> [REGISTRY=<r>] [TAG=<t>]` — Build, push, then deploy
+- `make delete-app APP=<name> ENV=<env>`
 - `make validate-app APP=<name> ENV=<env>`
-- `make deploy-apps ENV=<env> [REGISTRY=<r>] [TAG=<t>] [MINIKUBE=1]` — Deploy all apps
-- `make delete-apps ENV=<env> [MINIKUBE=1]`
+- `make deploy-apps ENV=<env> [REGISTRY=<r>] [TAG=<t>]` — Deploy all apps
+- `make delete-apps ENV=<env>`
 - `make validate-apps ENV=<env>`
 
 ### Full-stack deployments
 
-- `make deploy-all ENV=dev [REGISTRY=<r>] [TAG=<t>] [MINIKUBE=1]` — Deploy everything (with DBs, only dev)
-- `make deploy-all ENV=prod [REGISTRY=<r>] [TAG=<t>] [MINIKUBE=1]` — Deploy everything (no DBs, prod-ready)
-- `make delete-all ENV=<env> [MINIKUBE=1]` — Delete full stack
+- `make deploy-all ENV=dev [REGISTRY=<r>] [TAG=<t>]` — Deploy everything (with DBs, only dev)
+- `make deploy-all ENV=prod [REGISTRY=<r>] [TAG=<t>]` — Deploy everything (no DBs, prod-ready)
+- `make delete-all ENV=<env>` — Delete full stack
 - `make validate-all ENV=<env>` — Dry-run validate all manifests
 
 ## Repository structure
@@ -188,7 +195,6 @@ kubectl -n platform get ingress
 - `ENV` — Deployment environment: `dev` (includes DBs) or `prod` (no DBs). Default: `dev`
 - `REGISTRY` — Container registry. Default: `docker.io/masterbogdan0`
 - `TAG` — Image tag. Default: `latest`
-- `MINIKUBE` — Set to `1` to use `minikube kubectl --` instead of plain `kubectl`
 - `APP` — Application name (required for single-app targets like `deploy-app`, `docker-build`)
 
 ### Kubernetes overlays
@@ -201,7 +207,7 @@ The Makefile automatically prefers `overlays/$(ENV)` when present; falls back to
 
 ## Notes
 
-- **MINIKUBE=1 required**: After starting minikube, always use `MINIKUBE=1` with make deploy targets so kubectl communicates with the minikube cluster.
+- **Cluster context**: Make sure `kubectl config current-context` points at the cluster you intend to manage (minikube, k3s, etc.) before running make targets.
 - **Dev vs Prod**: `ENV=dev` includes PostgreSQL and Redis; `ENV=prod` omits them.
 - **Validate before deploy**: Use `make validate-all ENV=dev` (dry-run) before deploying.
 - **Kustomize**: All k8s manifests use Kustomize. Overlays can override base patches, replicas, resource limits, etc.

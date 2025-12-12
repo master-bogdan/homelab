@@ -7,7 +7,7 @@ spec:
   parentRefs:
     - name: homelab-gw
       namespace: networking
-      sectionName: http
+      sectionName: https
   hostnames:
     - "storage.homelab.local"
   rules:

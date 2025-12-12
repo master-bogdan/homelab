@@ -20,6 +20,7 @@ spec:
         certificateRefs:
           - kind: Secret
             name: homelab-gw-tls
+            namespace: networking
       allowedRoutes:
         namespaces:
           from: All
