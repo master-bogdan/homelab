@@ -12,9 +12,19 @@ Lightweight Kubernetes manifests and local app projects for a home cluster. Uses
 - **Kubernetes cluster** (Minikube, k3s, k0s, bare metal, etc.) accessible via your active kubecontext
 - Container registry access (default: `REGISTRY=docker.io/masterbogdan0`)
 
-> Using Minikube? Start your cluster (example 3-node profile):
+> Using Minikube? Start your cluster (example 3-node profile), then enable the storage addons once all nodes are ready (enabling them inline prevents secondary nodes from booting and kube-proxy from starting):
 > ```bash
 > minikube start --profile homelab-dev --nodes=3 --driver=docker --cpus=4 --memory=8192
+> minikube addons enable storage-provisioner --profile homelab-dev
+> minikube addons enable default-storageclass --profile homelab-dev
+> ```
+>
+> If the profile gets wedged (e.g., kube-proxy or nodes never become Ready), delete and recreate it:
+> ```bash
+> minikube delete --profile homelab-dev
+> minikube start --profile homelab-dev --nodes=3 --driver=docker --cpus=4 --memory=8192
+> minikube addons enable storage-provisioner --profile homelab-dev
+> minikube addons enable default-storageclass --profile homelab-dev
 > ```
 
 ### Example workflow
