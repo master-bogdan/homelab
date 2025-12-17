@@ -1,0 +1,58 @@
+image:
+  repository: chrislusf/seaweedfs
+  tag: "3.92"
+  pullPolicy: IfNotPresent
+
+master:
+  enabled: true
+  replicas: 3
+  persistence:
+    enabled: true
+    storageClass: hcloud-volumes
+    size: 1Gi
+
+volume:
+  enabled: true
+  replicas: 3
+  persistence:
+    enabled: true
+    storageClass: hcloud-volumes
+    size: 1Gi
+
+filer:
+  enabled: true
+  replicas: 2
+  persistence:
+    enabled: true
+    storageClass: hcloud-volumes
+    size: 10Gi
+  extraArgs:
+    - "-s3"
+
+s3:
+  enabled: true
+  service:
+    type: ClusterIP
+    port: 8333
+
+  extraEnvVarsSecret:
+
+  createBuckets:
+    - name: personal-website
+      anonymousRead: true
+      collections:
+        - name: public
+    - name: internal-artifacts
+      anonymousRead: false
+
+# --- Network Policies ---
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: networking
+      ports:
+        - protocol: TCP
+          port: 8333

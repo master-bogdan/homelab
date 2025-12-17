@@ -1,10 +1,10 @@
 # --- Basic image & service ---
 image:
   repository: n8nio/n8n
+  tag: "2.0.1"
   pullPolicy: IfNotPresent
 
 service:
-  enabled: true
   type: ClusterIP
   port: 5678
   name: http
@@ -12,13 +12,18 @@ service:
 ingress:
   enabled: false
 
+nodes:
+  builtin:
+    enabled: true
+
 main:
   persistence:
     enabled: true
     volumeName: "n8n-main-data"
     mountPath: "/home/node/.n8n"
     size: 5Gi
-    accessMode: ReadWriteOnce
+    accessMode: ReadWriteMany
+    storageClass: standard
   resources:
     requests:
       cpu: 100m
@@ -41,7 +46,7 @@ externalRedis:
   host: redis-service.dev-db.svc.cluster.local
   port: 6379
   username: default
-  password: redis-dev-password
+  password: redis-secret
 
 # --- Queue mode (minimal) ---
 worker:
@@ -52,10 +57,9 @@ worker:
 webhook:
   mode: queue
   count: 1
-  url: ""                                       # you can set later once Gateway URL is known
+  url: ""
 
 encryptionKey: "DEV_ENCRYPTION_KEY_32_CHARS_1234"
 
 diagnostics:
   enabled: false
-

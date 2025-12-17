@@ -26,7 +26,6 @@ spec:
             - name: postgresql-init
               mountPath: /docker-entrypoint-initdb.d
               readOnly: true
-              defaultMode: 0644
           resources:
             requests:
               memory: "256Mi"
@@ -41,3 +40,4 @@ spec:
         - name: postgresql-init
           configMap:
             name: postgresql-init-sql
+            defaultMode: 0644

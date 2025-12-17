@@ -1,7 +1,6 @@
 fullnameOverride: opensearch-dashboards-dev
 
-opensearchHosts: 
-  - "http://opensearch-cluster-master.observability.svc.cluster.local:9200"
+opensearchHosts: "http://opensearch-cluster-master.observability.svc.cluster.local:9200"
 
 opensearchSecurity:
   enabled: false

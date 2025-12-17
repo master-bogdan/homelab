@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: platform
+
+resources:
+  - ../../base
+
+commonLabels:
+  app.kubernetes.io/name: seaweedfs
+  app.kubernetes.io/instance: seaweedfs-dev
+  env: dev
+
+helmCharts:
+  - name: seaweedfs
+    repo: https://seaweedfs.github.io/seaweedfs/helm
+    version: "4.0.392"
+    releaseName: seaweedfs
+    namespace: platform
+    includeCRDs: true
+    valuesFile: values-dev.yaml

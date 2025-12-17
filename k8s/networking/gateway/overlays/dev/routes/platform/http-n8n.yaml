@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: http-minio-console
+  name: http-n8n
   namespace: networking
 spec:
   parentRefs:
@@ -9,11 +9,17 @@ spec:
       namespace: networking
       sectionName: http
   rules:
-    - matches:
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: authentik-forward-auth
+      matches:
         - path:
             type: PathPrefix
-            value: /minio/
+            value: /n8n/
       backendRefs:
-        - name: minio-console
+        - name: n8n
           namespace: platform
-          port: 9001
+          port: 5678

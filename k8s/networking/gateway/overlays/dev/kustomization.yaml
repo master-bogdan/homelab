@@ -5,10 +5,11 @@ namespace: networking
 
 resources:
   - ../../base
-  - routes/http-personal-website-ui.yaml
-  - routes/http-ephermal-notes-api.yaml
-  - routes/http-authentik.yaml
-  - routes/http-n8n.yaml
-  - routes/http-minio-console.yaml
-  - routes/http-grafana.yaml
-  - routes/http-opensearch-dashboards.yaml
+  - routes/apps/http-personal-website-ui.yaml
+  - routes/apps/http-ephermal-notes-api.yaml
+  - routes/platform/http-authentik.yaml
+  - routes/platform/http-n8n.yaml
+  - routes/platform/http-seaweedfs-filer.yaml
+  - routes/platform/http-seaweedfs.yaml
+  - routes/platform/http-grafana.yaml
+  - routes/platform/http-opensearch-dashboards.yaml
