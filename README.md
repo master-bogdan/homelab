@@ -134,18 +134,6 @@ Use `ENV=dev` or `ENV=prod` and make sure `kubectl` points at the intended clust
 
 ## Dashboard URLs & access
 
-All services use host-based ingress. Choose one access method below:
-
-### Services by namespace
-
-| Service | Host (example) | Namespace | k8s path |
-|---------|---|---|---|
-| **Authentik** | `auth.<your-domain>` | `platform` | `k8s/platform/authentik` |
-| **n8n** | `n8n.<your-domain>` | `platform` | `k8s/platform/n8n` |
-| **Grafana** | `grafana.<your-domain>` | `observability` | `k8s/observability/grafana` |
-| **Prometheus** | `prometheus.<your-domain>` | `observability` | `k8s/observability/prometheus` |
-| **OpenSearch Dashboards** | `opensearch.<your-domain>` | `observability` | `k8s/observability/opensearch-dashboards` |
-
 ### Access methods (no `/etc/hosts` edits needed)
 
 **Option 1: Wildcard DNS (nip.io / sslip.io)**
@@ -187,16 +175,37 @@ kubectl -n platform port-forward svc/authentik 8000:8000
 # Then access on localhost:port
 ```
 
-### Discover actual ingress hosts
+### Dev example URLs (dev overlay, nip.io) ✅
+
+Use the Minikube IP with a wildcard DNS service like nip.io to access Gateway routes quickly:
 
 ```bash
-# List all ingresses across namespaces
-kubectl get ingress -A
-
-# Check specific namespace
-kubectl -n observability get ingress
-kubectl -n platform get ingress
+IP=$(minikube ip --profile homelab-dev)
+# Personal website (root)
+# http://$IP.nip.io/
+# Ephemeral notes API
+# http://$IP.nip.io/api/notes
+# Grafana (auth-protected)
+# http://$IP.nip.io/grafana/
+# Authentik
+# http://$IP.nip.io/auth/
+# n8n (auth-protected)
+# http://$IP.nip.io/n8n/
+# OpenSearch Dashboards (auth-protected)
+# http://$IP.nip.io/logs/
 ```
+
+SeaweedFS storage uses a specific hostname in the manifests (`storage.homelab.local`). You can either add an `/etc/hosts` entry or use nip.io (recommended for quick setup):
+
+```bash
+# Add /etc/hosts entry (example)
+echo "$(minikube ip --profile homelab-dev) storage.homelab.local" | sudo tee -a /etc/hosts
+# or use nip.io:
+# http://storage.$IP.nip.io/personal-website
+# http://storage.$IP.nip.io/internal-artifacts
+```
+
+> Note: routes that reference the `authentik-forward-auth` middleware (Grafana, n8n, OpenSearch Dashboards, SeaweedFS internal artifacts) require signing in via Authentik. Dev overlays use the HTTP listener (no TLS) by default.
 
 ## Configuration
 
