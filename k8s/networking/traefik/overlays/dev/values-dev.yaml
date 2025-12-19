@@ -3,27 +3,27 @@ fullnameOverride: traefik-dev
 service:
   enabled: true
   type: NodePort
-  ports:
-    web:
-      port: 80
-      nodePort: 30080
-    websecure:
-      port: 443
-      nodePort: 30443
+
+ports:
+  web:
+    nodePort: 30080
+  websecure:
+    nodePort: 30443
 
 providers:
   kubernetesGateway:
     enabled: true
-    experimentalChannel: true
 
   kubernetesIngress:
     enabled: false
   kubernetesCRD:
-    enabled: false
+    enabled: true
 
-additionalArguments:
-  - "--entrypoints.web.address=:80"
-  - "--entrypoints.websecure.address=:443"
+gateway:
+  enabled: false
+
+gatewayClass:
+  enabled: false
 
 resources:
   requests:

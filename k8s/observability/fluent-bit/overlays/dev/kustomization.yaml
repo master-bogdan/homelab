@@ -3,10 +3,13 @@ kind: Kustomization
 
 namespace: observability
 
-commonLabels:
-  app.kubernetes.io/name: fluent-bit
-  app.kubernetes.io/instance: fluent-bit-dev
-  env: dev
+labels:
+  - pairs:
+      app.kubernetes.io/name: fluent-bit
+      app.kubernetes.io/instance: fluent-bit-dev
+      env: dev
+    includeSelectors: true
+    includeTemplates: true
 
 resources: []
 

@@ -3,10 +3,11 @@ kind: Kustomization
 
 namespace: observability
 
-# commonLabels:
-#   app.kubernetes.io/name: opensearch
-#   app.kubernetes.io/instance: opensearch-dev
-#   env: dev
+labels:
+  - pairs:
+      app.kubernetes.io/name: opensearch
+      app.kubernetes.io/instance: opensearch-dev
+      env: dev
 
 resources: []
 

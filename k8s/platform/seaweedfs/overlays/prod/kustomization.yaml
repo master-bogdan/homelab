@@ -6,10 +6,13 @@ namespace: platform
 resources:
   - ../../base
 
-commonLabels:
-  app.kubernetes.io/name: seaweedfs
-  app.kubernetes.io/instance: seaweedfs-prod
-  env: prod
+labels:
+  - pairs:
+      app.kubernetes.io/name: seaweedfs
+      app.kubernetes.io/instance: seaweedfs-prod
+      env: prod
+    includeSelectors: true
+    includeTemplates: true
 
 helmCharts:
   - name: seaweedfs

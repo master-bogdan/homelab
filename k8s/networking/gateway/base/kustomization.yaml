@@ -6,4 +6,3 @@ namespace: networking
 resources:
   - gatewayclass.yaml
   - gateway.yaml
-  - authentik-forward-auth.yaml

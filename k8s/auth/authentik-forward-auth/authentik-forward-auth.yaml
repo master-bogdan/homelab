@@ -2,10 +2,10 @@ apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: authentik-forward-auth
-  namespace: networking
+  namespace: observability
 spec:
   forwardAuth:
-    address: http://authentik-server.platform.svc.cluster.local/outpost.goauthentik.io/auth/traefik
+    address: http://ak-outpost-grafana-outpost.auth.svc.cluster.local:9000/outpost.goauthentik.io/auth/traefik
     trustForwardHeader: true
     authResponseHeaders:
       - X-authentik-username

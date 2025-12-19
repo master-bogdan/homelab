@@ -24,3 +24,12 @@ datasources:
         isDefault: true
         url: "http://prometheus-server.observability.svc.cluster.local"
         editable: true
+
+grafana.ini:
+  auth.proxy:
+    enabled: true
+    header_name: X-authentik-username
+    header_property: username
+    auto_sign_up: true
+    whitelist: 10.244.0.0/24, 10.244.1.0/24, 10.244.2.0/24
+    headers: Email:X-authentik-email Groups:X-authentik-groups

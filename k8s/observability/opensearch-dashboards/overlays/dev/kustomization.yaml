@@ -3,12 +3,18 @@ kind: Kustomization
 
 namespace: observability
 
-commonLabels:
-  app.kubernetes.io/name: opensearch-dashboards
-  app.kubernetes.io/instance: opensearch-dashboards-dev
-  env: dev
+resources:
+  - ../../base
+  - http-opensearch-dashboards.yaml
+  - ../../../../auth/authentik-forward-auth
 
-resources: []
+labels:
+  - pairs:
+      app.kubernetes.io/name: opensearch-dashboards
+      app.kubernetes.io/instance: opensearch-dashboards-dev
+      env: dev
+    includeSelectors: true
+    includeTemplates: true
 
 helmCharts:
   - name: opensearch-dashboards

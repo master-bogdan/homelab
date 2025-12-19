@@ -1,4 +1,17 @@
 # --- Basic image & service ---
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: [ "ALL" ]
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+
+podSecurityContext:
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+
 image:
   repository: n8nio/n8n
   tag: "2.0.1"

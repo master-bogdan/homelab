@@ -5,11 +5,16 @@ namespace: platform
 
 resources:
   - ../../base
+  - http-seaweedfs.yaml
+  - http-seaweedfs-filer.yaml
 
-commonLabels:
-  app.kubernetes.io/name: seaweedfs
-  app.kubernetes.io/instance: seaweedfs-dev
-  env: dev
+labels:
+  - pairs:
+      app.kubernetes.io/name: seaweedfs
+      app.kubernetes.io/instance: seaweedfs-dev
+      env: dev
+    includeSelectors: true
+    includeTemplates: true
 
 helmCharts:
   - name: seaweedfs
