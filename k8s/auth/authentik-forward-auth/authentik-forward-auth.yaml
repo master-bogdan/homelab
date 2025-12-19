@@ -5,7 +5,7 @@ metadata:
   namespace: observability
 spec:
   forwardAuth:
-    address: http://ak-outpost-grafana-outpost.auth.svc.cluster.local:9000/outpost.goauthentik.io/auth/traefik
+    address: http://ak-outpost-shared-outpost.auth.svc.cluster.local:9000/outpost.goauthentik.io/auth/traefik
     trustForwardHeader: true
     authResponseHeaders:
       - X-authentik-username

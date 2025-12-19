@@ -10,29 +10,13 @@ spec:
     - name: homelab-gw
       namespace: networking
       sectionName: http
-
   rules:
-    # 1) Bypass ForwardAuth for authentik outpost endpoints (avoid loops)
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /outpost.goauthentik.io/
-      backendRefs:
-        - name: ak-outpost-grafana-outpost
-          namespace: auth
-          port: 9000
-
-    # 2) Protect Grafana with ForwardAuth middleware
     - matches:
         - path:
             type: PathPrefix
             value: /
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: authentik-forward-auth
       backendRefs:
-        - name: grafana
-          port: 80
+        - kind: Service
+          name: ak-outpost-shared-outpost
+          namespace: auth
+          port: 9000

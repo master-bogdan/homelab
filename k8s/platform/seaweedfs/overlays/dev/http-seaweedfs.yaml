@@ -11,23 +11,23 @@ spec:
   hostnames:
     - "storage.homelab.local"
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /personal-website
-      backendRefs:
-        - name: seaweedfs-storage
-          port: 8333
-    - filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: authentik-forward-auth
-      matches:
-        - path:
-            type: PathPrefix
-            value: /internal-artifacts
-      backendRefs:
-        - name: seaweedfs-storage
-          port: 8333
+    # - matches:
+    #     - path:
+    #         type: PathPrefix
+    #         value: /personal-website
+    #   backendRefs:
+    #     - name: seaweedfs-storage
+    #       port: 8333
+    # - filters:
+    #     - type: ExtensionRef
+    #       extensionRef:
+    #         group: traefik.io
+    #         kind: Middleware
+    #         name: authentik-forward-auth
+    #   matches:
+    #     - path:
+    #         type: PathPrefix
+    #         value: /internal-artifacts
+    #   backendRefs:
+    #     - name: seaweedfs-storage
+    #       port: 8333
