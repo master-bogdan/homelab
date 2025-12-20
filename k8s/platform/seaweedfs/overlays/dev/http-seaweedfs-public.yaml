@@ -5,7 +5,7 @@ metadata:
   namespace: platform
 spec:
   hostnames:
-    - seaweedfs.192-168-58-2.sslip.io
+    - storage.192-168-58-2.sslip.io
   parentRefs:
     - name: homelab-gw
       namespace: networking

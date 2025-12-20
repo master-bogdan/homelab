@@ -26,10 +26,15 @@ datasources:
         editable: true
 
 grafana.ini:
+  users:
+    auto_assign_org: true
+    auto_assign_org_role: Admin
+
   auth.proxy:
     enabled: true
     header_name: X-authentik-username
     header_property: username
     auto_sign_up: true
-    headers: Email:X-authentik-email Groups:X-authentik-groups
+    sync_ttl: 0 
+    headers: Email:X-authentik-email Groups:X-authentik-groups Role:X-grafana-role
 
