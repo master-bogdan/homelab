@@ -3,14 +3,6 @@ kind: Kustomization
 
 namespace: observability
 
-labels:
-  - pairs:
-      app.kubernetes.io/name: opensearch-dashboards
-      app.kubernetes.io/instance: opensearch-dashboards-prod
-      env: prod
-    includeSelectors: true
-    includeTemplates: true
-
 resources: []
 
 helmCharts:

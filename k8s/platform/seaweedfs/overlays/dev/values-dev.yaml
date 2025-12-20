@@ -4,7 +4,6 @@ global:
     WEED_CLUSTER_SW_FILER: "seaweedfs-filer-client.platform:8888"
 
 image:
-  repository: chrislusf/seaweedfs
   tag: "4.02"
   pullPolicy: IfNotPresent
 

@@ -3,14 +3,6 @@ kind: Kustomization
 
 namespace: networking
 
-labels:
-  - pairs:
-      app.kubernetes.io/name: traefik
-      app.kubernetes.io/instance: traefik-prod
-      env: prod
-    includeSelectors: true
-    includeTemplates: true
-
 resources:
   - ../../base
 

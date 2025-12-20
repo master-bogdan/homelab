@@ -3,12 +3,6 @@ kind: Kustomization
 
 namespace: auth
 
-labels:
-  - pairs:
-      app.kubernetes.io/name: authentik
-      app.kubernetes.io/instance: authentik-prod
-      env: prod
-
 helmCharts:
   - name: authentik
     repo: https://charts.goauthentik.io

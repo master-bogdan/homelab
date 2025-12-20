@@ -3,14 +3,6 @@ kind: Kustomization
 
 namespace: observability
 
-labels:
-  - pairs:
-      app.kubernetes.io/name: prometheus
-      app.kubernetes.io/instance: prometheus-prod
-      env: prod
-    includeSelectors: true
-    includeTemplates: true
-
 resources: []
 
 helmCharts:

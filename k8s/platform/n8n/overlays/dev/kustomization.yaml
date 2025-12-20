@@ -8,14 +8,6 @@ resources:
   - http-n8n.yaml
   - ../../../../auth/authentik-forward-auth
 
-labels:
-  - pairs:
-      app.kubernetes.io/name: n8n
-      app.kubernetes.io/instance: n8n-dev
-      env: dev
-    includeSelectors: true
-    includeTemplates: true
-
 helmCharts:
   - name: n8n
     repo: https://community-charts.github.io/helm-charts

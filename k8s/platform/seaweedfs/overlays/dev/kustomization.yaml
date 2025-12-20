@@ -8,14 +8,6 @@ resources:
   - http-seaweedfs-dashboard.yaml
   - http-seaweedfs-public.yaml
 
-labels:
-  - pairs:
-      app.kubernetes.io/name: seaweedfs
-      app.kubernetes.io/instance: seaweedfs-dev
-      env: dev
-    includeSelectors: true
-    includeTemplates: true
-
 helmCharts:
   - name: seaweedfs
     repo: https://seaweedfs.github.io/seaweedfs/helm

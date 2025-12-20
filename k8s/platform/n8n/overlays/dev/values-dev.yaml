@@ -12,9 +12,18 @@ podSecurityContext:
   fsGroup: 1000
   fsGroupChangePolicy: OnRootMismatch
 
+extraInitContainers:
+  - name: volume-permissions
+    image: busybox:1.36
+    command: [ "sh", "-c", "chown -R 1000:1000 /home/node/.n8n" ]
+    securityContext:
+      runAsUser: 0
+    volumeMounts:
+      - name: n8n-main-data
+        mountPath: /home/node/.n8n
+
 image:
   repository: n8nio/n8n
-  tag: "2.0.1"
   pullPolicy: IfNotPresent
 
 service:
@@ -70,7 +79,7 @@ worker:
 webhook:
   mode: queue
   count: 1
-  url: ""
+  url: "http://n8n.192-168-58-2.sslip.io:30080"
 
 encryptionKey: "DEV_ENCRYPTION_KEY_32_CHARS_1234"
 

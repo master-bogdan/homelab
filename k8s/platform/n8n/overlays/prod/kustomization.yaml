@@ -3,14 +3,6 @@ kind: Kustomization
 
 namespace: platform
 
-labels:
-  - pairs:
-      app.kubernetes.io/name: n8n
-      app.kubernetes.io/instance: n8n-prod
-      env: prod
-    includeSelectors: true
-    includeTemplates: true
-
 resources: []
 
 helmCharts:

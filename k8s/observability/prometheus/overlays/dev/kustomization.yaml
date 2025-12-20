@@ -6,15 +6,6 @@ namespace: observability
 resources:
   - ../../base
   - http-prometheus.yaml
-  - ../../../../auth/authentik-forward-auth
-
-labels:
-  - pairs:
-      app.kubernetes.io/name: prometheus
-      app.kubernetes.io/instance: prometheus-dev
-      env: dev
-    includeSelectors: true
-    includeTemplates: true
 
 helmCharts:
   - name: prometheus

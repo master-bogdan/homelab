@@ -3,14 +3,6 @@ kind: Kustomization
 
 namespace: observability
 
-labels:
-  - pairs:
-      app.kubernetes.io/name: grafana
-      app.kubernetes.io/instance: grafana-prod
-      env: prod
-    includeSelectors: true
-    includeTemplates: true
-
 resources: []
 
 helmCharts:

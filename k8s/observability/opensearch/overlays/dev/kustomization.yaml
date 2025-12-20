@@ -3,12 +3,6 @@ kind: Kustomization
 
 namespace: observability
 
-labels:
-  - pairs:
-      app.kubernetes.io/name: opensearch
-      app.kubernetes.io/instance: opensearch-dev
-      env: dev
-
 resources: []
 
 helmCharts:

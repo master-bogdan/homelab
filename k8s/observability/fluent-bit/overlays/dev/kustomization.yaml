@@ -3,14 +3,6 @@ kind: Kustomization
 
 namespace: observability
 
-labels:
-  - pairs:
-      app.kubernetes.io/name: fluent-bit
-      app.kubernetes.io/instance: fluent-bit-dev
-      env: dev
-    includeSelectors: true
-    includeTemplates: true
-
 resources: []
 
 helmCharts:

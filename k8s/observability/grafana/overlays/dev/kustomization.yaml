@@ -6,15 +6,6 @@ namespace: observability
 resources:
   - ../../base
   - http-grafana.yaml
-  - ../../../../auth/authentik-forward-auth
-
-labels:
-  - pairs:
-      app.kubernetes.io/name: grafana
-      app.kubernetes.io/instance: grafana-dev
-      env: dev
-    includeSelectors: true
-    includeTemplates: true
 
 helmCharts:
   - name: grafana
