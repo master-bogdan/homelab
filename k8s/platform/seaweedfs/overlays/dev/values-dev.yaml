@@ -1,5 +1,10 @@
-# Use upstream SeaweedFS image (or Chainguard’s hardened one if you want)
+global:
+  extraEnvironmentVars:
+    WEED_CLUSTER_SW_MASTER: "seaweedfs-master.platform:9333"
+    WEED_CLUSTER_SW_FILER: "seaweedfs-filer-client.platform:8888"
+
 image:
+  repository: chrislusf/seaweedfs
   tag: "4.02"
   pullPolicy: IfNotPresent
 
@@ -13,6 +18,8 @@ master:
     storageClass: standard
     size: 1Gi
 
+  extraArgs: []
+
 # --- Volume servers ---
 volume:
   enabled: true
@@ -23,7 +30,9 @@ volume:
     storageClass: standard
     size: 1Gi
 
-# --- Filer (SeaweedFS metadata + APIs) ---
+  extraArgs: []
+
+# --- Filer (metadata + HTTP API) ---
 filer:
   enabled: true
   replicas: 1
@@ -36,33 +45,25 @@ filer:
   extraArgs:
     - "-s3"
 
-# --- Separate S3 gateway section (chart-specific) ---
+  s3:
+    enabled: true
+    enableAuth: true
+    createBuckets:
+      - name: personal-website
+        anonymousRead: true
+      - name: internal-artifacts
+        anonymousRead: false
+
 s3:
   enabled: true
+  replicas: 1
+
   service:
     type: ClusterIP
     port: 8333
 
-  createBuckets:
-    - name: personal-website
-      anonymousRead: true  # static site bucket
-      collections:
-        - name: public
-    - name: internal-artifacts
-      anonymousRead: false
-
-# --- Network Policies ---
-networkPolicy:
-  enabled: true
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              name: networking
-      ports:
-        - protocol: TCP
-          port: 8333
+    enabled: false
 
-# --- Metrics (optional for observability integration later) ---
 metrics:
   enabled: true

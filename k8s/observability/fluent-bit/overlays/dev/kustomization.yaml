@@ -16,7 +16,7 @@ resources: []
 helmCharts:
   - name: fluent-bit
     repo: https://fluent.github.io/helm-charts
-    version: "0.46.7"
+    version: "0.54.0"
     releaseName: fluent-bit
     namespace: observability
     includeCRDs: false

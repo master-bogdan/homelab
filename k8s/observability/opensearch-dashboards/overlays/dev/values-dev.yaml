@@ -1,3 +1,4 @@
+# values-dev.yaml (opensearch-dashboards)
 fullnameOverride: opensearch-dashboards-dev
 
 opensearchHosts: "http://opensearch-cluster-master.observability.svc.cluster.local:9200"
@@ -5,17 +6,13 @@ opensearchHosts: "http://opensearch-cluster-master.observability.svc.cluster.loc
 opensearchSecurity:
   enabled: false
 
+extraEnvs:
+  - name: DISABLE_SECURITY_DASHBOARDS_PLUGIN
+    value: "true"
+
 service:
   type: ClusterIP
   port: 5601
-
-resources:
-  requests:
-    cpu: "100m"
-    memory: "256Mi"
-  limits:
-    cpu: "500m"
-    memory: "512Mi"
 
 ingress:
   enabled: false
