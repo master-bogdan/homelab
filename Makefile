@@ -25,7 +25,6 @@ POSTGRESQL_DIR        := $(DATABASES_DIR)/postgresql
 PLATFORM_DIR          := $(KUBERNETES_DIR)/platform
 AUTHENTIK_DIR         := $(KUBERNETES_DIR)/auth/authentik
 AUTH_DIR              := $(KUBERNETES_DIR)/auth
-AUTHENTIK_FWD_AUTH_DIR:= $(AUTH_DIR)/authentik-forward-auth
 AUTH_REFERENCE_GRANT  := $(AUTH_DIR)/reference-grant.yaml
 N8N_DIR               := $(PLATFORM_DIR)/n8n
 SEAWEEDFS_DIR         := $(PLATFORM_DIR)/seaweedfs
