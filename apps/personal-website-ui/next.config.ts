@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   reactCompiler: true,
-  output: "standalone",
+  output: "export",
   images: {
     unoptimized: true,
   },

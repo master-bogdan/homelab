@@ -5,7 +5,7 @@ metadata:
   namespace: observability
 spec:
   hostnames:
-    - prometheus.192-168-58-2.sslip.io
+    - prometheus.apps.192-168-58-2.sslip.io
   parentRefs:
     - name: homelab-gw
       namespace: networking

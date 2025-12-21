@@ -5,7 +5,7 @@ metadata:
   namespace: auth
 spec:
   hostnames:
-    - auth.192-168-58-2.sslip.io
+    - auth.apps.192-168-58-2.sslip.io
   parentRefs:
     - name: homelab-gw
       namespace: networking

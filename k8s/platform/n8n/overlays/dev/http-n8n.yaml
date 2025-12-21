@@ -5,7 +5,7 @@ metadata:
   namespace: platform
 spec:
   hostnames:
-    - n8n.192-168-58-2.sslip.io
+    - n8n.apps.192-168-58-2.sslip.io
   parentRefs:
     - name: homelab-gw
       namespace: networking

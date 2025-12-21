@@ -6,7 +6,6 @@ namespace: platform
 resources:
   - ../../base
   - http-n8n.yaml
-  - ../../../../auth/authentik-forward-auth
 
 helmCharts:
   - name: n8n

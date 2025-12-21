@@ -5,7 +5,7 @@ metadata:
   namespace: observability
 spec:
   hostnames:
-    - grafana.192-168-58-2.sslip.io
+    - grafana.apps.192-168-58-2.sslip.io
   parentRefs:
     - name: homelab-gw
       namespace: networking
@@ -17,6 +17,5 @@ spec:
             value: /
       backendRefs:
         - kind: Service
-          name: ak-outpost-shared-outpost
-          namespace: auth
-          port: 9000
+          name: grafana
+          port: 80
