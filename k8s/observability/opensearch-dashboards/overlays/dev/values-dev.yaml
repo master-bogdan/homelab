@@ -1,8 +1,7 @@
 # values-dev.yaml (opensearch-dashboards)
 fullnameOverride: opensearch-dashboards-dev
 
-opensearchHosts: "https://opensearch-cluster-master.observability.svc.cluster.local:9200"
-
+opensearchHosts: '[\"https://opensearch-cluster-master.observability.svc.cluster.local:9200\"]'
 opensearchUsername: "admin"
 opensearchPassword: "DevOpensearchAdmin123!"
 
@@ -11,7 +10,6 @@ opensearchSecurity:
 
 config:
   opensearch_dashboards.yml: |
-    # IMPORTANT: must match your secured OpenSearch endpoint
     opensearch.hosts: ["https://opensearch-cluster-master.observability.svc.cluster.local:9200"]
     opensearch.username: "admin"
     opensearch.password: "DevOpensearchAdmin123!"
@@ -25,6 +23,9 @@ config:
     opensearch_security.openid.client_secret: "mqe85y4dvgC3BuyZeAQ8egnxp3DS72zpwQzHcqp607Pt3rSMAZPNnXYWtyDia61aT6IOzCCgURsrm7F7jX2nl5k69uajXbK8DXixl85a1zflByxjimisBspFECTerqgU"
     opensearch_security.openid.scope: "openid profile email"
     opensearch_security.openid.base_redirect_url: "http://opensearch.apps.192-168-58-2.sslip.io:30080"
+
+    # IMPORTANT when Dashboards is served over plain HTTP
+    opensearch_security.cookie.secure: false
 
 service:
   type: ClusterIP

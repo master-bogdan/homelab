@@ -1,8 +1,8 @@
+# values-dev.yaml (opensearch)
 singleNode: true
 replicas: 1
 
 clusterName: "homelab-opensearch-dev"
-
 nodeGroup: "master"
 
 roles:
@@ -10,11 +10,6 @@ roles:
   - ingest
   - data
   - remote_cluster_client
-
-config:
-  opensearch.yml: |
-    cluster.name: homelab-opensearch-dev
-    network.host: 0.0.0.0
 
 extraEnvs:
   - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
@@ -35,7 +30,6 @@ resources:
     cpu: "1"
     memory: "2Gi"
 
-
 httpPort: 9200
 transportPort: 9300
 
@@ -43,6 +37,7 @@ service:
   type: ClusterIP
 
 securityConfig:
+  enabled: true
   config:
     dataComplete: false
     data:
@@ -81,21 +76,37 @@ securityConfig:
                   challenge: false
                 authentication_backend:
                   type: internal
-
-startupProbe:
-  tcpSocket:
-    port: 9200
-  initialDelaySeconds: 60
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 30
-
-livenessProbe:
-  tcpSocket:
-    port: 9200
-  initialDelaySeconds: 120
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-
-antiAffinity: "soft"
+      roles_mapping.yml: |-
+        _meta:
+          type: "rolesmapping"
+          config_version: 2
+        all_access:
+          reserved: false
+          backend_roles:
+            - "admin"
+            - "opensearch-admins"
+            - "authentik Admins"
+          description: "Authentik admins"
+        kibana_user:
+          reserved: false
+          backend_roles:
+            - "kibanauser"
+            - "opensearch-admins"
+            - "opensearch-users"
+            - "authentik Admins"
+          description: "Authentik users with Dashboards access"
+        kibana_server:
+          reserved: false
+          users:
+            - "kibanaserver"
+          description: "OpenSearch Dashboards server user"
+        readall:
+          reserved: false
+          backend_roles:
+            - "readall"
+          description: "Read-only role"
+        manage_snapshots:
+          reserved: false
+          backend_roles:
+            - "snapshotrestore"
+          description: "Snapshot management role"
