@@ -1,9 +1,8 @@
-# Prometheus values (fixed permissions for /data)
-
 server:
   persistentVolume:
     enabled: true
     size: 5Gi
+    storageClass: standard
     accessModes:
       - ReadWriteOnce
 
@@ -12,6 +11,9 @@ server:
   service:
     type: ClusterIP
     port: 80
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9090"
 
   securityContext:
     runAsNonRoot: false
@@ -25,14 +27,22 @@ alertmanager:
   persistentVolume:
     enabled: true
     size: 2Gi
+    storageClass: standard
     accessModes:
       - ReadWriteOnce
 
-pushgateway:
+  service:
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9093"
+
+prometheus-pushgateway:
   enabled: false
 
-nodeExporter:
+prometheus-node-exporter:
   enabled: true
 
-kubeStateMetrics:
+kube-state-metrics:
   enabled: true
+  prometheusScrape: true
+  prometheusScrapePort: 8080

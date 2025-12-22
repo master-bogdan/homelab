@@ -23,7 +23,9 @@ REDIS_DIR             := $(DATABASES_DIR)/redis
 POSTGRESQL_DIR        := $(DATABASES_DIR)/postgresql
 
 PLATFORM_DIR          := $(KUBERNETES_DIR)/platform
-AUTHENTIK_DIR         := $(PLATFORM_DIR)/authentik
+AUTHENTIK_DIR         := $(KUBERNETES_DIR)/auth/authentik
+AUTH_DIR              := $(KUBERNETES_DIR)/auth
+AUTH_REFERENCE_GRANT  := $(AUTH_DIR)/reference-grant.yaml
 N8N_DIR               := $(PLATFORM_DIR)/n8n
 SEAWEEDFS_DIR         := $(PLATFORM_DIR)/seaweedfs
 
@@ -50,6 +52,9 @@ define k8s_apply_or_base
 	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
 	  echo "🚀 Applying: $${ROOT}/overlays/$(ENV)"; \
 	  $(KUBECTL) apply -k "$${ROOT}/overlays/$(ENV)"; \
+	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
+	  echo "🚀 Applying: $${ROOT}"; \
+	  $(KUBECTL) apply -k "$${ROOT}"; \
 	else \
 	  echo "🚀 Applying: $${ROOT}/base"; \
 	  $(KUBECTL) apply -k "$${ROOT}/base" 2>/dev/null || \
@@ -63,6 +68,9 @@ define k8s_delete_or_base
 	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
 	  echo "🔥 Deleting: $${ROOT}/overlays/$(ENV)"; \
 	  $(KUBECTL) delete -k "$${ROOT}/overlays/$(ENV)" --ignore-not-found; \
+	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
+	  echo "🔥 Deleting: $${ROOT}"; \
+	  $(KUBECTL) delete -k "$${ROOT}" --ignore-not-found; \
 	else \
 	  echo "🔥 Deleting: $${ROOT}/base"; \
 	  $(KUBECTL) delete -k "$${ROOT}/base" --ignore-not-found 2>/dev/null || \
@@ -108,6 +116,9 @@ define k8s_dry_run_or_base
 	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
 	  echo "🧪 Dry-run: $${ROOT}/overlays/$(ENV)"; \
 	  $(KUBECTL) apply -k "$${ROOT}/overlays/$(ENV)" --dry-run=client --validate=false -o yaml >/dev/null; \
+	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
+	  echo "🧪 Dry-run: $${ROOT}"; \
+	  $(KUBECTL) apply -k "$${ROOT}" --dry-run=client --validate=false -o yaml >/dev/null; \
 	else \
 	  echo "🧪 Dry-run: $${ROOT}/base"; \
 	  $(KUBECTL) apply -k "$${ROOT}/base" --dry-run=client --validate=false -o yaml >/dev/null 2>/dev/null || \
@@ -151,6 +162,7 @@ endef
 	deploy-namespaces delete-namespaces validate-namespaces \
 	deploy-app deploy-apps delete-app delete-apps validate-app validate-apps \
 	deploy-networking delete-networking validate-networking \
+	deploy-auth delete-auth validate-auth \
 	deploy-platform delete-platform validate-platform \
 	deploy-observability delete-observability validate-observability \
 	deploy-databases delete-databases validate-databases \
@@ -177,6 +189,7 @@ help:
 	@echo "☸  Kubernetes (per layer)"
 	@echo "  deploy-namespaces / delete-namespaces / validate-namespaces"
 	@echo "  deploy-networking  / delete-networking  / validate-networking"
+	@echo "  deploy-auth        / delete-auth        / validate-auth"
 	@echo "  deploy-platform    / delete-platform    / validate-platform"
 	@echo "  deploy-observability / delete-observability / validate-observability"
 	@echo "  deploy-databases   / delete-databases   / validate-databases  (dev only)"
@@ -324,6 +337,30 @@ validate-networking:
 	  $(KUBECTL) kustomize "$${ROOT}/base" >/dev/null; \
 	fi
 	@echo "✅ Networking manifests are valid (env=$(ENV))"
+
+# ============================
+# Auth (Authentik + supporting resources)
+# ============================
+deploy-auth: deploy-namespaces
+	$(call k8s_apply_helm_or_base,$(AUTHENTIK_DIR))
+	$(call k8s_apply_or_base,$(AUTHENTIK_FWD_AUTH_DIR))
+	@echo "🚀 Applying ReferenceGrant: $(AUTH_REFERENCE_GRANT)"
+	@$(KUBECTL) apply -f "$(AUTH_REFERENCE_GRANT)"
+	@echo "🔐 Auth deployed (env=$(ENV))"
+
+delete-auth:
+	@echo "🔥 Deleting ReferenceGrant: $(AUTH_REFERENCE_GRANT)"
+	@$(KUBECTL) delete --ignore-not-found -f "$(AUTH_REFERENCE_GRANT)"
+	$(call k8s_delete_or_base,$(AUTHENTIK_FWD_AUTH_DIR))
+	$(call k8s_delete_helm_or_base,$(AUTHENTIK_DIR))
+	@echo "🧹 Auth deleted (env=$(ENV))"
+
+validate-auth:
+	$(call k8s_dry_run_helm_or_base,$(AUTHENTIK_DIR))
+	$(call k8s_dry_run_or_base,$(AUTHENTIK_FWD_AUTH_DIR))
+	@echo "🧪 Dry-run: $(AUTH_REFERENCE_GRANT)"
+	@$(KUBECTL) apply -f "$(AUTH_REFERENCE_GRANT)" --dry-run=client --validate=false -o yaml >/dev/null
+	@echo "✅ Auth manifests are valid (env=$(ENV))"
 
 # ============================
 # Platform (authentik, n8n, seaweedfs)

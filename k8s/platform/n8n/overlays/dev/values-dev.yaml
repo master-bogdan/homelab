@@ -1,7 +1,19 @@
 # --- Basic image & service ---
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: false
+  runAsNonRoot: false
+  runAsUser: 0
+  runAsGroup: 0
+
+podSecurityContext:
+  fsGroup: 0
+  fsGroupChangePolicy: OnRootMismatch
+
 image:
   repository: n8nio/n8n
-  tag: "2.0.1"
   pullPolicy: IfNotPresent
 
 service:
@@ -17,12 +29,14 @@ nodes:
     enabled: true
 
 main:
+  extraEnvVars:
+    N8N_SECURE_COOKIE: "false"
   persistence:
     enabled: true
     volumeName: "n8n-main-data"
     mountPath: "/home/node/.n8n"
     size: 5Gi
-    accessMode: ReadWriteMany
+    accessMode: ReadWriteOnce
     storageClass: standard
   resources:
     requests:
@@ -53,11 +67,15 @@ worker:
   mode: queue
   count: 1
   concurrency: 5
+  extraEnvVars:
+    N8N_SECURE_COOKIE: "false"
 
 webhook:
   mode: queue
   count: 1
-  url: ""
+  url: "http://n8n.apps.192-168-58-2.sslip.io:30080"
+  extraEnvVars:
+    N8N_SECURE_COOKIE: "false"
 
 encryptionKey: "DEV_ENCRYPTION_KEY_32_CHARS_1234"
 
