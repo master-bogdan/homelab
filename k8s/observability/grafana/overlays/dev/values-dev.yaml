@@ -14,6 +14,10 @@ service:
 ingress:
   enabled: false
 
+env:
+  GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "MPSzs1PogNtyrZBzaQqJbe9Fb0N7vt04nTsPXIZP"
+  GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "QIQ9WmUHrTB63SO1oJiUGridlyWs84bHynF9Gr5Y4YZ4xOgeubz7QTOoI8i8oa5kVwVggiorGWGcEufeEnYEDf2H1Bx2pBe4PRDIxjFu86yxDyQ2UT1Lq5f46KcQpFKK"
+
 datasources:
   datasources.yaml:
     apiVersion: 1
@@ -24,3 +28,25 @@ datasources:
         isDefault: true
         url: "http://prometheus-server.observability.svc.cluster.local"
         editable: true
+
+grafana.ini:
+  server:
+    root_url: "http://grafana.apps.192-168-58-2.sslip.io:30080"
+    serve_from_sub_path: false
+
+  auth.generic_oauth:
+    enabled: true
+    name: authentik
+    allow_sign_up: true
+    client_id: $__env{GF_AUTH_GENERIC_OAUTH_CLIENT_ID}
+    client_secret: $__env{GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET}
+    scopes: "openid profile email groups"
+    groups_attribute_path: groups
+    role_attribute_path: >
+      contains(groups[*], 'authentik Admins') && 'GrafanaAdmin' ||
+      'Viewer'
+
+    allow_assign_grafana_admin: true
+    auth_url: "http://auth.apps.192-168-58-2.sslip.io:30080/application/o/authorize/"
+    token_url: "http://auth.apps.192-168-58-2.sslip.io:30080/application/o/token/"
+    api_url: "http://auth.apps.192-168-58-2.sslip.io:30080/application/o/userinfo/"

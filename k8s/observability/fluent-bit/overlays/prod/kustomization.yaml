@@ -3,11 +3,6 @@ kind: Kustomization
 
 namespace: observability
 
-commonLabels:
-  app.kubernetes.io/name: fluent-bit
-  app.kubernetes.io/instance: fluent-bit-prod
-  env: prod
-
 resources: []
 
 helmCharts:

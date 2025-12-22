@@ -3,15 +3,14 @@ kind: Kustomization
 
 namespace: platform
 
-commonLabels:
-  app.kubernetes.io/name: n8n
-  app.kubernetes.io/instance: n8n-dev
-  env: dev
+resources:
+  - ../../base
+  - http-n8n.yaml
 
 helmCharts:
   - name: n8n
     repo: https://community-charts.github.io/helm-charts
-    version: "0.1.4"
+    version: "1.16.10"
     releaseName: n8n
     namespace: platform
     includeCRDs: true

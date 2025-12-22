@@ -1,22 +1,62 @@
+# values-dev.yaml (opensearch-dashboards)
 fullnameOverride: opensearch-dashboards-dev
 
-opensearchHosts: 
-  - "http://opensearch-cluster-master.observability.svc.cluster.local:9200"
+opensearchHosts: '[\"https://opensearch-cluster-master.observability.svc.cluster.local:9200\"]'
+opensearchUsername: "admin"
+opensearchPassword: "DevOpensearchAdmin123!"
 
 opensearchSecurity:
-  enabled: false
+  enabled: true
+
+config:
+  opensearch_dashboards.yml: |
+    opensearch.hosts: ["https://opensearch-cluster-master.observability.svc.cluster.local:9200"]
+    opensearch.username: "admin"
+    opensearch.password: "DevOpensearchAdmin123!"
+    opensearch.ssl.verificationMode: none
+
+    opensearch.requestHeadersAllowlist: ["Authorization", "securitytenant"]
+
+    opensearch_security.auth.type: "openid"
+    opensearch_security.openid.connect_url: "http://auth.apps.192-168-58-2.sslip.io:30080/application/o/opensearch/.well-known/openid-configuration"
+    opensearch_security.openid.client_id: "dNgxJIOxOrEExrV3Pxnd1eqsZJLU1aOTnzBoAux3"
+    opensearch_security.openid.client_secret: "mqe85y4dvgC3BuyZeAQ8egnxp3DS72zpwQzHcqp607Pt3rSMAZPNnXYWtyDia61aT6IOzCCgURsrm7F7jX2nl5k69uajXbK8DXixl85a1zflByxjimisBspFECTerqgU"
+    opensearch_security.openid.scope: "openid profile email"
+    opensearch_security.openid.base_redirect_url: "http://opensearch.apps.192-168-58-2.sslip.io:30080"
+
+    # IMPORTANT when Dashboards is served over plain HTTP
+    opensearch_security.cookie.secure: false
 
 service:
   type: ClusterIP
   port: 5601
 
-resources:
-  requests:
-    cpu: "100m"
-    memory: "256Mi"
-  limits:
-    cpu: "500m"
-    memory: "512Mi"
-
 ingress:
   enabled: false
+
+startupProbe:
+  tcpSocket:
+    port: 5601
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+  successThreshold: 1
+  initialDelaySeconds: 60
+
+livenessProbe:
+  tcpSocket:
+    port: 5601
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 10
+  successThreshold: 1
+  initialDelaySeconds: 60
+
+readinessProbe:
+  tcpSocket:
+    port: 5601
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 10
+  successThreshold: 1
+  initialDelaySeconds: 30

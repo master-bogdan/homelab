@@ -3,18 +3,13 @@ kind: Kustomization
 
 namespace: networking
 
-commonLabels:
-  app.kubernetes.io/name: traefik
-  app.kubernetes.io/instance: traefik-dev
-  env: dev
-
 resources:
   - ../../base
 
 helmCharts:
   - name: traefik
     repo: https://traefik.github.io/charts
-    version: "34.2.1"
+    version: "37.4.0"
     releaseName: traefik
     namespace: networking
     includeCRDs: true

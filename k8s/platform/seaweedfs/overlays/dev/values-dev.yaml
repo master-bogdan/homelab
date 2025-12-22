@@ -1,0 +1,68 @@
+global:
+  extraEnvironmentVars:
+    WEED_CLUSTER_SW_MASTER: "seaweedfs-master.platform:9333"
+    WEED_CLUSTER_SW_FILER: "seaweedfs-filer-client.platform:8888"
+
+image:
+  tag: "4.02"
+  pullPolicy: IfNotPresent
+
+# --- Master servers ---
+master:
+  enabled: true
+  replicas: 1
+
+  persistence:
+    enabled: true
+    storageClass: standard
+    size: 1Gi
+
+  extraArgs: []
+
+# --- Volume servers ---
+volume:
+  enabled: true
+  replicas: 1
+
+  persistence:
+    enabled: true
+    storageClass: standard
+    size: 1Gi
+
+  extraArgs: []
+
+# --- Filer (metadata + HTTP API) ---
+filer:
+  enabled: true
+  replicas: 1
+
+  persistence:
+    enabled: true
+    storageClass: standard
+    size: 1Gi
+
+  extraArgs:
+    - "-s3"
+
+  s3:
+    enabled: true
+    enableAuth: true
+    createBuckets:
+      - name: personal-website
+        anonymousRead: true
+      - name: internal-artifacts
+        anonymousRead: false
+
+s3:
+  enabled: true
+  replicas: 1
+
+  service:
+    type: ClusterIP
+    port: 8333
+
+  ingress:
+    enabled: false
+
+metrics:
+  enabled: true

@@ -5,10 +5,6 @@ namespace: networking
 
 resources:
   - ../../base
-  - routes/http-personal-website-ui.yaml
-  - routes/http-ephermal-notes-api.yaml
-  - routes/http-authentik.yaml
-  - routes/http-n8n.yaml
-  - routes/http-minio-console.yaml
-  - routes/http-grafana.yaml
-  - routes/http-opensearch-dashboards.yaml
+
+patches:
+  - path: gateway.yaml

@@ -3,15 +3,14 @@ kind: Kustomization
 
 namespace: observability
 
-commonLabels:
-  app.kubernetes.io/name: prometheus
-  app.kubernetes.io/instance: prometheus-dev
-  env: dev
+resources:
+  - ../../base
+  - http-prometheus.yaml
 
 helmCharts:
   - name: prometheus
     repo: https://prometheus-community.github.io/helm-charts
-    version: "27.0.0"
+    version: "27.50.0"
     releaseName: prometheus
     namespace: observability
     includeCRDs: false

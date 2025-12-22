@@ -3,11 +3,6 @@ kind: Kustomization
 
 namespace: observability
 
-commonLabels:
-  app.kubernetes.io/name: grafana
-  app.kubernetes.io/instance: grafana-prod
-  env: prod
-
 resources: []
 
 helmCharts:
