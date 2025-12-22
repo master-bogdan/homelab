@@ -15,7 +15,7 @@ spec:
             value: /api/notes
         - path:
             type: PathPrefix
-            value: /swagger 
+            value: /swagger
       backendRefs:
         - name: ephermal-notes-api-service
           port: 80
