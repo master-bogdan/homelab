@@ -1,16 +1,20 @@
+// Package postgresql provides postgresql connection and utils
 package postgresql
 
 import (
-	"database/sql"
-	"fmt"
+	"context"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
+	"github.com/master-bogdan/estimate-room-api/config"
 )
 
-func Connect(connStr string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", connStr)
+func Connect(cfg *config.Config) (*pgxpool.Pool, error) {
+	dbpool, err := pgxpool.New(context.Background(), cfg.DB.DatabaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open db: %w", err)
+		return nil, err
 	}
+	defer dbpool.Close()
 
-	return db, nil
+	return dbpool, nil
 }

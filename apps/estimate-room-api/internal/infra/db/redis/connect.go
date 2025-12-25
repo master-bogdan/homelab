@@ -1,15 +1,21 @@
-package memory_db
+// Package redis provides redis connection and utils
+package redis
 
 import (
 	"context"
 	"time"
 
-	"github.com/master-bogdan/ephermal-notes/pkg/config"
+	"github.com/master-bogdan/estimate-room-api/config"
 	"github.com/redis/go-redis/v9"
 )
 
 func Connect(cfg *config.Config) (*redis.Client, error) {
-	rdb := redis.NewClient(&cfg.Db.Redis)
+	opts, err := redis.ParseURL(cfg.DB.RedisURL)
+	if err != nil {
+		return nil, err
+	}
+
+	rdb := redis.NewClient(opts)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
