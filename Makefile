@@ -7,6 +7,22 @@ REGISTRY          ?= docker.io/masterbogdan0
 TAG               ?= latest
 ENV               ?= dev              # dev | prod
 APP               ?=                  # single app name, e.g. personal-website-ui
+# ---- UI static site publish (dev defaults) ----
+RCLONE                ?= rclone
+UI_NAME_PATTERN       ?= ui
+UI_BUILD_OUTPUT_DIRS  ?= build dist out
+SEAWEEDFS_S3_REGION   ?= us-east-1
+SEAWEEDFS_S3_BUCKET     ?= $(APP)
+RCLONE_REMOTE         ?= SEAWEEDFS
+RCLONE_REMOTE_ENV     ?= SEAWEEDFS
+RCLONE_SYNC_ARGS      ?= --checksum
+RCLONE_FORCE_PATH_STYLE ?= true
+RCLONE_NO_CHECK_BUCKET  ?= true
+ifeq ($(ENV),dev)
+SEAWEEDFS_S3_ENDPOINT ?= http://storage.apps.192-168-58-2.sslip.io:30080
+SEAWEEDFS_S3_ACCESS_KEY ?= yZSEuJpiHbYcXHxU9Wci
+SEAWEEDFS_S3_SECRET_KEY ?= Bp3vkTLC5BxxeqYFADlYvU807I4ryGUFzExB5k4N
+endif
 # ---- Paths ----
 APPS_DIR              := apps
 KUBERNETES_DIR        := k8s
@@ -158,6 +174,7 @@ endef
 .PHONY: help apps-list \
 	docker-build docker-push docker-build-push \
 	docker-build-all docker-push-all docker-build-push-all \
+	deploy-ui-list deploy-ui-build deploy-ui-build-all deploy-ui-upload deploy-ui-upload-all deploy-ui deploy-ui-all \
 	deploy-namespaces delete-namespaces validate-namespaces \
 	deploy-app deploy-apps delete-app delete-apps validate-app validate-apps \
 	deploy-networking delete-networking validate-networking \
@@ -184,6 +201,14 @@ help:
 	@echo "  docker-build-all                   # Build all images"
 	@echo "  docker-push-all                    # Push all images"
 	@echo "  docker-build-push-all              # Build + push all images"
+	@echo "🎨 UI (static -> SeaweedFS)"
+	@echo "  deploy-ui-list                     # List UI apps (name contains UI, no Dockerfile)"
+	@echo "  deploy-ui-build    APP=<name>      # Build UI app"
+	@echo "  deploy-ui-upload   APP=<name>      # rclone build output to SeaweedFS"
+	@echo "  deploy-ui          APP=<name>      # Build + upload UI app"
+	@echo "  deploy-ui-build-all               # Build all UI apps"
+	@echo "  deploy-ui-upload-all              # Upload all UI apps"
+	@echo "  deploy-ui-all                     # Build + upload all UI apps"
 	@echo "☸  Kubernetes (per layer)"
 	@echo "  deploy-namespaces / delete-namespaces / validate-namespaces"
 	@echo "  deploy-networking  / delete-networking  / validate-networking"
@@ -211,6 +236,116 @@ help:
 
 apps-list:
 	@echo "$(APPS)"
+
+# ============================
+# UI static site build + publish (SeaweedFS rclone)
+# ============================
+deploy-ui-list:
+	@for app in $(APPS); do \
+	  if printf "%s" "$$app" | grep -qi "$(UI_NAME_PATTERN)"; then \
+	    if [ ! -f "$(APPS_DIR)/$$app/Dockerfile" ] && [ ! -f "$(APPS_DIR)/$$app/deployments/docker/Dockerfile" ]; then \
+	      echo "$$app"; \
+	    fi; \
+	  fi; \
+	done
+
+deploy-ui-build:
+	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
+	@APP_DIR="$(APPS_DIR)/$(APP)"; \
+	if [ ! -d "$$APP_DIR" ]; then echo "❌ $$APP_DIR not found"; exit 1; fi; \
+	if ! printf "%s" "$(APP)" | grep -qi "$(UI_NAME_PATTERN)"; then \
+	  echo "❌ $(APP) is not a UI app (name must contain UI)"; exit 1; \
+	fi; \
+	if [ -f "$$APP_DIR/Dockerfile" ] || [ -f "$$APP_DIR/deployments/docker/Dockerfile" ]; then \
+	  echo "❌ $(APP) has a Dockerfile; static UI build is skipped"; exit 1; \
+	fi; \
+	if [ ! -f "$$APP_DIR/package.json" ]; then \
+	  echo "❌ $$APP_DIR/package.json not found"; exit 1; \
+	fi; \
+	if [ -f "$$APP_DIR/pnpm-lock.yaml" ]; then PM="pnpm"; \
+	elif [ -f "$$APP_DIR/yarn.lock" ]; then PM="yarn"; \
+	else PM="npm"; fi; \
+	echo "🎨 Building UI $$APP_DIR (using $$PM)"; \
+	cd "$$APP_DIR" && $$PM run build
+
+deploy-ui-build-all:
+	@for app in $(APPS); do \
+	  if printf "%s" "$$app" | grep -qi "$(UI_NAME_PATTERN)"; then \
+	    if [ ! -f "$(APPS_DIR)/$$app/Dockerfile" ] && [ ! -f "$(APPS_DIR)/$$app/deployments/docker/Dockerfile" ]; then \
+	      APP="$$app" $(MAKE) --no-print-directory deploy-ui-build; \
+	    fi; \
+	  fi; \
+	done
+	@echo "✅ Built all UI apps"
+
+deploy-ui-upload:
+	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
+	@APP_DIR="$(APPS_DIR)/$(APP)"; \
+	if [ ! -d "$$APP_DIR" ]; then echo "❌ $$APP_DIR not found"; exit 1; fi; \
+	if ! printf "%s" "$(APP)" | grep -qi "$(UI_NAME_PATTERN)"; then \
+	  echo "❌ $(APP) is not a UI app (name must contain UI)"; exit 1; \
+	fi; \
+	if [ -f "$$APP_DIR/Dockerfile" ] || [ -f "$$APP_DIR/deployments/docker/Dockerfile" ]; then \
+	  echo "❌ $(APP) has a Dockerfile; static UI upload is skipped"; exit 1; \
+	fi; \
+	OUT_DIR=""; \
+	for candidate in $(UI_BUILD_OUTPUT_DIRS); do \
+	  if [ -d "$$APP_DIR/$$candidate" ]; then OUT_DIR="$$APP_DIR/$$candidate"; break; fi; \
+	done; \
+	if [ -z "$$OUT_DIR" ]; then \
+	  echo "❌ No build output dir found for $(APP). Expected one of: $(UI_BUILD_OUTPUT_DIRS)"; \
+	  exit 1; \
+	fi; \
+	if ! command -v "$(RCLONE)" >/dev/null 2>&1; then \
+	  echo "❌ rclone is required but not installed"; exit 1; \
+	fi; \
+	ENDPOINT="$(SEAWEEDFS_S3_ENDPOINT)"; \
+	ACCESS_KEY="$(SEAWEEDFS_S3_ACCESS_KEY)"; \
+	SECRET_KEY="$(SEAWEEDFS_S3_SECRET_KEY)"; \
+	REGION="$(SEAWEEDFS_S3_REGION)"; \
+	BUCKET="$(SEAWEEDFS_S3_BUCKET)"; \
+	REMOTE="$(RCLONE_REMOTE)"; \
+	REMOTE_ENV="$(RCLONE_REMOTE_ENV)"; \
+	if [ -z "$$ENDPOINT" ]; then echo "❌ SEAWEEDFS_S3_ENDPOINT is required"; exit 1; fi; \
+	if [ -z "$$ACCESS_KEY" ] || [ -z "$$SECRET_KEY" ]; then \
+	  echo "❌ SEAWEEDFS_S3_ACCESS_KEY and SEAWEEDFS_S3_SECRET_KEY are required"; exit 1; \
+	fi; \
+	if [ -z "$$BUCKET" ]; then echo "❌ SEAWEEDFS_S3_BUCKET is required"; exit 1; fi; \
+	echo "📦 rclone $$OUT_DIR to $$REMOTE:$$BUCKET"; \
+	export RCLONE_CONFIG_$${REMOTE_ENV}_TYPE=s3; \
+	export RCLONE_CONFIG_$${REMOTE_ENV}_PROVIDER=Other; \
+	export RCLONE_CONFIG_$${REMOTE_ENV}_ENDPOINT="$$ENDPOINT"; \
+	export RCLONE_CONFIG_$${REMOTE_ENV}_ACCESS_KEY_ID="$$ACCESS_KEY"; \
+	export RCLONE_CONFIG_$${REMOTE_ENV}_SECRET_ACCESS_KEY="$$SECRET_KEY"; \
+	export RCLONE_CONFIG_$${REMOTE_ENV}_REGION="$$REGION"; \
+	export RCLONE_CONFIG_$${REMOTE_ENV}_FORCE_PATH_STYLE="$(RCLONE_FORCE_PATH_STYLE)"; \
+	export RCLONE_CONFIG_$${REMOTE_ENV}_NO_CHECK_BUCKET="$(RCLONE_NO_CHECK_BUCKET)"; \
+	$(RCLONE) sync "$$OUT_DIR" "$$REMOTE:$$BUCKET" $(RCLONE_SYNC_ARGS)
+
+deploy-ui-upload-all:
+	@for app in $(APPS); do \
+	  if printf "%s" "$$app" | grep -qi "$(UI_NAME_PATTERN)"; then \
+	    if [ ! -f "$(APPS_DIR)/$$app/Dockerfile" ] && [ ! -f "$(APPS_DIR)/$$app/deployments/docker/Dockerfile" ]; then \
+	      APP="$$app" $(MAKE) --no-print-directory deploy-ui-upload; \
+	    fi; \
+	  fi; \
+	done
+	@echo "✅ Uploaded all UI apps"
+
+deploy-ui:
+	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
+	@$(MAKE) --no-print-directory deploy-ui-build APP=$(APP)
+	@$(MAKE) --no-print-directory deploy-ui-upload APP=$(APP)
+
+deploy-ui-all:
+	@for app in $(APPS); do \
+	  if printf "%s" "$$app" | grep -qi "$(UI_NAME_PATTERN)"; then \
+	    if [ ! -f "$(APPS_DIR)/$$app/Dockerfile" ] && [ ! -f "$(APPS_DIR)/$$app/deployments/docker/Dockerfile" ]; then \
+	      APP="$$app" $(MAKE) --no-print-directory deploy-ui; \
+	    fi; \
+	  fi; \
+	done
+	@echo "✅ Deployed all UI apps"
 
 # ============================
 # Docker (no pattern wrappers)
@@ -469,10 +604,10 @@ validate-all: clean-charts
 # ============================
 # Everything (dev/prod)
 # ============================
-deploy-all-dev: validate-all deploy-namespaces deploy-networking deploy-databases deploy-platform deploy-observability deploy-apps
+deploy-all-dev: validate-all deploy-namespaces deploy-networking deploy-databases deploy-platform deploy-observability deploy-apps deploy-ui-all
 	@echo "✅ Full stack applied for dev (with databases)"
 
-deploy-all-prod: validate-all deploy-namespaces deploy-networking deploy-platform deploy-observability deploy-apps
+deploy-all-prod: validate-all deploy-namespaces deploy-networking deploy-platform deploy-observability deploy-apps deploy-ui-all
 	@echo "✅ Full stack applied for prod (no databases)"
 
 deploy-all:

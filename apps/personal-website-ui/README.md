@@ -56,7 +56,6 @@ npm run dev
 
 - \`npm run dev\` - Start development server
 - \`npm run build\` - Build for production
-- \`npm run build:static\` - Build static export for \`/personal-website\`
 - \`npm run start\` - Start production server
 - \`npm run lint\` - Run ESLint
 
