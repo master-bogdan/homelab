@@ -3,10 +3,6 @@ global:
     WEED_CLUSTER_SW_MASTER: "seaweedfs-master.platform:9333"
     WEED_CLUSTER_SW_FILER: "seaweedfs-filer-client.platform:8888"
 
-image:
-  tag: "4.02"
-  pullPolicy: IfNotPresent
-
 # --- Master servers ---
 master:
   enabled: true
@@ -41,17 +37,10 @@ filer:
     storageClass: standard
     size: 1Gi
 
-  extraArgs:
-    - "-s3"
+  extraArgs: []
 
   s3:
-    enabled: true
-    enableAuth: true
-    createBuckets:
-      - name: personal-website
-        anonymousRead: true
-      - name: internal-artifacts
-        anonymousRead: false
+    enabled: false
 
 s3:
   enabled: true
@@ -63,6 +52,19 @@ s3:
 
   ingress:
     enabled: false
+
+  enableAuth: true
+
+  createBuckets:
+    - name: personal-website-ui
+      anonymousRead: true
+    - name: internal-artifacts
+      anonymousRead: false
+
+admin:
+  enabled: true
+  port: 23646
+  grpcPort: 33646
 
 metrics:
   enabled: true

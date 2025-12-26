@@ -4,6 +4,8 @@ metadata:
   name: http-ephermal-notes-api
   namespace: dev
 spec:
+  hostnames:
+    - notes.192-168-58-2.sslip.io
   parentRefs:
     - name: homelab-gw
       namespace: networking
@@ -12,10 +14,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /api/notes
-        - path:
-            type: PathPrefix
-            value: /swagger
+            value: /
       backendRefs:
         - name: ephermal-notes-api-service
           port: 80

@@ -13,28 +13,8 @@ spec:
   rules:
     - matches:
         - path:
-            type: Exact
-            value: /
-      filters:
-        - type: URLRewrite
-          urlRewrite:
-            path:
-              type: ReplaceFullPath
-              replaceFullPath: /personal-website/index.html
-      backendRefs:
-        - name: seaweedfs-s3
-          port: 8333
-
-    - matches:
-        - path:
             type: PathPrefix
             value: /
-      filters:
-        - type: URLRewrite
-          urlRewrite:
-            path:
-              type: ReplacePrefixMatch
-              replacePrefixMatch: /personal-website/
       backendRefs:
         - name: seaweedfs-s3
           port: 8333

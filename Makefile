@@ -7,7 +7,6 @@ REGISTRY          ?= docker.io/masterbogdan0
 TAG               ?= latest
 ENV               ?= dev              # dev | prod
 APP               ?=                  # single app name, e.g. personal-website-ui
-
 # ---- Paths ----
 APPS_DIR              := apps
 KUBERNETES_DIR        := k8s
@@ -169,7 +168,7 @@ endef
 	validate-all \
 	deploy-all deploy-all-dev deploy-all-prod \
 	delete-all delete-all-dev delete-all-prod \
-	clean-charts
+	clean-charts \
 
 # ============================
 # Help
@@ -185,7 +184,6 @@ help:
 	@echo "  docker-build-all                   # Build all images"
 	@echo "  docker-push-all                    # Push all images"
 	@echo "  docker-build-push-all              # Build + push all images"
-	@echo ""
 	@echo "☸  Kubernetes (per layer)"
 	@echo "  deploy-namespaces / delete-namespaces / validate-namespaces"
 	@echo "  deploy-networking  / delete-networking  / validate-networking"
@@ -274,6 +272,7 @@ validate-namespaces:
 # ============================
 deploy-app:
 	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
+	@if [ ! -d "$(KUBERNETES_DIR)/apps/$(APP)" ]; then echo "⚠  Skipping $(APP): no k8s manifests"; exit 0; fi
 	@$(MAKE) --no-print-directory docker-build-push APP=$(APP)
 	$(call k8s_apply_or_base,$(KUBERNETES_DIR)/apps/$(APP))
 	@echo "✅ Deployed app: $(APP) (env=$(ENV))"
@@ -281,30 +280,35 @@ deploy-app:
 deploy-apps:
 	@for app in $(APPS); do \
 	  echo "🚀 Deploying app $$app (env=$(ENV))"; \
+	  if [ ! -d "$(KUBERNETES_DIR)/apps/$$app" ]; then echo "⚠  Skipping $$app: no k8s manifests"; continue; fi; \
 	  APP="$$app" $(MAKE) --no-print-directory deploy-app; \
 	done
 	@echo "🎉 All apps deployed (env=$(ENV))"
 
 delete-app:
 	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
+	@if [ ! -d "$(KUBERNETES_DIR)/apps/$(APP)" ]; then echo "⚠  Skipping $(APP): no k8s manifests"; exit 0; fi
 	$(call k8s_delete_or_base,$(KUBERNETES_DIR)/apps/$(APP))
 	@echo "🗑  Deleted app: $(APP) (env=$(ENV))"
 
 delete-apps:
 	@for app in $(APPS); do \
 	  echo "🧹 Deleting app $$app (env=$(ENV))"; \
+	  if [ ! -d "$(KUBERNETES_DIR)/apps/$$app" ]; then echo "⚠  Skipping $$app: no k8s manifests"; continue; fi; \
 	  APP="$$app" $(MAKE) --no-print-directory delete-app; \
 	done
 	@echo "🧹 All apps deleted (env=$(ENV))"
 
 validate-app:
 	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
+	@if [ ! -d "$(KUBERNETES_DIR)/apps/$(APP)" ]; then echo "⚠  Skipping $(APP): no k8s manifests"; exit 0; fi
 	$(call k8s_dry_run_or_base,$(KUBERNETES_DIR)/apps/$(APP))
 	@echo "✅ App $(APP) manifests are valid (env=$(ENV))"
 
 validate-apps:
 	@for app in $(APPS); do \
 	  echo "🧪 Validating app $$app (env=$(ENV))"; \
+	  if [ ! -d "$(KUBERNETES_DIR)/apps/$$app" ]; then echo "⚠  Skipping $$app: no k8s manifests"; continue; fi; \
 	  APP="$$app" $(MAKE) --no-print-directory validate-app; \
 	done
 	@echo "✅ All apps manifest validation passed (env=$(ENV))"
