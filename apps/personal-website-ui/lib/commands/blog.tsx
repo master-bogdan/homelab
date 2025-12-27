@@ -11,7 +11,7 @@ export const blogCommand = (args?: string[]): React.ReactNode => {
     const posts = getBlogPosts()
     return (
       <Box>
-        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00aaff", mb: 1 }}>Blog Posts:</Typography>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#18c7ff", mb: 1 }}>Blog Posts:</Typography>
         {posts.map((post, index) => (
           <Box key={post.slug} sx={{ mb: 1 }}>
             <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00ff00" }}>
@@ -35,7 +35,7 @@ export const blogCommand = (args?: string[]): React.ReactNode => {
                   padding: 0,
                   "&:hover": {
                     textDecoration: "underline",
-                    color: "#00aaff",
+                    color: "#18c7ff",
                   },
                 }}
               >
@@ -68,7 +68,7 @@ export const blogCommand = (args?: string[]): React.ReactNode => {
 
   return (
     <Box>
-      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00aaff", mb: 1 }}>{post.title}</Typography>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#18c7ff", mb: 1 }}>{post.title}</Typography>
       <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "#888888", mb: 2 }}>
         Published: {post.date}
       </Typography>
@@ -77,7 +77,7 @@ export const blogCommand = (args?: string[]): React.ReactNode => {
           "& h1": {
             fontFamily: "var(--font-mono)",
             fontSize: "18px",
-            color: "#00aaff",
+            color: "#18c7ff",
             mb: 1,
             mt: 2,
           },
@@ -128,7 +128,7 @@ export const blogCommand = (args?: string[]): React.ReactNode => {
             padding: 0,
           },
           "& a": {
-            color: "#00aaff",
+            color: "#18c7ff",
             textDecoration: "none",
             "&:hover": {
               textDecoration: "underline",

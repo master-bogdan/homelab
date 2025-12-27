@@ -28,54 +28,54 @@ export const neofetchCommand = (): React.ReactNode => {
         </Typography>
       </Box>
       <Box sx={{ flex: "1 1 auto", minWidth: "300px" }}>
-        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00aaff", fontWeight: "bold" }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#18c7ff", fontWeight: "bold" }}>
           bogdan@homelab
         </Typography>
         <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#888888" }}>---------------</Typography>
         <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
-          <Box component="span" sx={{ color: "#00aaff" }}>
+          <Box component="span" sx={{ color: "#18c7ff" }}>
             OS:
           </Box>{" "}
           Ubuntu 22.04 LTS x86_64
         </Typography>
         <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
-          <Box component="span" sx={{ color: "#00aaff" }}>
+          <Box component="span" sx={{ color: "#18c7ff" }}>
             Host:
           </Box>{" "}
           Personal Portfolio
         </Typography>
         <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
-          <Box component="span" sx={{ color: "#00aaff" }}>
+          <Box component="span" sx={{ color: "#18c7ff" }}>
             Kernel:
           </Box>{" "}
           6.2.0-terminal
         </Typography>
         <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
-          <Box component="span" sx={{ color: "#00aaff" }}>
+          <Box component="span" sx={{ color: "#18c7ff" }}>
             Uptime:
           </Box>{" "}
           {uptimeSec} seconds
         </Typography>
         <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
-          <Box component="span" sx={{ color: "#00aaff" }}>
+          <Box component="span" sx={{ color: "#18c7ff" }}>
             Shell:
           </Box>{" "}
           bash 5.1.16
         </Typography>
         <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
-          <Box component="span" sx={{ color: "#00aaff" }}>
+          <Box component="span" sx={{ color: "#18c7ff" }}>
             Terminal:
           </Box>{" "}
           xterm-256color
         </Typography>
         <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
-          <Box component="span" sx={{ color: "#00aaff" }}>
+          <Box component="span" sx={{ color: "#18c7ff" }}>
             CPU:
           </Box>{" "}
           TypeScript Engine (8) @ 3.9GHz
         </Typography>
         <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
-          <Box component="span" sx={{ color: "#00aaff" }}>
+          <Box component="span" sx={{ color: "#18c7ff" }}>
             Memory:
           </Box>{" "}
           {Math.floor(Math.random() * 2000 + 1000)}MiB / 16384MiB
@@ -127,7 +127,7 @@ export const hackCommand = (): React.ReactNode => {
           sx={{
             fontFamily: "var(--font-mono)",
             fontSize: "14px",
-            color: index === hackLines.length - 3 ? "#00ff00" : "#00aaff",
+            color: index === hackLines.length - 3 ? "#00ff00" : "#18c7ff",
             mb: 0.5,
           }}
         >
@@ -201,7 +201,7 @@ export const matrixCommand = (): React.ReactNode => {
           {line}
         </Typography>
       ))}
-      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00aaff", mt: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#18c7ff", mt: 1 }}>
         Wake up, Neo... The Matrix has you...
       </Typography>
     </Box>
@@ -220,7 +220,7 @@ export const rickrollCommand = (): React.ReactNode => {
       <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ff00ff", mb: 1 }}>
         ♪ Never gonna run around and desert you ♪
       </Typography>
-      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00aaff", mt: 2 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#18c7ff", mt: 2 }}>
         You just got rickrolled! 🎵
       </Typography>
       <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#888888", mt: 1 }}>
@@ -248,7 +248,7 @@ export const coffeeCommand = (): React.ReactNode => {
     \\_____________________/
         `}
       </Typography>
-      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00aaff", mt: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#18c7ff", mt: 1 }}>
         ☕ Coffee break! Refueling developer energy...
       </Typography>
     </Box>

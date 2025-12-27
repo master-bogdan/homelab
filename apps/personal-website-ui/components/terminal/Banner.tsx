@@ -1,17 +1,19 @@
 import type React from "react"
-import Image from 'next/image';
-
-const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "")
-const src = `${basePath}/banner.svg`
+import { Box } from "@mui/material"
 
 export const Banner: React.FC = () => {
   return (
-    <Image
-      priority
-      src={src}
-      height={32}
-      width={32}
-      alt="Follow us on Twitter"
+    <Box
+      component="img"
+      src="banner.svg"
+      alt="Bogdan Shchavinskyi banner"
+      sx={{
+        display: "block",
+        width: "100%",
+        maxWidth: "860px",
+        height: "auto",
+        mb: 2,
+      }}
     />
   )
 }

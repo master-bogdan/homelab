@@ -46,7 +46,7 @@ export const helpCommand = (args: string[]): React.ReactNode => {
         sx={{
           fontFamily: "var(--font-mono)",
           fontSize: "14px",
-          color: "#00aaff",
+          color: "#18c7ff",
           mb: 1,
         }}>
         Available Commands:

@@ -354,8 +354,28 @@ deploy-ui-upload:
 		sh -c 'set -e; cd "$$UPLOAD_DIR" && find . -type f | while IFS= read -r f; do \
 			rel="$${f#./}"; \
 			url="$$SEAWEED_BASE/$$BUCKET/$$APP/$$rel"; \
+			content_type="application/octet-stream"; \
+			case "$$rel" in \
+				*.html) content_type="text/html; charset=utf-8" ;; \
+				*.css) content_type="text/css; charset=utf-8" ;; \
+				*.js|*.mjs) content_type="application/javascript; charset=utf-8" ;; \
+				*.json|*.map) content_type="application/json; charset=utf-8" ;; \
+				*.txt) content_type="text/plain; charset=utf-8" ;; \
+				*.svg) content_type="image/svg+xml" ;; \
+				*.png) content_type="image/png" ;; \
+				*.jpg|*.jpeg) content_type="image/jpeg" ;; \
+				*.gif) content_type="image/gif" ;; \
+				*.webp) content_type="image/webp" ;; \
+				*.ico) content_type="image/x-icon" ;; \
+				*.woff2) content_type="font/woff2" ;; \
+				*.woff) content_type="font/woff" ;; \
+				*.ttf) content_type="font/ttf" ;; \
+				*.otf) content_type="font/otf" ;; \
+				*.eot) content_type="application/vnd.ms-fontobject" ;; \
+				*.pdf) content_type="application/pdf" ;; \
+			esac; \
 			echo "  ↥ $$rel"; \
-			curl -sS --fail -X PUT -H "Expect:" \
+			curl -sS --fail -X PUT -H "Expect:" -H "Content-Type: $$content_type" \
 				--connect-timeout "$(SEAWEED_UPLOAD_CONNECT_TIMEOUT)" \
 				--max-time "$(SEAWEED_UPLOAD_MAX_TIME)" \
 				--upload-file "$$f" "$$url" -o /dev/null; \

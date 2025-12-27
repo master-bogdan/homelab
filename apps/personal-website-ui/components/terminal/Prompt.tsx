@@ -36,7 +36,7 @@ export const Prompt: React.FC<PromptProps> = ({ showCursor = true }) => {
         sx={{
           fontFamily: "var(--font-mono)",
           fontSize: "14px",
-          color: "#00aaff",
+          color: "#18c7ff",
         }}
       >
         ~
