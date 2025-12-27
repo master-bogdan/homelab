@@ -47,7 +47,7 @@ export const Terminal: React.FC = () => {
       setCurrentOutput({
         command: input,
         output: (
-          <Box sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ff0000" }}>
+          <Box sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ff0000" }}>
             Command not found: {commandName}
             <br />
             Type &apos;help&apos; for available commands.
@@ -145,7 +145,7 @@ export const Terminal: React.FC = () => {
             <Box sx={{ mt: 2 }}>
               <Box
                 sx={{
-                  fontFamily: "monospace",
+                  fontFamily: "var(--font-mono)",
                   fontSize: { xs: "12px", sm: "14px" },
                   color: "#888888",
                   mb: 1,

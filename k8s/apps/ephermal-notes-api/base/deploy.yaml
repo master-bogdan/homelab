@@ -11,6 +11,10 @@ spec:
     metadata:
       labels:
         app: ephermal-notes-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/api/v1/metrics"
     spec:
       containers:
         - name: ephermal-notes-api-container

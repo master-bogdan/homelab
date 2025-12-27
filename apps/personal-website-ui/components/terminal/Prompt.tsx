@@ -14,7 +14,7 @@ export const Prompt: React.FC<PromptProps> = ({ showCursor = true }) => {
       <Typography
         component="span"
         sx={{
-          fontFamily: "monospace",
+          fontFamily: "var(--font-mono)",
           fontSize: "14px",
           color: "#00ff00",
         }}
@@ -24,7 +24,7 @@ export const Prompt: React.FC<PromptProps> = ({ showCursor = true }) => {
       <Typography
         component="span"
         sx={{
-          fontFamily: "monospace",
+          fontFamily: "var(--font-mono)",
           fontSize: "14px",
           color: "#ffffff",
         }}
@@ -34,7 +34,7 @@ export const Prompt: React.FC<PromptProps> = ({ showCursor = true }) => {
       <Typography
         component="span"
         sx={{
-          fontFamily: "monospace",
+          fontFamily: "var(--font-mono)",
           fontSize: "14px",
           color: "#00aaff",
         }}
@@ -44,7 +44,7 @@ export const Prompt: React.FC<PromptProps> = ({ showCursor = true }) => {
       <Typography
         component="span"
         sx={{
-          fontFamily: "monospace",
+          fontFamily: "var(--font-mono)",
           fontSize: "14px",
           color: "#ffffff",
         }}

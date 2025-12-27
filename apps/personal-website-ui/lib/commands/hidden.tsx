@@ -7,7 +7,7 @@ export const neofetchCommand = (): React.ReactNode => {
   return (
     <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
       <Box sx={{ flex: "0 0 auto" }}>
-        <Typography component="pre" sx={{ fontFamily: "monospace", fontSize: "14px", color: "#dd4814", m: 0 }}>
+        <Typography component="pre" sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#dd4814", m: 0 }}>
           {`       _,met$$$$$gg.
     ,g$$$$$$$$$$$$$$$P.
   ,g$$P"     """Y$$.".
@@ -28,53 +28,53 @@ export const neofetchCommand = (): React.ReactNode => {
         </Typography>
       </Box>
       <Box sx={{ flex: "1 1 auto", minWidth: "300px" }}>
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00aaff", fontWeight: "bold" }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00aaff", fontWeight: "bold" }}>
           bogdan@homelab
         </Typography>
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#888888" }}>---------------</Typography>
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#888888" }}>---------------</Typography>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
           <Box component="span" sx={{ color: "#00aaff" }}>
             OS:
           </Box>{" "}
           Ubuntu 22.04 LTS x86_64
         </Typography>
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
           <Box component="span" sx={{ color: "#00aaff" }}>
             Host:
           </Box>{" "}
           Personal Portfolio
         </Typography>
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
           <Box component="span" sx={{ color: "#00aaff" }}>
             Kernel:
           </Box>{" "}
           6.2.0-terminal
         </Typography>
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
           <Box component="span" sx={{ color: "#00aaff" }}>
             Uptime:
           </Box>{" "}
           {uptimeSec} seconds
         </Typography>
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
           <Box component="span" sx={{ color: "#00aaff" }}>
             Shell:
           </Box>{" "}
           bash 5.1.16
         </Typography>
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
           <Box component="span" sx={{ color: "#00aaff" }}>
             Terminal:
           </Box>{" "}
           xterm-256color
         </Typography>
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
           <Box component="span" sx={{ color: "#00aaff" }}>
             CPU:
           </Box>{" "}
           TypeScript Engine (8) @ 3.9GHz
         </Typography>
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
           <Box component="span" sx={{ color: "#00aaff" }}>
             Memory:
           </Box>{" "}
@@ -88,16 +88,16 @@ export const neofetchCommand = (): React.ReactNode => {
 export const sudoCommand = (): React.ReactNode => {
   return (
     <Box>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ff0000", mb: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ff0000", mb: 1 }}>
         [sudo] password for bogdan:
       </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff", mb: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff", mb: 1 }}>
         Sorry, try again.
       </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#888888" }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#888888" }}>
         sudo: 3 incorrect password attempts
       </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00ff00", mt: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00ff00", mt: 1 }}>
         Just kidding! You don&apos;t need sudo here. 😉
       </Typography>
     </Box>
@@ -125,7 +125,7 @@ export const hackCommand = (): React.ReactNode => {
         <Typography
           key={index}
           sx={{
-            fontFamily: "monospace",
+            fontFamily: "var(--font-mono)",
             fontSize: "14px",
             color: index === hackLines.length - 3 ? "#00ff00" : "#00aaff",
             mb: 0.5,
@@ -153,7 +153,7 @@ export const fortuneCommand = (): React.ReactNode => {
 
   return (
     <Box>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00ff00" }}>{randomFortune}</Typography>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00ff00" }}>{randomFortune}</Typography>
     </Box>
   )
 }
@@ -164,7 +164,7 @@ export const cowsayCommand = (args: string[]): React.ReactNode => {
 
   return (
     <Box>
-      <Typography component="pre" sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+      <Typography component="pre" sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
         {`
  ${"_".repeat(messageLength + 2)}
 < ${message} >
@@ -192,7 +192,7 @@ export const matrixCommand = (): React.ReactNode => {
         <Typography
           key={index}
           sx={{
-            fontFamily: "monospace",
+            fontFamily: "var(--font-mono)",
             fontSize: "12px",
             color: "#00ff00",
             lineHeight: 1.2,
@@ -201,7 +201,7 @@ export const matrixCommand = (): React.ReactNode => {
           {line}
         </Typography>
       ))}
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00aaff", mt: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00aaff", mt: 1 }}>
         Wake up, Neo... The Matrix has you...
       </Typography>
     </Box>
@@ -211,19 +211,19 @@ export const matrixCommand = (): React.ReactNode => {
 export const rickrollCommand = (): React.ReactNode => {
   return (
     <Box>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ff00ff", mb: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ff00ff", mb: 1 }}>
         ♪ Never gonna give you up ♪
       </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ff00ff", mb: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ff00ff", mb: 1 }}>
         ♪ Never gonna let you down ♪
       </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ff00ff", mb: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ff00ff", mb: 1 }}>
         ♪ Never gonna run around and desert you ♪
       </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00aaff", mt: 2 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00aaff", mt: 2 }}>
         You just got rickrolled! 🎵
       </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#888888", mt: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#888888", mt: 1 }}>
         (Opening YouTube would be too obvious...)
       </Typography>
     </Box>
@@ -233,7 +233,7 @@ export const rickrollCommand = (): React.ReactNode => {
 export const coffeeCommand = (): React.ReactNode => {
   return (
     <Box>
-      <Typography component="pre" sx={{ fontFamily: "monospace", fontSize: "14px", color: "#8B4513" }}>
+      <Typography component="pre" sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#8B4513" }}>
         {`
         (  )   (   )  )
          ) (   )  (  (
@@ -248,7 +248,7 @@ export const coffeeCommand = (): React.ReactNode => {
     \\_____________________/
         `}
       </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00aaff", mt: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00aaff", mt: 1 }}>
         ☕ Coffee break! Refueling developer energy...
       </Typography>
     </Box>

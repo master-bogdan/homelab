@@ -1,26 +1,17 @@
-"use client"
-
 import type React from "react"
-import { Box, Typography } from "@mui/material"
-import { ASCII_BANNER } from "@/lib/constants"
+import Image from 'next/image';
+
+const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "")
+const src = `${basePath}/banner.svg`
 
 export const Banner: React.FC = () => {
   return (
-    <Box sx={{ mb: 2 }}>
-      <Typography
-        component="pre"
-        sx={{
-          fontFamily: "monospace",
-          fontSize: { xs: "6px", sm: "8px", md: "12px" },
-          color: "#00aaff",
-          lineHeight: 1.2,
-          whiteSpace: "pre",
-          margin: 0,
-          overflow: "hidden",
-        }}
-      >
-        {ASCII_BANNER}
-      </Typography>
-    </Box>
+    <Image
+      priority
+      src={src}
+      height={32}
+      width={32}
+      alt="Follow us on Twitter"
+    />
   )
 }

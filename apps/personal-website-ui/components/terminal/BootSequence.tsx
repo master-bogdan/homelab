@@ -38,7 +38,7 @@ export const BootSequence: React.FC<BootSequenceProps> = ({ onComplete }) => {
         <Box
           key={index}
           sx={{
-            fontFamily: "monospace",
+            fontFamily: "var(--font-mono)",
             fontSize: "14px",
             color: "#00ff00",
             mb: 0.5,

@@ -21,7 +21,7 @@ export const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Courier New", Courier, monospace',
+    fontFamily: "var(--font-mono)",
     fontSize: 14,
   },
   components: {
@@ -30,6 +30,7 @@ export const theme = createTheme({
         body: {
           backgroundColor: "#0a0a0a",
           color: "#00ff00",
+          fontFamily: "var(--font-mono)",
         },
       },
     },

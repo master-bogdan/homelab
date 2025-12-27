@@ -4,10 +4,10 @@ import { Box, Typography, Link } from "@mui/material"
 export const contactsCommand = (): React.ReactNode => {
   return (
     <Box>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#00aaff", mb: 1 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#00aaff", mb: 1 }}>
         Contact Information:
       </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff", mb: 0.5 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff", mb: 0.5 }}>
         Email:{" "}
         <Link
           href="mailto:bshchavinskyi@gmail.com"
@@ -16,7 +16,7 @@ export const contactsCommand = (): React.ReactNode => {
           bshchavinskyi@gmail.com
         </Link>
       </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff", mb: 0.5 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff", mb: 0.5 }}>
         GitHub:{" "}
         <Link
           href="https://github.com/master-bogdan"
@@ -27,7 +27,7 @@ export const contactsCommand = (): React.ReactNode => {
           github.com/master-bogdan
         </Link>
       </Typography>
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff", mb: 0.5 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff", mb: 0.5 }}>
         LinkedIn:{" "}
         <Link
           href="https://www.linkedin.com/in/b-shchavinskyi-fullstack"

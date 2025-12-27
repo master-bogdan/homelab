@@ -13,8 +13,6 @@ master:
     storageClass: standard
     size: 1Gi
 
-  extraArgs: []
-
 # --- Volume servers ---
 volume:
   enabled: true
@@ -24,8 +22,6 @@ volume:
     enabled: true
     storageClass: standard
     size: 1Gi
-
-  extraArgs: []
 
 # --- Filer (metadata + HTTP API) ---
 filer:
@@ -37,29 +33,14 @@ filer:
     storageClass: standard
     size: 1Gi
 
-  extraArgs: []
-
   s3:
-    enabled: false
-
-s3:
-  enabled: true
-  replicas: 1
-
-  service:
-    type: ClusterIP
-    port: 8333
-
-  ingress:
-    enabled: false
-
-  enableAuth: true
-
-  createBuckets:
-    - name: personal-website-ui
-      anonymousRead: true
-    - name: internal-artifacts
-      anonymousRead: false
+    enabled: true
+    enableAuth: false
+    createBuckets:
+      - name: public
+        anonymousRead: true
+      - name: internal-artifacts
+        anonymousRead: false
 
 admin:
   enabled: true

@@ -25,7 +25,7 @@ export const QuickCommands: React.FC<QuickCommandsProps> = ({ commands, onComman
           label={cmd}
           onClick={() => onCommand(cmd)}
           sx={{
-            fontFamily: "monospace",
+            fontFamily: "var(--font-mono)",
             fontSize: { xs: "10px", sm: "12px" },
             backgroundColor: "#1a1a1a",
             color: "#00aaff",

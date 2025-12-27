@@ -14,7 +14,12 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /
+            value: /public
+          method: GET
+        - path:
+            type: PathPrefix
+            value: /public
+          method: HEAD
       backendRefs:
         - name: seaweedfs-s3
           port: 8333
