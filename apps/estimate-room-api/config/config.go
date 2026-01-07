@@ -14,8 +14,9 @@ type Config struct {
 		PasetoSymmetricKey string `env:"PASETO_SYMMETRIC_KEY"`
 	}
 	DB struct {
-		DatabaseURL string `env:"DATABASE_URL"`
-		RedisURL    string `env:"REDIS_URL"`
+		DatabaseURL      string `env:"DATABASE_URL"`
+		RedisURL         string `env:"REDIS_URL"`
+		IsAutoMigrations bool   `env:"IS_AUTO_MIGRATIONS"`
 	}
 }
 

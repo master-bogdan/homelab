@@ -4,23 +4,26 @@ package postgresql
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
-	"github.com/master-bogdan/estimate-room-api/config"
 )
 
-func Connect(cfg *config.Config) (*pgxpool.Pool, error) {
-	dbCfg, err := pgx.ParseConfig(cfg.DB.DatabaseURL)
+func Connect(databaseURL string) (*pgxpool.Pool, error) {
+	dbCfg, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, err
 	}
 
-	dbpool, err := pgxpool.New(context.Background(), cfg.DB.DatabaseURL)
+	dbpool, err := pgxpool.NewWithConfig(context.Background(), dbCfg)
 	if err != nil {
 		return nil, err
 	}
-	defer dbpool.Close()
+
+	err = dbpool.Ping(context.Background())
+	if err != nil {
+		dbpool.Close()
+		return nil, err
+	}
 
 	return dbpool, nil
 }

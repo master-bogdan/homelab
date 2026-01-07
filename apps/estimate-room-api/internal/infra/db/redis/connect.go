@@ -5,12 +5,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/master-bogdan/estimate-room-api/config"
 	"github.com/redis/go-redis/v9"
 )
 
-func Connect(cfg *config.Config) (*redis.Client, error) {
-	opts, err := redis.ParseURL(cfg.DB.RedisURL)
+func Connect(redisURL string) (*redis.Client, error) {
+	opts, err := redis.ParseURL(redisURL)
 	if err != nil {
 		return nil, err
 	}
