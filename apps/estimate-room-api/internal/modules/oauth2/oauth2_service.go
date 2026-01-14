@@ -1,5 +1,5 @@
-// package oauth2
-//
+package oauth2
+
 // import (
 // 	"crypto/rand"
 // 	"crypto/sha256"

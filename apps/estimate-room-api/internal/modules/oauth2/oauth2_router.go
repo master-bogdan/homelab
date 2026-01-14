@@ -1,5 +1,5 @@
-// package oauth2
-//
+package oauth2
+
 // import "github.com/gofiber/fiber/v2"
 //
 // const (

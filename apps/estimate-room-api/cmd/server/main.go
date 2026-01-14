@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -17,6 +18,8 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/redis"
 )
+
+var IsGracefulShutdown atomic.Bool
 
 func main() {
 	cfg, err := config.LoadConfig()
@@ -48,10 +51,11 @@ func main() {
 	router := chi.NewRouter()
 
 	application := app.AppDeps{
-		DB:      db,
-		CacheDB: client,
-		Cfg:     cfg,
-		Router:  router,
+		DB:                 db,
+		Redis:              client,
+		Cfg:                cfg,
+		Router:             router,
+		IsGracefulShutdown: &IsGracefulShutdown,
 	}
 
 	application.SetupApp()
@@ -78,15 +82,16 @@ func main() {
 		}
 	}()
 
-	gracefulShutdown(srv, application.DB, application.CacheDB)
+	gracefulShutdown(srv, application.DB, application.Redis)
 }
 
-func gracefulShutdown(srv *http.Server, db interface{ Close() }, cacheDB interface{ Close() error }) {
+func gracefulShutdown(srv *http.Server, db interface{ Close() }, redis interface{ Close() error }) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	<-quit
 	log.Println("Shutting down server...")
+	IsGracefulShutdown.Store(true)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -97,7 +102,7 @@ func gracefulShutdown(srv *http.Server, db interface{ Close() }, cacheDB interfa
 	}
 
 	log.Println("Closing cache database connection...")
-	err = cacheDB.Close()
+	err = redis.Close()
 	if err != nil {
 		log.Printf("Error closing cache database: %v", err)
 	}

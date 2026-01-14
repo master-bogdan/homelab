@@ -1,5 +1,5 @@
-// package tests
-//
+package tests
+
 // import (
 // 	"crypto/sha256"
 // 	"database/sql"
