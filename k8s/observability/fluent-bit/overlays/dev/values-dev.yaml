@@ -5,6 +5,12 @@ kind: DaemonSet
 service:
   type: ClusterIP
 
+env:
+  - name: ES_USER
+    value: "admin"
+  - name: ES_PASSWORD
+    value: "DevOpensearchAdmin123!"
+
 config:
   service: |
     [SERVICE]
@@ -40,13 +46,16 @@ config:
         Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
         Merge_Log           On
         Kube_Tag_Prefix     kube.var.log.containers.
+        Labels              On
+        Annotations         Off
 
     # 2) Route ONLY your notes API logs into a dedicated tag
     #    If label matches, retag to kube.app.notes and DROP the original (Keep=false)
     [FILTER]
         Name                rewrite_tag
         Match               kube.*
-        Rule                $kubernetes['labels']['app']  ^ephermal-notes-api$  kube.app.notes  false
+        Rule                $kubernetes['labels']['app']  ^ephermal-notes-api$  kube.app.notes  true
+        Rule                $kubernetes['labels']['app.kubernetes.io/name']  ^ephermal-notes-api$  kube.app.notes  true
 
   outputs: |
     # A) Notes API logs -> notes-dev-YYYY.MM.DD
@@ -55,6 +64,10 @@ config:
         Match                 kube.app.notes
         Host                  opensearch-cluster-master.observability.svc.cluster.local
         Port                  9200
+        TLS                   On
+        TLS.verify            Off
+        HTTP_User             ${ES_USER}
+        HTTP_Passwd           ${ES_PASSWORD}
         Logstash_Format       On
         Logstash_Prefix       notes-dev
         Suppress_Type_Name    On
@@ -67,6 +80,10 @@ config:
         Match                 kube.*
         Host                  opensearch-cluster-master.observability.svc.cluster.local
         Port                  9200
+        TLS                   On
+        TLS.verify            Off
+        HTTP_User             ${ES_USER}
+        HTTP_Passwd           ${ES_PASSWORD}
         Logstash_Format       On
         Logstash_Prefix       k8s-dev
         Suppress_Type_Name    On

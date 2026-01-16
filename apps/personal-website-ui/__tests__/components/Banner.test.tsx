@@ -3,20 +3,9 @@ import { render, screen } from "@testing-library/react"
 import { Banner } from "@/components/terminal/Banner"
 
 describe("Banner", () => {
-  it("renders the ASCII banner", () => {
+  it("renders the banner image", () => {
     render(<Banner />)
-    expect(screen.getByText(/BOGDAN/i)).toBeInTheDocument()
-  })
-
-  it("displays professional title", () => {
-    const { container } = render(<Banner />)
-    expect(container.textContent).toContain("Senior Software Engineer")
-  })
-
-  it("displays technical specializations", () => {
-    const { container } = render(<Banner />)
-    expect(container.textContent).toContain("Backend")
-    expect(container.textContent).toContain("Platform")
-    expect(container.textContent).toContain("DevOps")
+    const image = screen.getByRole("img", { name: /bogdan shchavinskyi banner/i })
+    expect(image).toHaveAttribute("src", expect.stringContaining("banner.svg"))
   })
 })

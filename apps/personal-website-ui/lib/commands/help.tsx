@@ -10,14 +10,14 @@ export const helpCommand = (args: string[]): React.ReactNode => {
 
     return (
       <Box>
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ff00ff", mb: 1 }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ff00ff", mb: 1 }}>
           🎉 Secret Hidden Commands:
         </Typography>
         {hiddenCommands.map((cmd) => (
           <Box key={cmd.name} sx={{ display: "flex", mb: 0.5 }}>
             <Typography
               sx={{
-                fontFamily: "monospace",
+                fontFamily: "var(--font-mono)",
                 fontSize: "14px",
                 color: "#ff00ff",
                 minWidth: "120px",
@@ -25,12 +25,12 @@ export const helpCommand = (args: string[]): React.ReactNode => {
             >
               {cmd.name}
             </Typography>
-            <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#ffffff" }}>
+            <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#ffffff" }}>
               - {cmd.description}
             </Typography>
           </Box>
         ))}
-        <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#888888", mt: 2 }}>
+        <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#888888", mt: 2 }}>
           Congratulations on finding the secret! 🎊
         </Typography>
       </Box>
@@ -44,9 +44,9 @@ export const helpCommand = (args: string[]): React.ReactNode => {
       <Typography
         key="available-commands-title"
         sx={{
-          fontFamily: "monospace",
+          fontFamily: "var(--font-mono)",
           fontSize: "14px",
-          color: "#00aaff",
+          color: "#18c7ff",
           mb: 1,
         }}>
         Available Commands:
@@ -55,7 +55,7 @@ export const helpCommand = (args: string[]): React.ReactNode => {
         <Box key={cmd.name} sx={{ display: "flex", mb: 0.5 }}>
           <Typography
             sx={{
-              fontFamily: "monospace",
+              fontFamily: "var(--font-mono)",
               fontSize: "14px",
               color: "#00ff00",
               minWidth: "120px",
@@ -65,7 +65,7 @@ export const helpCommand = (args: string[]): React.ReactNode => {
           </Typography>
           <Typography
             sx={{
-              fontFamily: "monospace",
+              fontFamily: "var(--font-mono)",
               fontSize: "14px",
               color: "#ffffff"
             }}>
@@ -73,7 +73,7 @@ export const helpCommand = (args: string[]): React.ReactNode => {
           </Typography>
         </Box>
       ))}
-      <Typography sx={{ fontFamily: "monospace", fontSize: "14px", color: "#888888", mt: 2 }}>
+      <Typography sx={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "#888888", mt: 2 }}>
         Hint: Try exploring for hidden commands...
       </Typography>
     </Box>

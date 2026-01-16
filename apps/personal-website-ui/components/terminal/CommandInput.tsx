@@ -68,7 +68,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onCommand, disabled 
         sx={{
           position: "relative",
           flex: 1,
-          fontFamily: "monospace",
+          fontFamily: "var(--font-mono)",
           fontSize: { xs: "12px", sm: "14px" },
           color: "#00ff00",
           display: "flex",
@@ -99,7 +99,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({ onCommand, disabled 
         <Box
           component="span"
           sx={{
-            fontFamily: "monospace",
+            fontFamily: "var(--font-mono)",
             fontSize: { xs: "12px", sm: "14px" },
             color: "#00ff00",
             whiteSpace: "pre",

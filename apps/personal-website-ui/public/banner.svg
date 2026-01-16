@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 320" role="img" aria-label="Linux banner - neon circuit blueprint">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070A0F"/>
+      <stop offset="1" stop-color="#05070B"/>
+    </linearGradient>
+
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" fill="none" stroke="#18C7FF" stroke-opacity="0.08" stroke-width="1"/>
+      <path d="M12 0V24M0 12H24" fill="none" stroke="#18C7FF" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.4" result="b"/>
+      <feColorMatrix in="b" type="matrix"
+        values="1 0 0 0 0
+                0 1 0 0 0.9
+                0 0 1 0 1
+                0 0 0 1 0" result="c"/>
+      <feMerge>
+        <feMergeNode in="c"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" />
+    </filter>
+  </defs>
+
+  <!-- background -->
+  <rect width="1000" height="320" rx="14" fill="url(#bg)"/>
+  <rect x="14" y="14" width="972" height="292" rx="12" fill="url(#grid)"/>
+
+  <!-- outer border -->
+  <rect x="10" y="10" width="980" height="300" rx="14" fill="none" stroke="#18C7FF" stroke-opacity="0.55" stroke-width="2"/>
+  <rect x="16" y="16" width="968" height="288" rx="12" fill="none" stroke="#18C7FF" stroke-opacity="0.22" stroke-width="1"/>
+
+  <!-- circuit traces -->
+  <g fill="none" stroke="#18C7FF" stroke-opacity="0.55" stroke-width="2" stroke-linecap="round">
+    <path stroke-dasharray="10 10" d="M70 70H460c22 0 22 0 42 20l30 30c12 12 12 12 30 12h85"/>
+    <path stroke-dasharray="14 12" d="M70 250H420c26 0 26 0 44-18l46-46c12-12 12-12 28-12h115"/>
+    <path stroke-dasharray="9 9" d="M520 88h110c20 0 20 0 34 14l28 28c12 12 12 12 28 12h120"/>
+    <path stroke-dasharray="12 10" d="M520 232h110c20 0 20 0 34-14l28-28c12-12 12-12 28-12h120"/>
+
+    <animate attributeName="stroke-dashoffset" from="0" to="-120" dur="6s" repeatCount="indefinite"/>
+  </g>
+
+  <!-- nodes -->
+  <g fill="#18C7FF" fill-opacity="0.9" filter="url(#glow)">
+    <circle cx="70" cy="70" r="4"/>
+    <circle cx="70" cy="250" r="4"/>
+    <circle cx="520" cy="88" r="4"/>
+    <circle cx="520" cy="232" r="4"/>
+    <circle cx="900" cy="140" r="4"/>
+    <circle cx="900" cy="180" r="4"/>
+  </g>
+
+  <!-- title -->
+  <g filter="url(#glow)">
+    <text x="60" y="130"
+      font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace"
+      font-size="96" font-weight="900"
+      fill="#18C7FF" letter-spacing="2">LINUX</text>
+
+    <text x="64" y="166"
+      font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace"
+      font-size="14" fill="#18C7FF" fill-opacity="0.9">
+      Bogdan Shchavinskyi — Senior Software Engineer
+    </text>
+    <text x="64" y="186"
+      font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace"
+      font-size="14" fill="#18C7FF" fill-opacity="0.85">
+      Backend | Platform | DevOps
+    </text>
+    <text x="64" y="206"
+      font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace"
+      font-size="14" fill="#18C7FF" fill-opacity="0.8">
+      Node.js Expert | Go (Golang) Developer | Kubernetes Home Lab Enthusiast
+    </text>
+    <text x="64" y="226"
+      font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace"
+      font-size="14" fill="#18C7FF" fill-opacity="0.75">
+      Building Scalable Cloud Solutions (AWS, Kubernetes)
+    </text>
+  </g>
+
+  <!-- minimal geometric tux (right) -->
+  <g transform="translate(760 74)" filter="url(#glow)">
+    <!-- shadow -->
+    <ellipse cx="90" cy="200" rx="88" ry="14" fill="#18C7FF" fill-opacity="0.12" filter="url(#soft)"/>
+    <!-- body -->
+    <path d="M48 180c-10-26-14-46-14-70 0-46 30-78 56-78s56 32 56 78c0 24-4 44-14 70"
+      fill="none" stroke="#18C7FF" stroke-width="3" stroke-opacity="0.8"/>
+    <path d="M62 172c-8-22-10-38-10-58 0-36 22-60 38-60s38 24 38 60c0 20-2 36-10 58"
+      fill="none" stroke="#18C7FF" stroke-width="3" stroke-opacity="0.55"/>
+    <!-- belly -->
+    <path d="M74 166c-6-18-7-30-7-46 0-24 14-40 23-40s23 16 23 40c0 16-1 28-7 46"
+      fill="none" stroke="#18C7FF" stroke-opacity="0.9" stroke-width="3"/>
+    <!-- head -->
+    <rect x="70" y="14" width="40" height="46" rx="12" fill="none" stroke="#18C7FF" stroke-width="3"/>
+    <circle cx="82" cy="32" r="3.5" fill="#18C7FF"/>
+    <circle cx="98" cy="32" r="3.5" fill="#18C7FF"/>
+    <path d="M86 44h8" stroke="#18C7FF" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>
