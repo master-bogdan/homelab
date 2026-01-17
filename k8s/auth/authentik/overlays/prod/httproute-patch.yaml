@@ -5,3 +5,7 @@ metadata:
 spec:
   hostnames:
     - auth.example.invalid
+  parentRefs:
+    - name: homelab-gw
+      namespace: networking
+      sectionName: https
