@@ -4,12 +4,14 @@ kind: Kustomization
 namespace: prod
 resources:
   - ../../base
+  - external-config.yaml
 
-configMapGenerator:
-  - name: ephermal-notes-api-config
-    literals:
-      - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=8000
-      - REDIS_ADDR=redis-service.prod-db.svc.cluster.local:6379
-generatorOptions:
-  disableNameSuffixHash: true
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-ephermal-notes-api
+    path: httproute-patch.yaml
+  - target:
+      kind: Deployment
+      name: ephermal-notes-api-deploy
+    path: deploy-envfrom-patch.yaml
