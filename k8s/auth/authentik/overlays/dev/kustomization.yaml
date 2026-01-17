@@ -5,7 +5,6 @@ namespace: auth
 
 resources:
   - ../../base
-  - http-authentik.yaml
 
 helmCharts:
   - name: authentik
@@ -15,3 +14,9 @@ helmCharts:
     namespace: auth
     includeCRDs: true
     valuesFile: values-dev.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-authentik
+    path: httproute-patch.yaml

@@ -3,6 +3,10 @@ kind: Kustomization
 
 namespace: auth
 
+resources:
+  - ../../base
+  - external-secret.yaml
+
 helmCharts:
   - name: authentik
     repo: https://charts.goauthentik.io
@@ -11,3 +15,9 @@ helmCharts:
     namespace: auth
     includeCRDs: true
     valuesFile: values-prod.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-authentik
+    path: httproute-patch.yaml
