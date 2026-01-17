@@ -3,43 +3,96 @@ authentik:
   error_reporting:
     enabled: true
 
-  postgresql:
-    host: ""
-    port: 5432
-    name: "authentik"
-    user: "authentik"
-
-  redis:
-    host: ""
-    port: 6379
-
 postgresql:
   enabled: false
+
 redis:
   enabled: false
 
 server:
+  ingress:
+    enabled: false
   env:
     - name: AUTHENTIK_SECRET_KEY
       valueFrom:
         secretKeyRef:
           name: authentik-prod-creds
-          key: secret-key
+          key: AUTHENTIK_SECRET_KEY
+    - name: AUTHENTIK_POSTGRESQL__HOST
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_POSTGRESQL__HOST
+    - name: AUTHENTIK_POSTGRESQL__PORT
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_POSTGRESQL__PORT
+    - name: AUTHENTIK_POSTGRESQL__NAME
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_POSTGRESQL__NAME
+    - name: AUTHENTIK_POSTGRESQL__USER
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_POSTGRESQL__USER
     - name: AUTHENTIK_POSTGRESQL__PASSWORD
       valueFrom:
         secretKeyRef:
           name: authentik-prod-creds
-          key: db-password
+          key: AUTHENTIK_POSTGRESQL__PASSWORD
+    - name: AUTHENTIK_REDIS__HOST
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_REDIS__HOST
+    - name: AUTHENTIK_REDIS__PORT
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_REDIS__PORT
     - name: AUTHENTIK_REDIS__PASSWORD
       valueFrom:
         secretKeyRef:
           name: authentik-prod-creds
-          key: redis-password
+          key: AUTHENTIK_REDIS__PASSWORD
+    - name: AUTHENTIK_EMAIL__HOST
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_EMAIL__HOST
+    - name: AUTHENTIK_EMAIL__PORT
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_EMAIL__PORT
+    - name: AUTHENTIK_EMAIL__USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_EMAIL__USERNAME
     - name: AUTHENTIK_EMAIL__PASSWORD
       valueFrom:
         secretKeyRef:
           name: authentik-prod-creds
-          key: smtp-password
+          key: AUTHENTIK_EMAIL__PASSWORD
+    - name: AUTHENTIK_EMAIL__FROM
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_EMAIL__FROM
+    - name: AUTHENTIK_EMAIL__USE_TLS
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_EMAIL__USE_TLS
+    - name: AUTHENTIK_EMAIL__USE_SSL
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_EMAIL__USE_SSL
 
 worker:
   env:
@@ -47,14 +100,44 @@ worker:
       valueFrom:
         secretKeyRef:
           name: authentik-prod-creds
-          key: secret-key
+          key: AUTHENTIK_SECRET_KEY
+    - name: AUTHENTIK_POSTGRESQL__HOST
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_POSTGRESQL__HOST
+    - name: AUTHENTIK_POSTGRESQL__PORT
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_POSTGRESQL__PORT
+    - name: AUTHENTIK_POSTGRESQL__NAME
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_POSTGRESQL__NAME
+    - name: AUTHENTIK_POSTGRESQL__USER
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_POSTGRESQL__USER
     - name: AUTHENTIK_POSTGRESQL__PASSWORD
       valueFrom:
         secretKeyRef:
           name: authentik-prod-creds
-          key: db-password
+          key: AUTHENTIK_POSTGRESQL__PASSWORD
+    - name: AUTHENTIK_REDIS__HOST
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_REDIS__HOST
+    - name: AUTHENTIK_REDIS__PORT
+      valueFrom:
+        secretKeyRef:
+          name: authentik-prod-creds
+          key: AUTHENTIK_REDIS__PORT
     - name: AUTHENTIK_REDIS__PASSWORD
       valueFrom:
         secretKeyRef:
           name: authentik-prod-creds
-          key: redis-password
+          key: AUTHENTIK_REDIS__PASSWORD

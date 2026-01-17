@@ -1,14 +1,17 @@
-fullnameOverride: traefik-prod
+fullnameOverride: traefik-prod-dev
 
 service:
   enabled: true
   type: LoadBalancer
-  ports:
-    web:
-      port: 80
-    websecure:
-      port: 443
-  annotations: {}
+
+ports:
+  web:
+    port: 80
+  websecure:
+    port: 443
+  traefik:
+    expose:
+      default: false
 
 providers:
   kubernetesGateway:
@@ -20,14 +23,15 @@ providers:
   kubernetesCRD:
     enabled: false
 
+gateway:
+  enabled: false
+
+gatewayClass:
+  enabled: false
+
 additionalArguments:
   - "--entrypoints.web.address=:80"
   - "--entrypoints.websecure.address=:443"
-
-ports:
-  traefik:
-    expose:
-      default: false
 
 resources:
   requests:

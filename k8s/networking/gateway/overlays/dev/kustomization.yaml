@@ -7,4 +7,7 @@ resources:
   - ../../base
 
 patches:
-  - path: gateway.yaml
+  - target:
+      kind: Gateway
+      name: homelab-gw
+    path: gateway-patch.yaml
