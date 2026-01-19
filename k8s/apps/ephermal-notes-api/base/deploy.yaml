@@ -11,36 +11,46 @@ spec:
     metadata:
       labels:
         app: ephermal-notes-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/api/v1/metrics"
     spec:
       containers:
-      - name: ephermal-notes-api-container
-        image: masterbogdan0/ephermal-notes-api:latest
-        imagePullPolicy: Always
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "250m"
-          limits:
-            memory: "128Mi"
-            cpu: "500m"
-        ports:
-          - containerPort: 8000
-        envFrom:
-          - configMapRef:
-              name: ephermal-notes-api-config
-          - secretRef:
-              name: ephermal-notes-api-secret
-        readinessProbe:
-          httpGet:
-            path: /api/v1/health/readyz
-            port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 2
-        livenessProbe:
-          httpGet:
-            path: /api/v1/health/healthz
-            port: 8000
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 2
+        - name: ephermal-notes-api-container
+          image: masterbogdan0/ephermal-notes-api:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: ephermal-notes-api-config
+            - secretRef:
+                name: ephermal-notes-api-secret
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/readyz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health/healthz
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 2
+          startupProbe:
+            httpGet:
+              path: /api/v1/health/healthz
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 10

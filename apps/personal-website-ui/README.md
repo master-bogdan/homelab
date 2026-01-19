@@ -142,10 +142,6 @@ Edit \`lib/theme.ts\` to change the terminal color scheme.
 
 Add new commands in \`lib/commands/\` and register them in \`lib/commandRegistry.tsx\`.
 
-### Banner
-
-Modify the ASCII art in \`lib/constants.ts\`.
-
 ## Testing
 
 Tests are located in the \`__tests__/\` directory and mirror the source structure.

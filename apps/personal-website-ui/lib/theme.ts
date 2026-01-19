@@ -9,7 +9,7 @@ export const theme = createTheme({
       main: "#00ff00",
     },
     secondary: {
-      main: "#00aaff",
+      main: "#18c7ff",
     },
     background: {
       default: "#0a0a0a",
@@ -17,11 +17,11 @@ export const theme = createTheme({
     },
     text: {
       primary: "#00ff00",
-      secondary: "#00aaff",
+      secondary: "#18c7ff",
     },
   },
   typography: {
-    fontFamily: '"Courier New", Courier, monospace',
+    fontFamily: "var(--font-mono)",
     fontSize: 14,
   },
   components: {
@@ -30,6 +30,7 @@ export const theme = createTheme({
         body: {
           backgroundColor: "#0a0a0a",
           color: "#00ff00",
+          fontFamily: "var(--font-mono)",
         },
       },
     },
