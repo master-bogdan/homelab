@@ -28,8 +28,10 @@ func NewHealthModule(deps HealthModuleDeps) *HealthModule {
 	})
 	ctrl := NewHealthController(svc, deps.IsGracefulShutdown)
 
-	deps.Router.Get("/healthz", ctrl.CheckHealth)
-	deps.Router.Get("/readyz", ctrl.CheckReadiness)
+	deps.Router.Route("/health", func(r chi.Router) {
+		deps.Router.Get("/healthz", ctrl.CheckHealth)
+		deps.Router.Get("/readyz", ctrl.CheckReadiness)
+	})
 
 	return &HealthModule{
 		Controller: ctrl,

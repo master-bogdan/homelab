@@ -14,21 +14,21 @@ type HealthController interface {
 
 type healthController struct {
 	svc                HealthService
-	IsGracefulShutdown *atomic.Bool
+	isGracefulShutdown *atomic.Bool
 }
 
 func NewHealthController(
 	healthService HealthService,
-	IsGracefulShutdown *atomic.Bool,
+	isGracefulShutdown *atomic.Bool,
 ) HealthController {
 	return &healthController{
 		svc:                healthService,
-		IsGracefulShutdown: IsGracefulShutdown,
+		isGracefulShutdown: isGracefulShutdown,
 	}
 }
 
 func (c *healthController) CheckReadiness(w http.ResponseWriter, r *http.Request) {
-	if c.IsGracefulShutdown != nil && c.IsGracefulShutdown.Load() {
+	if c.isGracefulShutdown != nil && c.isGracefulShutdown.Load() {
 		utils.WriteResponseError(w, http.StatusServiceUnavailable, "graceful shutdown")
 		return
 	}
@@ -44,7 +44,7 @@ func (c *healthController) CheckReadiness(w http.ResponseWriter, r *http.Request
 }
 
 func (c *healthController) CheckHealth(w http.ResponseWriter, r *http.Request) {
-	if c.IsGracefulShutdown != nil && c.IsGracefulShutdown.Load() {
+	if c.isGracefulShutdown != nil && c.isGracefulShutdown.Load() {
 		utils.WriteResponseError(w, http.StatusServiceUnavailable, "graceful shutdown")
 		return
 	}

@@ -8,6 +8,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/config"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -17,13 +19,21 @@ type AppDeps struct {
 	Cfg                *config.Config
 	Router             chi.Router
 	IsGracefulShutdown *atomic.Bool
+	Ws                 *ws.WsServer
 }
 
 func (deps *AppDeps) SetupApp() {
+	wsManager := ws.NewManager(deps.Ws, "app")
+
 	health.NewHealthModule(health.HealthModuleDeps{
 		Router:             deps.Router,
 		DB:                 deps.DB,
 		Redis:              deps.Redis,
 		IsGracefulShutdown: deps.IsGracefulShutdown,
+	})
+
+	rooms.NewRoomsModule(rooms.RoomsModuleDeps{
+		Router:    deps.Router,
+		WsManager: wsManager,
 	})
 }

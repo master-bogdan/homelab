@@ -17,6 +17,7 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/app"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/redis"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 )
 
 var IsGracefulShutdown atomic.Bool
@@ -42,20 +43,30 @@ func main() {
 	}
 	defer db.Close()
 
-	client, err := redis.Connect(cfg.DB.RedisURL)
+	redisClient, err := redis.Connect(cfg.DB.RedisURL)
 	if err != nil {
 		log.Fatalf("failed to connect to cache database: %v", err)
 	}
-	defer client.Close()
+	defer redisClient.Close()
+
+	redisPubSubClient, err := redis.Connect(cfg.DB.RedisURL)
+	if err != nil {
+		log.Fatalf("failed to connect to cache database: %v", err)
+	}
+
+	defer redisPubSubClient.Close()
+
+	wsServer := ws.NewWsServer(redisClient, redisPubSubClient)
 
 	router := chi.NewRouter()
 
 	application := app.AppDeps{
 		DB:                 db,
-		Redis:              client,
+		Redis:              redisClient,
 		Cfg:                cfg,
 		Router:             router,
 		IsGracefulShutdown: &IsGracefulShutdown,
+		Ws:                 wsServer,
 	}
 
 	application.SetupApp()
@@ -82,10 +93,10 @@ func main() {
 		}
 	}()
 
-	gracefulShutdown(srv, application.DB, application.Redis)
+	gracefulShutdown(srv, wsServer, application.DB, application.Redis)
 }
 
-func gracefulShutdown(srv *http.Server, db interface{ Close() }, redis interface{ Close() error }) {
+func gracefulShutdown(srv *http.Server, ws *ws.WsServer, db interface{ Close() }, redis interface{ Close() error }) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
@@ -95,6 +106,8 @@ func gracefulShutdown(srv *http.Server, db interface{ Close() }, redis interface
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+
+	ws.Shutdown()
 
 	err := srv.Shutdown(ctx)
 	if err != nil {
