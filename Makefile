@@ -7,6 +7,8 @@ REGISTRY          ?= docker.io/masterbogdan0
 TAG               ?= latest
 ENV               ?= dev
 APP               ?=
+# Optional fallback overlay for mixed environments (e.g., prod-dev -> prod)
+ENV_FALLBACK      ?= $(if $(filter prod-dev,$(ENV)),prod,)
 ROOT_DIR          := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 SCRIPTS_DIR       := $(ROOT_DIR)/scripts
 
@@ -15,7 +17,16 @@ UI_NAME_PATTERN         ?= ui
 UI_BUILD_OUTPUT_DIRS    ?= out build dist
 UI_PUBLIC_BUCKET        ?= public
 SEAWEEDFS_NAMESPACE     ?= platform
-SEAWEED_PUBLIC_BASE     ?= http://storage.apps.192-168-58-2.sslip.io:30080
+SEAWEED_PUBLIC_BASE_DEV      ?= http://storage.apps.192-168-58-2.sslip.io:30080
+SEAWEED_PUBLIC_BASE_PROD     ?= https://storage.example.invalid
+SEAWEED_PUBLIC_BASE_PROD_DEV ?= https://storage.apps.192-168-58-2.sslip.io
+ifeq ($(ENV),prod)
+SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_PROD)
+else ifeq ($(ENV),prod-dev)
+SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_PROD_DEV)
+else
+SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_DEV)
+endif
 SEAWEED_INTERNAL_BASE   ?= http://seaweedfs-s3.$(SEAWEEDFS_NAMESPACE).svc.cluster.local:8333
 SEAWEEDFS_MASTER_ADDR   ?= seaweedfs-master.$(SEAWEEDFS_NAMESPACE):9333
 SEAWEEDFS_FILER_ADDR    ?= seaweedfs-filer-client.$(SEAWEEDFS_NAMESPACE):8888
@@ -141,9 +152,14 @@ endef
 # Kustomize apply (prefer overlay, fallback to base)
 define k8s_apply_or_base
 	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🚀 Applying: $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) apply -k "$${ROOT}/overlays/$(ENV)"; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🚀 Applying: $$OVERLAY"; \
+		$(KUBECTL) apply -k "$$OVERLAY"; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🚀 Applying: $$FALLBACK (fallback)"; \
+		$(KUBECTL) apply -k "$$FALLBACK"; \
 	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
 		echo "🚀 Applying: $${ROOT}"; \
 		$(KUBECTL) apply -k "$${ROOT}"; \
@@ -157,9 +173,14 @@ endef
 # Kustomize delete
 define k8s_delete_or_base
 	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🔥 Deleting: $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) delete -k "$${ROOT}/overlays/$(ENV)" --ignore-not-found; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🔥 Deleting: $$OVERLAY"; \
+		$(KUBECTL) delete -k "$$OVERLAY" --ignore-not-found; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🔥 Deleting: $$FALLBACK (fallback)"; \
+		$(KUBECTL) delete -k "$$FALLBACK" --ignore-not-found; \
 	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
 		echo "🔥 Deleting: $${ROOT}"; \
 		$(KUBECTL) delete -k "$${ROOT}" --ignore-not-found; \
@@ -173,9 +194,14 @@ endef
 # Helm+Kustomize apply
 define k8s_apply_helm_or_base
 	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🚀 Applying (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) kustomize --enable-helm "$${ROOT}/overlays/$(ENV)" | $(KUBECTL) apply -f -; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🚀 Applying (helm+kustomize): $$OVERLAY"; \
+		$(KUBECTL) kustomize --enable-helm "$$OVERLAY" | $(KUBECTL) apply -f -; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🚀 Applying (helm+kustomize): $$FALLBACK (fallback)"; \
+		$(KUBECTL) kustomize --enable-helm "$$FALLBACK" | $(KUBECTL) apply -f -; \
 	else \
 		echo "🚀 Applying (helm+kustomize): $${ROOT}/base"; \
 		$(KUBECTL) kustomize --enable-helm "$${ROOT}/base" | $(KUBECTL) apply -f -; \
@@ -185,9 +211,14 @@ endef
 # Helm+Kustomize delete
 define k8s_delete_helm_or_base
 	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🔥 Deleting (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) kustomize --enable-helm "$${ROOT}/overlays/$(ENV)" | $(KUBECTL) delete --ignore-not-found -f -; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🔥 Deleting (helm+kustomize): $$OVERLAY"; \
+		$(KUBECTL) kustomize --enable-helm "$$OVERLAY" | $(KUBECTL) delete --ignore-not-found -f -; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🔥 Deleting (helm+kustomize): $$FALLBACK (fallback)"; \
+		$(KUBECTL) kustomize --enable-helm "$$FALLBACK" | $(KUBECTL) delete --ignore-not-found -f -; \
 	else \
 		echo "🔥 Deleting (helm+kustomize): $${ROOT}/base"; \
 		$(KUBECTL) kustomize --enable-helm "$${ROOT}/base" | $(KUBECTL) delete --ignore-not-found -f -; \
@@ -197,9 +228,14 @@ endef
 # Validate kustomize (dry-run)
 define k8s_dry_run_or_base
 	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🧪 Dry-run: $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) apply -k "$${ROOT}/overlays/$(ENV)" --dry-run=client --validate=false -o yaml >/dev/null; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🧪 Dry-run: $$OVERLAY"; \
+		$(KUBECTL) apply -k "$$OVERLAY" --dry-run=client --validate=false -o yaml >/dev/null; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🧪 Dry-run: $$FALLBACK (fallback)"; \
+		$(KUBECTL) apply -k "$$FALLBACK" --dry-run=client --validate=false -o yaml >/dev/null; \
 	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
 		echo "🧪 Dry-run: $${ROOT}"; \
 		$(KUBECTL) apply -k "$${ROOT}" --dry-run=client --validate=false -o yaml >/dev/null; \
@@ -213,9 +249,14 @@ endef
 # Validate helm+kustomize (build-only)
 define k8s_dry_run_helm_or_base
 	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🧪 Build-only (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) kustomize --enable-helm "$${ROOT}/overlays/$(ENV)" >/dev/null; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🧪 Build-only (helm+kustomize): $$OVERLAY"; \
+		$(KUBECTL) kustomize --enable-helm "$$OVERLAY" >/dev/null; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🧪 Build-only (helm+kustomize): $$FALLBACK (fallback)"; \
+		$(KUBECTL) kustomize --enable-helm "$$FALLBACK" >/dev/null; \
 	else \
 		echo "🧪 Build-only (helm+kustomize): $${ROOT}/base"; \
 		$(KUBECTL) kustomize --enable-helm "$${ROOT}/base" >/dev/null; \
@@ -305,6 +346,7 @@ help:
 	@echo "  deploy-ui-all                      # Build + upload all"
 	@echo ""
 	@echo "☸  Kubernetes (Layer-based)"
+	@echo "  ENV=prod-dev uses overlays/prod-dev when present, otherwise falls back to prod"
 	@echo "  deploy-namespaces   / delete-namespaces   / validate-namespaces"
 	@echo "  deploy-networking   / delete-networking   / validate-networking"
 	@echo "  deploy-auth         / delete-auth         / validate-auth"
@@ -437,7 +479,7 @@ delete-networking:
 
 validate-networking:
 	$(call k8s_dry_run_helm_list,$(NETWORKING_HELM_DIRS))
-	@$(KUBECTL) kustomize "$(GATEWAY_DIR)/$(if $(wildcard $(GATEWAY_DIR)/overlays/$(ENV)),overlays/$(ENV),base)" >/dev/null
+	@$(KUBECTL) kustomize "$(GATEWAY_DIR)/$(if $(wildcard $(GATEWAY_DIR)/overlays/$(ENV)),overlays/$(ENV),$(if $(ENV_FALLBACK),$(if $(wildcard $(GATEWAY_DIR)/overlays/$(ENV_FALLBACK)),overlays/$(ENV_FALLBACK),base),base))" >/dev/null
 	@echo "✅ Networking validated"
 
 # ---- Auth ----
