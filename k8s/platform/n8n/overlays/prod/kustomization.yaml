@@ -3,7 +3,8 @@ kind: Kustomization
 
 namespace: platform
 
-resources: []
+resources:
+  - ../../base
 
 helmCharts:
   - name: n8n
@@ -13,3 +14,9 @@ helmCharts:
     namespace: platform
     includeCRDs: true
     valuesFile: values-prod.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-n8n
+    path: httproute-patch.yaml

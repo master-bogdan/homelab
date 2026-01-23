@@ -9,8 +9,18 @@ resources:
 helmCharts:
   - name: seaweedfs
     repo: https://seaweedfs.github.io/seaweedfs/helm
-    version: "4.0.392"
+    version: "4.0.404"
     releaseName: seaweedfs
     namespace: platform
     includeCRDs: true
     valuesFile: values-prod.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-seaweedfs-dashboard
+    path: httproute-dashboard-patch.yaml
+  - target:
+      kind: HTTPRoute
+      name: http-seaweedfs-public
+    path: httproute-public-patch.yaml

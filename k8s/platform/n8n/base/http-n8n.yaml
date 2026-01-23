@@ -4,8 +4,6 @@ metadata:
   name: http-n8n
   namespace: platform
 spec:
-  hostnames:
-    - n8n.apps.192-168-58-2.sslip.io
   parentRefs:
     - name: homelab-gw
       namespace: networking
@@ -16,7 +14,6 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - kind: Service
-          name: ak-outpost-shared-outpost
+        - name: ak-outpost-shared-outpost
           namespace: auth
           port: 9000

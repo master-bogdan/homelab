@@ -3,4 +3,5 @@ kind: Kustomization
 
 namespace: platform
 
-resources: []
+resources:
+  - http-n8n.yaml

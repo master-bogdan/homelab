@@ -5,8 +5,16 @@ namespace: platform
 
 resources:
   - ../../base
-  - http-seaweedfs-dashboard.yaml
-  - http-seaweedfs-public.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-seaweedfs-dashboard
+    path: httproute-dashboard-patch.yaml
+  - target:
+      kind: HTTPRoute
+      name: http-seaweedfs-public
+    path: httproute-public-patch.yaml
 
 helmCharts:
   - name: seaweedfs

@@ -3,4 +3,6 @@ kind: Kustomization
 
 namespace: platform
 
-resources: []
+resources:
+  - http-seaweedfs-dashboard.yaml
+  - http-seaweedfs-public.yaml

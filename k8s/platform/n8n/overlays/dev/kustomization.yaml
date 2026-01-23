@@ -5,7 +5,12 @@ namespace: platform
 
 resources:
   - ../../base
-  - http-n8n.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-n8n
+    path: httproute-patch.yaml
 
 helmCharts:
   - name: n8n
