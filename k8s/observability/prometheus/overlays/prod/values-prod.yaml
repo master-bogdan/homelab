@@ -10,18 +10,37 @@ server:
   service:
     type: ClusterIP
     port: 80
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9090"
+
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
+    fsGroup: 0
+    fsGroupChangePolicy: "OnRootMismatch"
 
 alertmanager:
   enabled: true
   persistentVolume:
     enabled: true
     size: 2Gi
+    accessModes:
+      - ReadWriteOnce
 
-pushgateway:
+  service:
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9093"
+
+prometheus-pushgateway:
   enabled: false
 
-nodeExporter:
+prometheus-node-exporter:
   enabled: true
 
-kubeStateMetrics:
+kube-state-metrics:
   enabled: true
+  prometheusScrape: true
+  prometheusScrapePort: 8080

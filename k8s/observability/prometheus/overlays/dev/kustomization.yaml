@@ -5,7 +5,12 @@ namespace: observability
 
 resources:
   - ../../base
-  - http-prometheus.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-prometheus
+    path: httproute-patch.yaml
 
 helmCharts:
   - name: prometheus

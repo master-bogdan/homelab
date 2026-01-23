@@ -1,10 +1,6 @@
 fullnameOverride: fluent-bit-prod
 kind: DaemonSet
 
-image:
-  repository: cr.fluentbit.io/fluent/fluent-bit
-  tag: "3.0.4"
-
 service:
   type: ClusterIP
 
@@ -27,7 +23,7 @@ config:
         Daemon       Off
         Log_Level    info
         Parsers_File /fluent-bit/etc/parsers.conf
-        
+
         # Required for k8s liveness/readiness probes
         HTTP_Server  On
         HTTP_Listen  0.0.0.0
@@ -39,18 +35,19 @@ config:
         Path              /var/log/containers/*.log
         Parser            cri
         Tag               kube.*
-        Mem_Buf_Limit     5MB
+        Mem_Buf_Limit     20MB
         Skip_Long_Lines   On
         Refresh_Interval  10
-        
+
         # Disable inotify to prevent "too many open files"
         Inotify_Watcher   Off
-        
+
         # File position tracking
         DB                /var/log/flb_kube.db
         DB.locking        true
 
   filters: |
+    # 1) Add Kubernetes metadata (namespace, pod, labels, etc.)
     [FILTER]
         Name                kubernetes
         Match               kube.*
@@ -59,20 +56,59 @@ config:
         Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
         Merge_Log           On
         Kube_Tag_Prefix     kube.var.log.containers.
+        Labels              On
+        Annotations         Off
+
+    # 2) Route ONLY your notes API logs into a dedicated tag
+    #    If label matches, retag to kube.app.notes and DROP the original (Keep=false)
+    [FILTER]
+        Name                rewrite_tag
+        Match               kube.*
+        Rule                $kubernetes['labels']['app']  ^ephermal-notes-api$  kube.app.notes  true
+        Rule                $kubernetes['labels']['app.kubernetes.io/name']  ^ephermal-notes-api$  kube.app.notes  true
 
   outputs: |
+    # A) Notes API logs -> notes-prod-YYYY.MM.DD
     [OUTPUT]
-        Name            opensearch
-        Match           kube.*
-        Host            opensearch.observability.svc.cluster.local
-        Port            9200
-        TLS             On
-        TLS.verify      Off
-        HTTP_User       ${ES_USER}
-        HTTP_Passwd     ${ES_PASSWORD}
-        Index           logs-prod
-        Type            _doc
-        Logstash_Format On
-        Suppress_Type_Name On
-        Replace_Dots    On
-        Retry_Limit     False
+        Name                  opensearch
+        Match                 kube.app.notes
+        Host                  opensearch-cluster-master.observability.svc.cluster.local
+        Port                  9200
+        TLS                   On
+        TLS.verify            Off
+        HTTP_User             ${ES_USER}
+        HTTP_Passwd           ${ES_PASSWORD}
+        Logstash_Format       On
+        Logstash_Prefix       notes-prod
+        Suppress_Type_Name    On
+        Replace_Dots          On
+        Retry_Limit           False
+
+    # B) Everything else -> k8s-prod-YYYY.MM.DD
+    [OUTPUT]
+        Name                  opensearch
+        Match                 kube.*
+        Host                  opensearch-cluster-master.observability.svc.cluster.local
+        Port                  9200
+        TLS                   On
+        TLS.verify            Off
+        HTTP_User             ${ES_USER}
+        HTTP_Passwd           ${ES_PASSWORD}
+        Logstash_Format       On
+        Logstash_Prefix       k8s-prod
+        Suppress_Type_Name    On
+        Replace_Dots          On
+        Retry_Limit           False
+
+resources:
+  limits:
+    memory: 200Mi
+  requests:
+    cpu: 100m
+    memory: 100Mi
+
+podSecurityContext:
+  runAsUser: 0
+
+securityContext:
+  privileged: true

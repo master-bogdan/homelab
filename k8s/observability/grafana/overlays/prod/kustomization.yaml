@@ -3,7 +3,14 @@ kind: Kustomization
 
 namespace: observability
 
-resources: []
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-grafana
+    path: httproute-patch.yaml
 
 helmCharts:
   - name: grafana

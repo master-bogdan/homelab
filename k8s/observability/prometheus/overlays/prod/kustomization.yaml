@@ -3,7 +3,8 @@ kind: Kustomization
 
 namespace: observability
 
-resources: []
+resources:
+  - ../../base
 
 helmCharts:
   - name: prometheus
@@ -13,3 +14,9 @@ helmCharts:
     namespace: observability
     includeCRDs: false
     valuesFile: values-prod.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-prometheus
+    path: httproute-patch.yaml

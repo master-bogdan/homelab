@@ -5,7 +5,12 @@ namespace: observability
 
 resources:
   - ../../base
-  - http-grafana.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-grafana
+    path: httproute-patch.yaml
 
 helmCharts:
   - name: grafana

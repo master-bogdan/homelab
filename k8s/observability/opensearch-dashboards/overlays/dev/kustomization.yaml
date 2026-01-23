@@ -5,7 +5,12 @@ namespace: observability
 
 resources:
   - ../../base
-  - http-opensearch-dashboards.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-opensearch-dashboards
+    path: httproute-patch.yaml
 
 helmCharts:
   - name: opensearch-dashboards
