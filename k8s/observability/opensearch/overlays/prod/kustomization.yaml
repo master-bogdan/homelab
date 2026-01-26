@@ -3,7 +3,8 @@ kind: Kustomization
 
 namespace: observability
 
-resources: []
+resources:
+  - external-secret.yaml
 
 helmCharts:
   - name: opensearch

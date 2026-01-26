@@ -53,9 +53,12 @@ REDIS_DIR             := $(DATABASES_DIR)/redis
 POSTGRESQL_DIR        := $(DATABASES_DIR)/postgresql
 PLATFORM_DIR          := $(KUBERNETES_DIR)/platform
 AUTH_DIR              := $(KUBERNETES_DIR)/auth
+SECRETS_DIR           := $(KUBERNETES_DIR)/secrets
 AUTHENTIK_DIR         := $(AUTH_DIR)/authentik
 AUTHENTIK_FWD_AUTH_DIR := $(AUTH_DIR)/forward-auth
 AUTH_REFERENCE_GRANT  := $(AUTH_DIR)/reference-grant.yaml
+EXTERNAL_SECRETS_DIR  := $(SECRETS_DIR)/external-secrets
+VAULT_DIR             := $(SECRETS_DIR)/vault
 N8N_DIR               := $(PLATFORM_DIR)/n8n
 SEAWEEDFS_DIR          := $(PLATFORM_DIR)/seaweedfs
 OBSERVABILITY_DIR     := $(KUBERNETES_DIR)/observability
@@ -71,6 +74,7 @@ NETWORKING_HELM_DIRS  := $(TRAEFIK_DIR)
 AUTH_DIRS             := $(AUTHENTIK_FWD_AUTH_DIR)
 AUTH_HELM_DIRS        := $(AUTHENTIK_DIR)
 PLATFORM_HELM_DIRS    := $(AUTHENTIK_DIR) $(N8N_DIR) $(SEAWEEDFS_DIR)
+SECRETS_HELM_DIRS     := $(VAULT_DIR) $(EXTERNAL_SECRETS_DIR)
 OBS_HELM_DIRS         := $(FLUENTBIT_DIR) $(PROMETHEUS_DIR) $(GRAFANA_DIR) $(OPENSEARCH_DIR) $(OPENSEARCH_DASH_DIR)
 OBS_HELM_DELETE_DIRS  := $(OPENSEARCH_DASH_DIR) $(OPENSEARCH_DIR) $(GRAFANA_DIR) $(PROMETHEUS_DIR) $(FLUENTBIT_DIR)
 DATABASE_DIRS         := $(REDIS_DIR) $(POSTGRESQL_DIR)
@@ -310,6 +314,7 @@ endef
 	deploy-namespaces delete-namespaces validate-namespaces \
 	deploy-app deploy-apps delete-app delete-apps validate-app validate-apps \
 	deploy-networking delete-networking validate-networking \
+	deploy-secrets delete-secrets validate-secrets \
 	deploy-auth delete-auth validate-auth \
 	deploy-platform delete-platform validate-platform \
 	deploy-observability delete-observability validate-observability \
@@ -349,6 +354,7 @@ help:
 	@echo "  ENV=prod-dev uses overlays/prod-dev when present, otherwise falls back to prod"
 	@echo "  deploy-namespaces   / delete-namespaces   / validate-namespaces"
 	@echo "  deploy-networking   / delete-networking   / validate-networking"
+	@echo "  deploy-secrets      / delete-secrets      / validate-secrets"
 	@echo "  deploy-auth         / delete-auth         / validate-auth"
 	@echo "  deploy-platform     / delete-platform     / validate-platform"
 	@echo "  deploy-observability / delete-observability / validate-observability"
@@ -482,8 +488,20 @@ validate-networking:
 	@$(KUBECTL) kustomize "$(GATEWAY_DIR)/$(if $(wildcard $(GATEWAY_DIR)/overlays/$(ENV)),overlays/$(ENV),$(if $(ENV_FALLBACK),$(if $(wildcard $(GATEWAY_DIR)/overlays/$(ENV_FALLBACK)),overlays/$(ENV_FALLBACK),base),base))" >/dev/null
 	@echo "✅ Networking validated"
 
+# ---- Secrets (External Secrets Operator) ----
+deploy-secrets: deploy-namespaces
+	$(call k8s_apply_helm_list,$(SECRETS_HELM_DIRS))
+	@echo "✅ Secrets deployed"
+
+delete-secrets:
+	$(call k8s_delete_helm_list,$(SECRETS_HELM_DIRS))
+
+validate-secrets:
+	$(call k8s_dry_run_helm_list,$(SECRETS_HELM_DIRS))
+	@echo "✅ Secrets validated"
+
 # ---- Auth ----
-deploy-auth: deploy-namespaces
+deploy-auth: deploy-namespaces deploy-secrets
 	$(call k8s_apply_helm_list,$(AUTH_HELM_DIRS))
 	$(call k8s_apply_list,$(AUTH_DIRS))
 	@$(KUBECTL) apply -f "$(AUTH_REFERENCE_GRANT)"
@@ -501,7 +519,7 @@ validate-auth:
 	@echo "✅ Auth validated"
 
 # ---- Platform ----
-deploy-platform: deploy-namespaces
+deploy-platform: deploy-namespaces deploy-secrets
 	$(call k8s_apply_helm_list,$(PLATFORM_HELM_DIRS))
 	@echo "✅ Platform deployed"
 
@@ -513,7 +531,7 @@ validate-platform:
 	@echo "✅ Platform validated"
 
 # ---- Observability ----
-deploy-observability: deploy-namespaces
+deploy-observability: deploy-namespaces deploy-secrets
 	$(call k8s_apply_helm_list,$(OBS_HELM_DIRS))
 	@echo "✅ Observability deployed"
 
@@ -590,6 +608,7 @@ validate-all: clean-charts
 	@echo "🧪 Validating all manifests (ENV=$(ENV))..."
 	@$(MAKE) --no-print-directory validate-namespaces
 	@$(MAKE) --no-print-directory validate-networking
+	@$(MAKE) --no-print-directory validate-secrets
 	@$(MAKE) --no-print-directory validate-auth
 	@$(MAKE) --no-print-directory validate-platform
 	@$(MAKE) --no-print-directory validate-observability
@@ -601,8 +620,8 @@ validate-all: clean-charts
 # ============================
 # High-Level Operations
 # ============================
-deploy-all: validate-all deploy-namespaces deploy-networking deploy-auth deploy-databases deploy-platform deploy-observability deploy-apps deploy-ui-all
+deploy-all: validate-all deploy-namespaces deploy-networking deploy-secrets deploy-auth deploy-databases deploy-platform deploy-observability deploy-apps deploy-ui-all
 	@echo "🎉 Full stack deployed (ENV=$(ENV))"
 
-delete-all: delete-apps delete-observability delete-platform delete-databases delete-auth delete-networking delete-namespaces
+delete-all: delete-apps delete-observability delete-platform delete-databases delete-auth delete-secrets delete-networking delete-namespaces
 	@echo "✅ Full stack deleted (ENV=$(ENV))"

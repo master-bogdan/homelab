@@ -5,6 +5,7 @@ namespace: platform
 
 resources:
   - ../../base
+  - external-secret.yaml
 
 helmCharts:
   - name: n8n

@@ -5,6 +5,7 @@ namespace: observability
 
 resources:
   - ../../base
+  - external-secret.yaml
 
 helmCharts:
   - name: opensearch-dashboards
