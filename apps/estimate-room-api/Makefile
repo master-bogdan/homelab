@@ -1,4 +1,4 @@
-.PHONY: migrate-up migrate-down migrate-create
+.PHONY: migrate-up migrate-down migrate-create docs-gen
 
 # Apply all pending migrations
 migrate-up:
@@ -19,3 +19,7 @@ ifndef name
 	@exit 1
 endif
 	@go run cmd/migrations/main.go -command=create -name=$(name)
+
+# Generate Swagger/OpenAPI docs
+docs-gen:
+	@go run cmd/docs/main.go

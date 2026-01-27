@@ -10,11 +10,13 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/config"
+	_ "github.com/master-bogdan/estimate-room-api/docs"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 	"github.com/redis/go-redis/v9"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type AppDeps struct {
@@ -34,6 +36,10 @@ func (deps *AppDeps) SetupApp() {
 		middleware.Recoverer,
 		httprate.LimitByIP(100, 1*time.Minute),
 	)
+
+	deps.Router.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+	))
 
 	wsManager := ws.NewManager(deps.Ws, "app")
 

@@ -6,6 +6,10 @@ import (
 	"net/http"
 )
 
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 func WriteResponse(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
@@ -15,5 +19,5 @@ func WriteResponse(w http.ResponseWriter, status int, v any) {
 }
 
 func WriteResponseError(w http.ResponseWriter, status int, msg string) {
-	WriteResponse(w, status, map[string]string{"error": msg})
+	WriteResponse(w, status, ErrorResponse{Error: msg})
 }

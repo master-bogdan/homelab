@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 )
 
@@ -24,10 +25,20 @@ func NewRoomsGateway(
 	}
 }
 
+// HandleConnection godoc
+// @Summary Room WebSocket connection
+// @Description Upgrades the HTTP request to a WebSocket for the given room.
+// @Tags rooms
+// @Param roomID path string true "Room ID"
+// @Param clientID query string false "Client ID"
+// @Success 101 {string} string "Switching Protocols"
+// @Failure 400 {object} utils.ErrorResponse
+// @Failure 500 {object} utils.ErrorResponse
+// @Router /rooms/{roomID}/ws [get]
 func (g *roomsGateway) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	channelID := chi.URLParam(r, "roomID")
 	if channelID == "" {
-		http.Error(w, "roomID is required", http.StatusBadRequest)
+		utils.WriteResponseError(w, http.StatusBadRequest, "roomID is required")
 		return
 	}
 
@@ -35,7 +46,7 @@ func (g *roomsGateway) HandleConnection(w http.ResponseWriter, r *http.Request) 
 	if clientID == "" {
 		anonID, err := newClientID()
 		if err != nil {
-			http.Error(w, "failed to generate clientID", http.StatusInternalServerError)
+			utils.WriteResponseError(w, http.StatusInternalServerError, "failed to generate clientID")
 			return
 		}
 		clientID = anonID
