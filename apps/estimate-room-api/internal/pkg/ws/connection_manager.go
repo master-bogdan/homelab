@@ -3,12 +3,12 @@ package ws
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 )
 
 const (
@@ -119,7 +119,7 @@ func (m *Manager) HandleWS(w http.ResponseWriter, r *http.Request, channelID, cl
 		InsecureSkipVerify: true,
 	})
 	if err != nil {
-		log.Printf("WebSocket accept error: %v", err)
+		logger.L().Error("WebSocket accept error", "err", err)
 		return
 	}
 

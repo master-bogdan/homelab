@@ -5,10 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 )
 
@@ -45,19 +45,19 @@ func (g *roomsGateway) HandleConnection(w http.ResponseWriter, r *http.Request) 
 }
 
 func (g *roomsGateway) OnConnect(client ws.ClientInfo) {
-	log.Printf("Client %s connected to channel %s", client.ClientID, client.ChannelID)
+	logger.L().Info("Client connected", "client_id", client.ClientID, "channel_id", client.ChannelID)
 }
 
 func (g *roomsGateway) OnDisconnect(client ws.ClientInfo) {
-	log.Printf("Client %s disconnected from channel %s", client.ClientID, client.ChannelID)
+	logger.L().Info("Client disconnected", "client_id", client.ClientID, "channel_id", client.ChannelID)
 }
 
 func (g *roomsGateway) OnMessage(client ws.ClientInfo, message []byte) {
-	log.Printf("Message from client %s in channel %s: %s", client.ClientID, client.ChannelID, string(message))
+	logger.L().Info("Message received", "client_id", client.ClientID, "channel_id", client.ChannelID, "message", string(message))
 
 	var msg map[string]any
 	if err := json.Unmarshal(message, &msg); err != nil {
-		log.Printf("Invalid JSON: %v", err)
+		logger.L().Error("Invalid JSON", "err", err)
 		return
 	}
 
@@ -70,13 +70,13 @@ func (g *roomsGateway) OnMessage(client ws.ClientInfo, message []byte) {
 	// Broadcast via Redis to all servers
 	err := g.wsManager.Broadcast(response)
 	if err != nil {
-		log.Printf("Broadcast error: %v", err)
+		logger.L().Error("Broadcast error", "err", err)
 		return
 	}
 }
 
 func (g *roomsGateway) OnError(client ws.ClientInfo, err error) {
-	log.Printf("Error for client %s in channel %s: %v", client.ClientID, client.ChannelID, err)
+	logger.L().Error("Client error", "client_id", client.ClientID, "channel_id", client.ChannelID, "err", err)
 }
 
 // SendToRoom publishes a server message to all clients in the room.

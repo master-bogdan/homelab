@@ -2,12 +2,12 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
+	"os"
 	"slices"
 
 	"github.com/master-bogdan/estimate-room-api/config"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 )
 
 const (
@@ -17,6 +17,8 @@ const (
 )
 
 func main() {
+	logger.InitLogger()
+
 	var command string
 	var name string
 
@@ -27,45 +29,49 @@ func main() {
 	commands := []string{Create, Up, Down}
 
 	if !slices.Contains(commands, command) {
-		log.Fatalf("Invalid command: %s. Use 'up', 'down' or 'create'", command)
+		logger.L().Error("Invalid command. Use 'up', 'down' or 'create'", "command", command)
+		os.Exit(1)
 	}
 
 	if command == Create {
 		if name == "" {
-			log.Fatal("Migration name is required. Use: -command=create -name=your_migration_name")
+			logger.L().Error("Migration name is required. Use: -command=create -name=your_migration_name")
+			os.Exit(1)
 		}
 
 		upFile, downFile, err := postgresql.MigrateCreate(name)
 		if err != nil {
-			log.Fatalf("Failed to create migration: %v", err)
+			logger.L().Error("Failed to create migration", "err", err)
+			os.Exit(1)
 		}
 
-		fmt.Printf("✓ Created migration files:\n")
-		fmt.Printf("  - %s\n", upFile)
-		fmt.Printf("  - %s\n", downFile)
+		logger.L().Info("Created migration files", "up_file", upFile, "down_file", downFile)
 
 		return
 	}
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		logger.L().Error("Failed to load config", "err", err)
+		os.Exit(1)
 	}
 
 	switch command {
 	case Up:
-		fmt.Println("Applying migrations...")
+		logger.L().Info("Applying migrations...")
 		if err := postgresql.MigrateUp(cfg.DB.DatabaseURL); err != nil {
-			log.Fatalf("Failed to run migrations: %v", err)
+			logger.L().Error("Failed to run migrations", "err", err)
+			os.Exit(1)
 		}
 
-		fmt.Println("✓ Migrations applied successfully")
+		logger.L().Info("Migrations applied successfully")
 	case Down:
-		fmt.Println("Rolling back migrations...")
+		logger.L().Info("Rolling back migrations...")
 		if err := postgresql.MigrateDown(cfg.DB.DatabaseURL); err != nil {
-			log.Fatalf("Failed to rollback migrations: %v", err)
+			logger.L().Error("Failed to rollback migrations", "err", err)
+			os.Exit(1)
 		}
 
-		fmt.Println("✓ Migrations rolled back successfully")
+		logger.L().Info("Migrations rolled back successfully")
 	}
 }

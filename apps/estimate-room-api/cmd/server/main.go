@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -17,41 +16,49 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/app"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/redis"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 )
 
 var IsGracefulShutdown atomic.Bool
 
 func main() {
+	logger.InitLogger()
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		logger.L().Error("failed to load config", "err", err)
+		os.Exit(1)
 	}
 
 	if cfg.DB.IsAutoMigrations {
-		log.Println("Running database migations...")
+		logger.L().Info("Running database migations...")
 		err := postgresql.MigrateUp(cfg.DB.DatabaseURL)
 		if err != nil {
-			log.Fatalf("Failed to run migrations: %v", err)
+			logger.L().Error("Failed to run migrations", "err", err)
+			os.Exit(1)
 		}
-		log.Println("Migrations completed successfully")
+		logger.L().Info("Migrations completed successfully")
 	}
 
 	db, err := postgresql.Connect(cfg.DB.DatabaseURL)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		logger.L().Error("failed to connect to database", "err", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
 	redisClient, err := redis.Connect(cfg.DB.RedisURL)
 	if err != nil {
-		log.Fatalf("failed to connect to cache database: %v", err)
+		logger.L().Error("failed to connect to cache database", "err", err)
+		os.Exit(1)
 	}
 	defer redisClient.Close()
 
 	redisPubSubClient, err := redis.Connect(cfg.DB.RedisURL)
 	if err != nil {
-		log.Fatalf("failed to connect to cache database: %v", err)
+		logger.L().Error("failed to connect to cache database", "err", err)
+		os.Exit(1)
 	}
 
 	defer redisPubSubClient.Close()
@@ -86,10 +93,11 @@ func main() {
 	go func() {
 		addr := cfg.Server.Host + ":" + cfg.Server.Port
 
-		log.Printf("Starting server on %s", addr)
+		logger.L().Info("Starting server", "addr", addr)
 		err = srv.ListenAndServe()
 		if err != nil {
-			log.Fatalf("Error starting server: %v", err)
+			logger.L().Error("Error starting server", "err", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -101,7 +109,7 @@ func gracefulShutdown(srv *http.Server, ws *ws.WsServer, db interface{ Close() }
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	<-quit
-	log.Println("Shutting down server...")
+	logger.L().Info("Shutting down server...")
 	IsGracefulShutdown.Store(true)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -111,17 +119,17 @@ func gracefulShutdown(srv *http.Server, ws *ws.WsServer, db interface{ Close() }
 
 	err := srv.Shutdown(ctx)
 	if err != nil {
-		log.Printf("Error during shutdown: %v", err)
+		logger.L().Error("Error during shutdown", "err", err)
 	}
 
-	log.Println("Closing cache database connection...")
+	logger.L().Info("Closing cache database connection...")
 	err = redis.Close()
 	if err != nil {
-		log.Printf("Error closing cache database: %v", err)
+		logger.L().Error("Error closing cache database", "err", err)
 	}
 
-	log.Println("Closing database connection...")
+	logger.L().Info("Closing database connection...")
 	db.Close()
 
-	log.Println("Server gracefully stopped")
+	logger.L().Info("Server gracefully stopped")
 }

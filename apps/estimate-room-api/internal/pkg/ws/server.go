@@ -4,10 +4,10 @@ package ws
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"sync"
 	"time"
 
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -58,7 +58,7 @@ func (s *WsServer) Publish(channel string, message any) error {
 }
 
 func (s *WsServer) Shutdown() {
-	log.Println("Shutting down WebSocket server...")
+	logger.L().Info("Shutting down WebSocket server...")
 	s.cancel()
 
 	done := make(chan struct{})
@@ -69,8 +69,8 @@ func (s *WsServer) Shutdown() {
 
 	select {
 	case <-done:
-		log.Println("WebSocket server shut down gracefully")
+		logger.L().Info("WebSocket server shut down gracefully")
 	case <-time.After(5 * time.Second):
-		log.Println("WebSocket server shutdown timeout")
+		logger.L().Warn("WebSocket server shutdown timeout")
 	}
 }

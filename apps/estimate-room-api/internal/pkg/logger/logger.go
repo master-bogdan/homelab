@@ -1,4 +1,4 @@
-// internal/logger/logger.go
+// Package logger internal/logger/logger.go
 package logger
 
 import (
@@ -7,12 +7,18 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 )
 
 type ctxKey string
 
 const requestIDKey ctxKey = "request_id"
+
+var (
+	defaultLogger *slog.Logger
+	initOnce      sync.Once
+)
 
 // JSONHandler formats logs for OpenSearch, but adds colors when writing to a TTY.
 type JSONHandler struct {
@@ -42,7 +48,7 @@ func (h *JSONHandler) Handle(ctx context.Context, r slog.Record) error {
 	}
 
 	// Inject request_id if present
-	if rid, ok := ctx.Value(requestIDKey).(string); ok && rid != "" {
+	if rid := GetRequestID(ctx); rid != "" {
 		logEntry["request_id"] = rid
 	}
 
@@ -107,8 +113,37 @@ func isTerminal(f *os.File) bool {
 
 // InitLogger initializes and sets default slog logger
 func InitLogger() *slog.Logger {
-	handler := NewJSONHandler(slog.LevelInfo)
-	logger := slog.New(handler)
-	slog.SetDefault(logger)
-	return logger
+	initOnce.Do(func() {
+		handler := NewJSONHandler(slog.LevelInfo)
+		defaultLogger = slog.New(handler)
+		slog.SetDefault(defaultLogger)
+	})
+	return defaultLogger
+}
+
+// L returns the singleton logger instance, initializing it if needed.
+func L() *slog.Logger {
+	if defaultLogger != nil {
+		return defaultLogger
+	}
+	return InitLogger()
+}
+
+// WithRequestID stores a request ID in context for log enrichment.
+func WithRequestID(ctx context.Context, requestID string) context.Context {
+	if ctx == nil || requestID == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, requestIDKey, requestID)
+}
+
+// GetRequestID retrieves the request ID from context.
+func GetRequestID(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if rid, ok := ctx.Value(requestIDKey).(string); ok {
+		return rid
+	}
+	return ""
 }
