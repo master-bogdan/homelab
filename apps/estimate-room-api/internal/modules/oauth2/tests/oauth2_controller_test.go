@@ -14,14 +14,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
-	test_utils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
+	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
 )
 
 func setupTest(t *testing.T) (*chi.Mux, *pgxpool.Pool, string, string, string, string) {
 	t.Helper()
 
-	db := test_utils.SetupTestDB(t)
-	test_utils.ResetOauthTables(t, db)
+	db := testutils.SetupTestDB(t)
+	testutils.ResetOauthTables(t, db)
 
 	router := chi.NewRouter()
 
@@ -35,8 +35,8 @@ func setupTest(t *testing.T) (*chi.Mux, *pgxpool.Pool, string, string, string, s
 	router.Route("/api/v1", func(r chi.Router) {
 		oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
 			Router:           r,
-			TokenKey:         test_utils.TestTokenKey,
-			Issuer:           test_utils.TestIssuer,
+			TokenKey:         testutils.TestTokenKey,
+			Issuer:           testutils.TestIssuer,
 			ClientRepo:       clientRepo,
 			AuthCodeRepo:     authCodeRepo,
 			UserRepo:         userRepo,
@@ -47,9 +47,9 @@ func setupTest(t *testing.T) (*chi.Mux, *pgxpool.Pool, string, string, string, s
 	})
 
 	redirectURI := "http://localhost:4081"
-	clientID := test_utils.SeedClient(t, db, redirectURI, []string{"user"})
-	userID := test_utils.SeedUser(t, db, "testuser@example.com", "password123")
-	sessionID := test_utils.SeedSession(t, db, userID, clientID, "nonce123")
+	clientID := testutils.SeedClient(t, db, redirectURI, []string{"user"})
+	userID := testutils.SeedUser(t, db, "testuser@example.com", "password123")
+	sessionID := testutils.SeedSession(t, db, userID, clientID, "nonce123")
 
 	return router, db, clientID, userID, sessionID, redirectURI
 }

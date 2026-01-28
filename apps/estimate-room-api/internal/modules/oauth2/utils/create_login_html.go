@@ -1,4 +1,4 @@
-package oauth2_utils
+package oauth2utils
 
 import (
 	"fmt"

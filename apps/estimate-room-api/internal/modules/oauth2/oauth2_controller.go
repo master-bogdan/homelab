@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
-	oauth2_dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
-	oauth2_utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
+	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
+	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 )
@@ -72,7 +72,7 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createAuthCodeDTO := &oauth2_dto.CreateOauthCodeDTO{
+	createAuthCodeDTO := &oauth2dto.CreateOauthCodeDTO{
 		ClientID:            query.ClientID,
 		UserID:              userID,
 		OidcSessionID:       sessionID,
@@ -115,7 +115,7 @@ func (c *oauth2Controller) ShowLoginForm(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	html := oauth2_utils.CreateLoginHtml(params)
+	html := oauth2utils.CreateLoginHtml(params)
 	_, _ = w.Write([]byte(html))
 }
 
@@ -133,7 +133,7 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userDTO := &oauth2_dto.UserDTO{
+	userDTO := &oauth2dto.UserDTO{
 		Email:    loginDTO.Email,
 		Password: loginDTO.Password,
 	}
@@ -164,7 +164,7 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	oidcSessionDTO := &oauth2_dto.CreateOidcSessionDTO{
+	oidcSessionDTO := &oauth2dto.CreateOidcSessionDTO{
 		UserID:   userID,
 		ClientID: loginDTO.ClientID,
 		Nonce:    loginDTO.Nonce,
@@ -191,7 +191,7 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 	})
 
-	createAuthCodeDTO := &oauth2_dto.CreateOauthCodeDTO{
+	createAuthCodeDTO := &oauth2dto.CreateOauthCodeDTO{
 		ClientID:            loginDTO.ClientID,
 		UserID:              userID,
 		OidcSessionID:       oidcSessionID,
@@ -263,9 +263,9 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func parseAuthorizeQuery(r *http.Request) *oauth2_dto.AuthorizeQueryDTO {
+func parseAuthorizeQuery(r *http.Request) *oauth2dto.AuthorizeQueryDTO {
 	q := r.URL.Query()
-	return &oauth2_dto.AuthorizeQueryDTO{
+	return &oauth2dto.AuthorizeQueryDTO{
 		ClientID:            q.Get("client_id"),
 		RedirectURI:         q.Get("redirect_uri"),
 		ResponseType:        q.Get("response_type"),
@@ -277,12 +277,12 @@ func parseAuthorizeQuery(r *http.Request) *oauth2_dto.AuthorizeQueryDTO {
 	}
 }
 
-func parseLoginForm(r *http.Request) (*oauth2_dto.LoginDTO, error) {
+func parseLoginForm(r *http.Request) (*oauth2dto.LoginDTO, error) {
 	if err := r.ParseForm(); err != nil {
 		return nil, err
 	}
 
-	return &oauth2_dto.LoginDTO{
+	return &oauth2dto.LoginDTO{
 		Email:               r.Form.Get("email"),
 		Password:            r.Form.Get("password"),
 		ClientID:            r.Form.Get("client_id"),
@@ -296,12 +296,12 @@ func parseLoginForm(r *http.Request) (*oauth2_dto.LoginDTO, error) {
 	}, nil
 }
 
-func parseTokenForm(r *http.Request) (*oauth2_dto.GetTokenDTO, error) {
+func parseTokenForm(r *http.Request) (*oauth2dto.GetTokenDTO, error) {
 	if err := r.ParseForm(); err != nil {
 		return nil, err
 	}
 
-	return &oauth2_dto.GetTokenDTO{
+	return &oauth2dto.GetTokenDTO{
 		GrantType:    r.Form.Get("grant_type"),
 		CodeVerifier: r.Form.Get("code_verifier"),
 		Code:         r.Form.Get("code"),

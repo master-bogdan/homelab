@@ -7,19 +7,19 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	oauth2_dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
-	test_utils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
+	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
+	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
 )
 
 func TestRegisterAndAuthenticateUser(t *testing.T) {
-	db := test_utils.SetupTestDB(t)
-	test_utils.ResetOauthTables(t, db)
+	db := testutils.SetupTestDB(t)
+	testutils.ResetOauthTables(t, db)
 
-	svc := test_utils.NewOauth2Service(db)
+	svc := testutils.NewOauth2Service(db)
 	email := "test1@example.com"
 	pass := "password123"
 
-	_, err := svc.RegisterUser(&oauth2_dto.UserDTO{
+	_, err := svc.RegisterUser(&oauth2dto.UserDTO{
 		Email:    email,
 		Password: pass,
 	})
@@ -27,7 +27,7 @@ func TestRegisterAndAuthenticateUser(t *testing.T) {
 		t.Fatalf("failed to register user: %v", err)
 	}
 
-	userID, err := svc.AuthenticateUser(&oauth2_dto.UserDTO{
+	userID, err := svc.AuthenticateUser(&oauth2dto.UserDTO{
 		Email: email,
 	})
 	if err != nil || userID == "" {
@@ -36,17 +36,17 @@ func TestRegisterAndAuthenticateUser(t *testing.T) {
 }
 
 func TestCreateOidcSessionAndAuthCode(t *testing.T) {
-	db := test_utils.SetupTestDB(t)
-	test_utils.ResetOauthTables(t, db)
+	db := testutils.SetupTestDB(t)
+	testutils.ResetOauthTables(t, db)
 
-	svc := test_utils.NewOauth2Service(db)
+	svc := testutils.NewOauth2Service(db)
 
 	redirectURI := "http://localhost/callback"
-	clientID := test_utils.SeedClient(t, db, redirectURI, []string{"openid", "user"})
-	userID := test_utils.SeedUser(t, db, "testuser2@example.com", "password123")
+	clientID := testutils.SeedClient(t, db, redirectURI, []string{"openid", "user"})
+	userID := testutils.SeedUser(t, db, "testuser2@example.com", "password123")
 	nonce := "random-nonce"
 
-	sessionID, err := svc.CreateOidcSession(&oauth2_dto.CreateOidcSessionDTO{
+	sessionID, err := svc.CreateOidcSession(&oauth2dto.CreateOidcSessionDTO{
 		UserID:   userID,
 		ClientID: clientID,
 		Nonce:    nonce,
@@ -59,7 +59,7 @@ func TestCreateOidcSessionAndAuthCode(t *testing.T) {
 	hash := sha256.Sum256([]byte(verifier))
 	challenge := base64.RawURLEncoding.EncodeToString(hash[:])
 
-	code, err := svc.CreateAuthCode(&oauth2_dto.CreateOauthCodeDTO{
+	code, err := svc.CreateAuthCode(&oauth2dto.CreateOauthCodeDTO{
 		ClientID:            clientID,
 		UserID:              userID,
 		OidcSessionID:       sessionID,
@@ -78,16 +78,16 @@ func TestCreateOidcSessionAndAuthCode(t *testing.T) {
 }
 
 func TestAuthorizationCodeExchange(t *testing.T) {
-	db := test_utils.SetupTestDB(t)
-	test_utils.ResetOauthTables(t, db)
+	db := testutils.SetupTestDB(t)
+	testutils.ResetOauthTables(t, db)
 
-	svc := test_utils.NewOauth2Service(db)
+	svc := testutils.NewOauth2Service(db)
 
 	redirectURI := "http://localhost/callback"
-	clientID := test_utils.SeedClient(t, db, redirectURI, []string{"openid", "user"})
-	userID := test_utils.SeedUser(t, db, "testuser3@example.com", "password123")
+	clientID := testutils.SeedClient(t, db, redirectURI, []string{"openid", "user"})
+	userID := testutils.SeedUser(t, db, "testuser3@example.com", "password123")
 
-	sessionID, err := svc.CreateOidcSession(&oauth2_dto.CreateOidcSessionDTO{
+	sessionID, err := svc.CreateOidcSession(&oauth2dto.CreateOidcSessionDTO{
 		UserID:   userID,
 		ClientID: clientID,
 		Nonce:    "nonce-456",
@@ -100,7 +100,7 @@ func TestAuthorizationCodeExchange(t *testing.T) {
 	hash := sha256.Sum256([]byte(verifier))
 	challenge := base64.RawURLEncoding.EncodeToString(hash[:])
 
-	code, err := svc.CreateAuthCode(&oauth2_dto.CreateOauthCodeDTO{
+	code, err := svc.CreateAuthCode(&oauth2dto.CreateOauthCodeDTO{
 		ClientID:            clientID,
 		UserID:              userID,
 		OidcSessionID:       sessionID,
@@ -113,7 +113,7 @@ func TestAuthorizationCodeExchange(t *testing.T) {
 		t.Fatalf("create code: %v", err)
 	}
 
-	tokens, err := svc.GetAuthorizationTokens(&oauth2_dto.GetTokenDTO{
+	tokens, err := svc.GetAuthorizationTokens(&oauth2dto.GetTokenDTO{
 		GrantType:    "authorization_code",
 		ClientID:     clientID,
 		RedirectURI:  redirectURI,
@@ -130,16 +130,16 @@ func TestAuthorizationCodeExchange(t *testing.T) {
 }
 
 func TestAuthCodeExpires(t *testing.T) {
-	db := test_utils.SetupTestDB(t)
-	test_utils.ResetOauthTables(t, db)
+	db := testutils.SetupTestDB(t)
+	testutils.ResetOauthTables(t, db)
 
-	svc := test_utils.NewOauth2Service(db)
+	svc := testutils.NewOauth2Service(db)
 
 	redirectURI := "http://localhost/callback"
-	clientID := test_utils.SeedClient(t, db, redirectURI, []string{"openid", "user"})
-	userID := test_utils.SeedUser(t, db, "testuser4@example.com", "password123")
+	clientID := testutils.SeedClient(t, db, redirectURI, []string{"openid", "user"})
+	userID := testutils.SeedUser(t, db, "testuser4@example.com", "password123")
 
-	sessionID, err := svc.CreateOidcSession(&oauth2_dto.CreateOidcSessionDTO{
+	sessionID, err := svc.CreateOidcSession(&oauth2dto.CreateOidcSessionDTO{
 		UserID:   userID,
 		ClientID: clientID,
 		Nonce:    "nonce-exp",
@@ -152,7 +152,7 @@ func TestAuthCodeExpires(t *testing.T) {
 	hash := sha256.Sum256([]byte(verifier))
 	challenge := base64.RawURLEncoding.EncodeToString(hash[:])
 
-	code, err := svc.CreateAuthCode(&oauth2_dto.CreateOauthCodeDTO{
+	code, err := svc.CreateAuthCode(&oauth2dto.CreateOauthCodeDTO{
 		ClientID:            clientID,
 		UserID:              userID,
 		OidcSessionID:       sessionID,
@@ -170,7 +170,7 @@ func TestAuthCodeExpires(t *testing.T) {
 		t.Fatalf("expire code: %v", err)
 	}
 
-	_, err = svc.GetAuthorizationTokens(&oauth2_dto.GetTokenDTO{
+	_, err = svc.GetAuthorizationTokens(&oauth2dto.GetTokenDTO{
 		GrantType:    "authorization_code",
 		ClientID:     clientID,
 		RedirectURI:  redirectURI,
@@ -183,15 +183,15 @@ func TestAuthCodeExpires(t *testing.T) {
 }
 
 func TestValidateClientScope(t *testing.T) {
-	db := test_utils.SetupTestDB(t)
-	test_utils.ResetOauthTables(t, db)
+	db := testutils.SetupTestDB(t)
+	testutils.ResetOauthTables(t, db)
 
-	svc := test_utils.NewOauth2Service(db)
+	svc := testutils.NewOauth2Service(db)
 
 	redirectURI := "http://localhost/callback"
-	clientID := test_utils.SeedClient(t, db, redirectURI, []string{"openid"})
+	clientID := testutils.SeedClient(t, db, redirectURI, []string{"openid"})
 
-	err := svc.ValidateClient(&oauth2_dto.AuthorizeQueryDTO{
+	err := svc.ValidateClient(&oauth2dto.AuthorizeQueryDTO{
 		ClientID:            clientID,
 		RedirectURI:         redirectURI,
 		ResponseType:        "code",

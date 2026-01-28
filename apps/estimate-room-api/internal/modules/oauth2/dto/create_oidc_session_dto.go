@@ -1,4 +1,4 @@
-package oauth2_dto
+package oauth2dto
 
 import "github.com/go-playground/validator/v10"
 
