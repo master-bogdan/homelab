@@ -34,7 +34,7 @@ func NewHealthController(
 // @Produce json
 // @Success 200 {object} ReadinessStatus
 // @Failure 503 {object} utils.ErrorResponse
-// @Router /readyz [get]
+// @Router /api/v1/health/readyz [get]
 func (c *healthController) CheckReadiness(w http.ResponseWriter, r *http.Request) {
 	if c.isGracefulShutdown != nil && c.isGracefulShutdown.Load() {
 		utils.WriteResponseError(w, http.StatusServiceUnavailable, "graceful shutdown")
@@ -58,7 +58,7 @@ func (c *healthController) CheckReadiness(w http.ResponseWriter, r *http.Request
 // @Produce json
 // @Success 200 {object} LivenessStatus
 // @Failure 503 {object} utils.ErrorResponse
-// @Router /healthz [get]
+// @Router /api/v1/health/healthz [get]
 func (c *healthController) CheckHealth(w http.ResponseWriter, r *http.Request) {
 	if c.isGracefulShutdown != nil && c.isGracefulShutdown.Load() {
 		utils.WriteResponseError(w, http.StatusServiceUnavailable, "graceful shutdown")

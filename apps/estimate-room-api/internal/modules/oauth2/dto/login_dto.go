@@ -17,7 +17,7 @@ type LoginDTO struct {
 	Scopes              string `form:"scopes" validate:"required"`
 	State               string `form:"state" validate:"required"`
 	CodeChallenge       string `form:"code_challenge" validate:"required"`
-	CodeChallengeMethod string `form:"code_challenge_method" validate:"required"`
+	CodeChallengeMethod string `form:"code_challenge_method" validate:"required,oneof=S256"`
 	Nonce               string `form:"nonce" validate:"required"`
 }
 

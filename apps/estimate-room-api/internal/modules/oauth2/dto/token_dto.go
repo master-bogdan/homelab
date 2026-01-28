@@ -1,23 +1,40 @@
 package oauth2_dto
 
 import (
+	"errors"
+
 	"github.com/go-playground/validator/v10"
 )
 
 type GetTokenDTO struct {
 	GrantType    string `form:"grant_type" validate:"required,oneof=authorization_code refresh_token"`
-	CodeVerifier string `form:"code_verifier" validate:"required"`
+	CodeVerifier string `form:"code_verifier"`
 	Code         string `form:"code"`
 	ClientID     string `form:"client_id"`
+	RedirectURI  string `form:"redirect_uri"`
 	RefreshToken string `form:"refresh_token"`
 }
 
-// TODO: add better validation depending on grant_type
-
 func (s *GetTokenDTO) Validate() error {
 	validate := validator.New()
+	if err := validate.Struct(s); err != nil {
+		return err
+	}
 
-	return validate.Struct(s)
+	switch s.GrantType {
+	case "authorization_code":
+		if s.Code == "" || s.CodeVerifier == "" || s.ClientID == "" || s.RedirectURI == "" {
+			return errors.New("code, code_verifier, client_id, and redirect_uri are required for authorization_code")
+		}
+	case "refresh_token":
+		if s.RefreshToken == "" || s.ClientID == "" {
+			return errors.New("refresh_token and client_id are required for refresh_token")
+		}
+	default:
+		return errors.New("unsupported grant_type")
+	}
+
+	return nil
 }
 
 type IDTokenPayload struct {

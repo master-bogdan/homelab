@@ -12,6 +12,7 @@ type Config struct {
 		Host               string `env:"HOST"`
 		LogLevel           string `env:"LOG_LEVEL"`
 		PasetoSymmetricKey string `env:"PASETO_SYMMETRIC_KEY"`
+		Issuer             string `env:"ISSUER"`
 	}
 	DB struct {
 		DatabaseURL      string `env:"DATABASE_URL"`

@@ -14,7 +14,7 @@ type CreateOauthCodeDTO struct {
 	OidcSessionID       string `validate:"required"`
 	RedirectURI         string `validate:"required,url"`
 	CodeChallenge       string `validate:"required"`
-	CodeChallengeMethod string `validate:"required,oneof=plain S256"`
+	CodeChallengeMethod string `validate:"required,oneof=S256"`
 	Scopes              string `validate:"required"`
 }
 

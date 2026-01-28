@@ -1,7 +1,7 @@
 // @title Estimate Room API
 // @version 1.0.0
 // @description WebSocket-based room estimation service.
-// @BasePath /
+// @BasePath /api/v1
 package main
 
 import (

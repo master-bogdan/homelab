@@ -15,7 +15,7 @@ type AuthorizeQueryDTO struct {
 	Scopes              string `query:"scopes" validate:"required"`
 	State               string `query:"state" validate:"required"`
 	CodeChallenge       string `query:"code_challenge" validate:"required"`
-	CodeChallengeMethod string `query:"code_challenge_method" validate:"required"`
+	CodeChallengeMethod string `query:"code_challenge_method" validate:"required,oneof=S256"`
 	Nonce               string `query:"nonce" validate:"required"`
 }
 

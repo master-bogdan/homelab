@@ -11,7 +11,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
@@ -43,15 +45,36 @@ func (deps *AppDeps) SetupApp() {
 
 	wsManager := ws.NewManager(deps.Ws, "app")
 
-	health.NewHealthModule(health.HealthModuleDeps{
-		Router:             deps.Router,
-		DB:                 deps.DB,
-		Redis:              deps.Redis,
-		IsGracefulShutdown: deps.IsGracefulShutdown,
-	})
+	clientRepo := repositories.NewOauth2ClientRepository(deps.DB)
+	authCodeRepo := repositories.NewOauth2AuthCodeRepository(deps.DB)
+	userRepo := repositories.NewOauth2UserRepository(deps.DB)
+	oidcSessionRepo := repositories.NewOauth2OidcSessionRepository(deps.DB)
+	refreshTokenRepo := repositories.NewOauth2RefreshTokenRepository(deps.DB)
+	accessTokenRepo := repositories.NewOauth2AccessTokenRepository(deps.DB)
 
-	rooms.NewRoomsModule(rooms.RoomsModuleDeps{
-		Router:    deps.Router,
-		WsManager: wsManager,
+	deps.Router.Route("/api/v1", func(r chi.Router) {
+		health.NewHealthModule(health.HealthModuleDeps{
+			Router:             r,
+			DB:                 deps.DB,
+			Redis:              deps.Redis,
+			IsGracefulShutdown: deps.IsGracefulShutdown,
+		})
+
+		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
+			Router:    r,
+			WsManager: wsManager,
+		})
+
+		oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
+			Router:           r,
+			TokenKey:         deps.Cfg.Server.PasetoSymmetricKey,
+			Issuer:           deps.Cfg.Server.Issuer,
+			ClientRepo:       clientRepo,
+			AuthCodeRepo:     authCodeRepo,
+			UserRepo:         userRepo,
+			OidcSessionRepo:  oidcSessionRepo,
+			RefreshTokenRepo: refreshTokenRepo,
+			AccessTokenRepo:  accessTokenRepo,
+		})
 	})
 }

@@ -1,14 +1,39 @@
 package utils
 
-//func GenerateToken[T any](key []byte, payload T) (string, error) {
-//  return paseto.NewV2().Encrypt(key, payload, nil)
-//}
+import (
+	"crypto/sha256"
+	"errors"
 
-//func ParseToken[T any](key []byte, token string) (*T, error) {
-//var payload T
-//err := paseto.NewV2().Decrypt(token, key, &payload, nil)
-//if err != nil {
-//return nil, err
-//}
-//return &payload, nil
-//}
+	"github.com/o1egl/paseto"
+)
+
+func normalizeTokenKey(key []byte) []byte {
+	if len(key) == 32 {
+		return key
+	}
+	sum := sha256.Sum256(key)
+	return sum[:]
+}
+
+func GenerateToken[T any](key []byte, payload T) (string, error) {
+	if len(key) == 0 {
+		return "", errors.New("token key is required")
+	}
+
+	normalized := normalizeTokenKey(key)
+	return paseto.NewV2().Encrypt(normalized, payload, nil)
+}
+
+func ParseToken[T any](key []byte, token string) (*T, error) {
+	if len(key) == 0 {
+		return nil, errors.New("token key is required")
+	}
+
+	var payload T
+	normalized := normalizeTokenKey(key)
+	if err := paseto.NewV2().Decrypt(token, normalized, &payload, nil); err != nil {
+		return nil, err
+	}
+
+	return &payload, nil
+}
