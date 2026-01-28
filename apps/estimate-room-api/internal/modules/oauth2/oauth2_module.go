@@ -1,3 +1,4 @@
+// Package oauth2 is oauth2 implementation
 package oauth2
 
 import (
