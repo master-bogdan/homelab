@@ -17,7 +17,7 @@ type Oauth2ModuleDeps struct {
 	Issuer           string
 	ClientRepo       repositories.Oauth2ClientRepository
 	AuthCodeRepo     repositories.Oauth2AuthCodeRepository
-	UserRepo         repositories.Oauth2UserRepository
+	UserRepo         repositories.UserRepository
 	OidcSessionRepo  repositories.Oauth2OidcSessionRepository
 	RefreshTokenRepo repositories.Oauth2RefreshTokenRepository
 	AccessTokenRepo  repositories.Oauth2AccessTokenRepository

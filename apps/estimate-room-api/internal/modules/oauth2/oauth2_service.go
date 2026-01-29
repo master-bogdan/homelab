@@ -33,7 +33,7 @@ type Oauth2Service interface {
 type oauth2Service struct {
 	clientRepo       repositories.Oauth2ClientRepository
 	authCodeRepo     repositories.Oauth2AuthCodeRepository
-	userRepo         repositories.Oauth2UserRepository
+	userRepo         repositories.UserRepository
 	oidcSessionRepo  repositories.Oauth2OidcSessionRepository
 	refreshTokenRepo repositories.Oauth2RefreshTokenRepository
 	accessTokenRepo  repositories.Oauth2AccessTokenRepository
@@ -45,7 +45,7 @@ type oauth2Service struct {
 func NewOauth2Service(
 	clientRepo repositories.Oauth2ClientRepository,
 	authCodeRepo repositories.Oauth2AuthCodeRepository,
-	userRepo repositories.Oauth2UserRepository,
+	userRepo repositories.UserRepository,
 	oidcSessionRepo repositories.Oauth2OidcSessionRepository,
 	refreshTokenRepo repositories.Oauth2RefreshTokenRepository,
 	accessTokenRepo repositories.Oauth2AccessTokenRepository,
@@ -155,7 +155,10 @@ func (s *oauth2Service) AuthenticateUser(dto *oauth2dto.UserDTO) (string, error)
 		return "", err
 	}
 
-	if dto.Password != "" && !utils.CheckPasswordHash(dto.Password, user.PasswordHash) {
+	if user.PasswordHash == nil || *user.PasswordHash == "" {
+		return "", ErrInvalidCredentials
+	}
+	if dto.Password != "" && !utils.CheckPasswordHash(dto.Password, *user.PasswordHash) {
 		return "", ErrInvalidCredentials
 	}
 

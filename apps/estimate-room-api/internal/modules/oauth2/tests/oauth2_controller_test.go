@@ -27,7 +27,7 @@ func setupTest(t *testing.T) (*chi.Mux, *pgxpool.Pool, string, string, string, s
 
 	clientRepo := repositories.NewOauth2ClientRepository(db)
 	authCodeRepo := repositories.NewOauth2AuthCodeRepository(db)
-	userRepo := repositories.NewOauth2UserRepository(db)
+	userRepo := repositories.NewUserRepository(db)
 	oidcSessionRepo := repositories.NewOauth2OidcSessionRepository(db)
 	refreshTokenRepo := repositories.NewOauth2RefreshTokenRepository(db)
 	accessTokenRepo := repositories.NewOauth2AccessTokenRepository(db)

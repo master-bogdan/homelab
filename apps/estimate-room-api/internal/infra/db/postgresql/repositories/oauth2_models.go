@@ -14,13 +14,6 @@ type Oauth2ClientModel struct {
 	CreatedAt     time.Time
 }
 
-type Oauth2UserModel struct {
-	UserID       string
-	Email        string
-	PasswordHash string
-	CreatedAt    time.Time
-}
-
 type OidcSessionModel struct {
 	OidcSessionID string
 	UserID        string
@@ -76,11 +69,6 @@ type Oauth2AccessTokenModel struct {
 
 type Oauth2ClientRepository interface {
 	FindByID(clientID string) (*Oauth2ClientModel, error)
-}
-
-type Oauth2UserRepository interface {
-	FindByEmail(email string) (*Oauth2UserModel, error)
-	Create(email, passwordHash string) (string, error)
 }
 
 type Oauth2AuthCodeRepository interface {

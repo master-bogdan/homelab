@@ -10,16 +10,22 @@ CREATE TABLE IF NOT EXISTS oauth2_clients (
 	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS oauth2_users (
+CREATE TABLE IF NOT EXISTS users (
 	user_id TEXT PRIMARY KEY,
-	email TEXT NOT NULL UNIQUE,
-	password_hash TEXT NOT NULL,
-	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+	email TEXT UNIQUE,
+	password_hash TEXT,
+	github_id TEXT,
+	display_name TEXT NOT NULL DEFAULT '',
+	avatar_url TEXT,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	last_login_at TIMESTAMPTZ,
+	deleted_at TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS oauth2_oidc_sessions (
 	oidc_session_id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL REFERENCES oauth2_users(user_id) ON DELETE CASCADE,
+	user_id TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
 	client_id TEXT NOT NULL REFERENCES oauth2_clients(client_id) ON DELETE CASCADE,
 	nonce TEXT NOT NULL,
 	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -28,7 +34,7 @@ CREATE TABLE IF NOT EXISTS oauth2_oidc_sessions (
 CREATE TABLE IF NOT EXISTS oauth2_auth_codes (
 	auth_code_id TEXT PRIMARY KEY,
 	client_id TEXT NOT NULL REFERENCES oauth2_clients(client_id) ON DELETE CASCADE,
-	user_id TEXT NOT NULL REFERENCES oauth2_users(user_id) ON DELETE CASCADE,
+	user_id TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
 	oidc_session_id TEXT NOT NULL REFERENCES oauth2_oidc_sessions(oidc_session_id) ON DELETE CASCADE,
 	code TEXT NOT NULL UNIQUE,
 	redirect_uri TEXT NOT NULL,
@@ -42,7 +48,7 @@ CREATE TABLE IF NOT EXISTS oauth2_auth_codes (
 
 CREATE TABLE IF NOT EXISTS oauth2_refresh_tokens (
 	refresh_token_id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL REFERENCES oauth2_users(user_id) ON DELETE CASCADE,
+	user_id TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
 	client_id TEXT NOT NULL REFERENCES oauth2_clients(client_id) ON DELETE CASCADE,
 	oidc_session_id TEXT NOT NULL REFERENCES oauth2_oidc_sessions(oidc_session_id) ON DELETE CASCADE,
 	scopes TEXT[] NOT NULL,
@@ -55,7 +61,7 @@ CREATE TABLE IF NOT EXISTS oauth2_refresh_tokens (
 
 CREATE TABLE IF NOT EXISTS oauth2_access_tokens (
 	access_token_id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL REFERENCES oauth2_users(user_id) ON DELETE CASCADE,
+	user_id TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
 	client_id TEXT NOT NULL REFERENCES oauth2_clients(client_id) ON DELETE CASCADE,
 	oidc_session_id TEXT NOT NULL REFERENCES oauth2_oidc_sessions(oidc_session_id) ON DELETE CASCADE,
 	refresh_token_id TEXT NULL REFERENCES oauth2_refresh_tokens(refresh_token_id) ON DELETE SET NULL,

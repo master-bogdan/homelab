@@ -51,7 +51,7 @@ func ResetOauthTables(t *testing.T, db *pgxpool.Pool) {
 			oauth2_refresh_tokens,
 			oauth2_auth_codes,
 			oauth2_oidc_sessions,
-			oauth2_users,
+			users,
 			oauth2_clients
 		RESTART IDENTITY CASCADE
 	`)
@@ -63,7 +63,7 @@ func ResetOauthTables(t *testing.T, db *pgxpool.Pool) {
 func NewOauth2Service(db *pgxpool.Pool) oauth2.Oauth2Service {
 	clientRepo := repositories.NewOauth2ClientRepository(db)
 	authCodeRepo := repositories.NewOauth2AuthCodeRepository(db)
-	userRepo := repositories.NewOauth2UserRepository(db)
+	userRepo := repositories.NewUserRepository(db)
 	oidcSessionRepo := repositories.NewOauth2OidcSessionRepository(db)
 	refreshTokenRepo := repositories.NewOauth2RefreshTokenRepository(db)
 	accessTokenRepo := repositories.NewOauth2AccessTokenRepository(db)
@@ -108,7 +108,7 @@ func SeedUser(t *testing.T, db *pgxpool.Pool, email, password string) string {
 	}
 
 	_, err = db.Exec(context.Background(), `
-		INSERT INTO oauth2_users (user_id, email, password_hash)
+		INSERT INTO users (user_id, email, password_hash)
 		VALUES ($1, $2, $3)
 		ON CONFLICT DO NOTHING
 	`, userID, email, passwordHash)

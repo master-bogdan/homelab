@@ -12,9 +12,11 @@ import (
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 	"github.com/redis/go-redis/v9"
@@ -47,7 +49,7 @@ func (deps *AppDeps) SetupApp() {
 
 	clientRepo := repositories.NewOauth2ClientRepository(deps.DB)
 	authCodeRepo := repositories.NewOauth2AuthCodeRepository(deps.DB)
-	userRepo := repositories.NewOauth2UserRepository(deps.DB)
+	userRepo := repositories.NewUserRepository(deps.DB)
 	oidcSessionRepo := repositories.NewOauth2OidcSessionRepository(deps.DB)
 	refreshTokenRepo := repositories.NewOauth2RefreshTokenRepository(deps.DB)
 	accessTokenRepo := repositories.NewOauth2AccessTokenRepository(deps.DB)
@@ -75,6 +77,18 @@ func (deps *AppDeps) SetupApp() {
 			OidcSessionRepo:  oidcSessionRepo,
 			RefreshTokenRepo: refreshTokenRepo,
 			AccessTokenRepo:  accessTokenRepo,
+		})
+
+		authModule := auth.NewAuthModule(auth.AuthModuleDeps{
+			TokenKey:        deps.Cfg.Server.PasetoSymmetricKey,
+			AccessTokenRepo: accessTokenRepo,
+			OidcSessionRepo: oidcSessionRepo,
+		})
+
+		users.NewUsersModule(users.UsersModuleDeps{
+			Router:      r,
+			AuthService: authModule.Service,
+			UserRepo:    userRepo,
 		})
 	})
 }
