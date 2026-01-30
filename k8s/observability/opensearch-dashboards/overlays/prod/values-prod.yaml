@@ -1,7 +1,7 @@
 fullnameOverride: opensearch-dashboards-prod
 
 opensearchHosts:
-  - "https://opensearch-cluster-master.observability.svc.cluster.local:9200"
+  - "https://opensearch-cluster-master.prod-observability.svc.cluster.local:9200"
 
 opensearchUsername: "${OPENSEARCH_DASHBOARDS_USERNAME}"
 opensearchPassword: "${OPENSEARCH_DASHBOARDS_PASSWORD}"
@@ -33,7 +33,7 @@ opensearchSecurity:
 
 config:
   opensearch_dashboards.yml: |
-    opensearch.hosts: ["https://opensearch-cluster-master.observability.svc.cluster.local:9200"]
+    opensearch.hosts: ["https://opensearch-cluster-master.prod-observability.svc.cluster.local:9200"]
     opensearch.username: "${OPENSEARCH_DASHBOARDS_USERNAME}"
     opensearch.password: "${OPENSEARCH_DASHBOARDS_PASSWORD}"
     opensearch.ssl.verificationMode: none

@@ -1,0 +1,83 @@
+# --- Basic image & service ---
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: false
+  runAsNonRoot: false
+  runAsUser: 0
+  runAsGroup: 0
+
+podSecurityContext:
+  fsGroup: 0
+  fsGroupChangePolicy: OnRootMismatch
+
+image:
+  repository: n8nio/n8n
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 5678
+  name: http
+
+ingress:
+  enabled: false
+
+nodes:
+  builtin:
+    enabled: true
+
+main:
+  extraEnvVars:
+    N8N_SECURE_COOKIE: "true"
+  persistence:
+    enabled: true
+    volumeName: "n8n-main-data"
+    mountPath: "/home/node/.n8n"
+    size: 5Gi
+    accessMode: ReadWriteOnce
+    storageClass: standard
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+db:
+  type: postgresdb
+
+externalPostgresql:
+  host: postgresql-service.staging-db.svc.cluster.local
+  port: 5432
+  database: n8n_staging
+  username: n8n_staging
+  password: n8n-staging-password
+
+externalRedis:
+  host: redis-service.staging-db.svc.cluster.local
+  port: 6379
+  username: default
+  password: redis-secret
+
+# --- Queue mode (minimal) ---
+worker:
+  mode: queue
+  count: 1
+  concurrency: 5
+  extraEnvVars:
+    N8N_SECURE_COOKIE: "true"
+
+webhook:
+  mode: queue
+  count: 1
+  url: "https://n8n.apps.192-168-58-2.sslip.io"
+  extraEnvVars:
+    N8N_SECURE_COOKIE: "true"
+
+encryptionKey: "STAGING_ENCRYPTION_KEY_32_CHARS_1234"
+
+diagnostics:
+  enabled: false

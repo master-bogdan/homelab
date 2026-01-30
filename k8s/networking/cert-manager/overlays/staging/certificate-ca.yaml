@@ -2,7 +2,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: homelab-ca
-  namespace: cert-manager
+  namespace: staging-cert-manager
 spec:
   isCA: true
   commonName: homelab-ca

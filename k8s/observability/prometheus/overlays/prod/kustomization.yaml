@@ -1,8 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: observability
-
+namespace: prod-observability
 resources:
   - ../../base
 
@@ -11,7 +10,7 @@ helmCharts:
     repo: https://prometheus-community.github.io/helm-charts
     version: "27.50.0"
     releaseName: prometheus
-    namespace: observability
+    namespace: prod-observability
     includeCRDs: false
     valuesFile: values-prod.yaml
 

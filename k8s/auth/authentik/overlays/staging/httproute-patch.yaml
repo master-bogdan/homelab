@@ -1,0 +1,11 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-authentik
+spec:
+  parentRefs:
+    - name: homelab-gw
+      namespace: staging-networking
+      sectionName: https
+  hostnames:
+    - auth.apps.192-168-58-2.sslip.io

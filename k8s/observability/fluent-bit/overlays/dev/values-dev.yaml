@@ -62,7 +62,7 @@ config:
     [OUTPUT]
         Name                  opensearch
         Match                 kube.app.notes
-        Host                  opensearch-cluster-master.observability.svc.cluster.local
+        Host                  opensearch-cluster-master.dev-observability.svc.cluster.local
         Port                  9200
         TLS                   On
         TLS.verify            Off
@@ -78,7 +78,7 @@ config:
     [OUTPUT]
         Name                  opensearch
         Match                 kube.*
-        Host                  opensearch-cluster-master.observability.svc.cluster.local
+        Host                  opensearch-cluster-master.dev-observability.svc.cluster.local
         Port                  9200
         TLS                   On
         TLS.verify            Off

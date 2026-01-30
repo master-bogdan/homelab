@@ -1,7 +1,7 @@
 global:
   extraEnvironmentVars:
-    WEED_CLUSTER_SW_MASTER: "seaweedfs-master.platform:9333"
-    WEED_CLUSTER_SW_FILER: "seaweedfs-filer-client.platform:8888"
+    WEED_CLUSTER_SW_MASTER: "seaweedfs-master.prod-platform:9333"
+    WEED_CLUSTER_SW_FILER: "seaweedfs-filer-client.prod-platform:8888"
 
 master:
   enabled: true

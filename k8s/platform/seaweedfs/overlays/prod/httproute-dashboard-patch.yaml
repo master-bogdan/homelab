@@ -7,5 +7,14 @@ spec:
     - seaweedfs.example.invalid
   parentRefs:
     - name: homelab-gw
-      namespace: networking
+      namespace: prod-networking
       sectionName: https
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ak-outpost-shared-outpost
+          namespace: prod-auth
+          port: 9000

@@ -24,7 +24,7 @@ datasources:
         type: prometheus
         access: proxy
         isDefault: true
-        url: "http://prometheus-server.observability.svc.cluster.local"
+        url: "http://prometheus-server.prod-observability.svc.cluster.local"
         editable: false
 
 env:

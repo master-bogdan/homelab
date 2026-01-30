@@ -1,8 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: platform
-
+namespace: prod-platform
 resources:
   - ../../base
 
@@ -11,7 +10,7 @@ helmCharts:
     repo: https://seaweedfs.github.io/seaweedfs/helm
     version: "4.0.404"
     releaseName: seaweedfs
-    namespace: platform
+    namespace: prod-platform
     includeCRDs: true
     valuesFile: values-prod.yaml
 

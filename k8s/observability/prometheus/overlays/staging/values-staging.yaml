@@ -1,0 +1,48 @@
+server:
+  persistentVolume:
+    enabled: true
+    size: 5Gi
+    storageClass: standard
+    accessModes:
+      - ReadWriteOnce
+
+  retention: "7d"
+
+  service:
+    type: ClusterIP
+    port: 80
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9090"
+
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
+    fsGroup: 0
+    fsGroupChangePolicy: "OnRootMismatch"
+
+alertmanager:
+  enabled: true
+  persistentVolume:
+    enabled: true
+    size: 2Gi
+    storageClass: standard
+    accessModes:
+      - ReadWriteOnce
+
+  service:
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9093"
+
+prometheus-pushgateway:
+  enabled: false
+
+prometheus-node-exporter:
+  enabled: true
+
+kube-state-metrics:
+  enabled: true
+  prometheusScrape: true
+  prometheusScrapePort: 8080

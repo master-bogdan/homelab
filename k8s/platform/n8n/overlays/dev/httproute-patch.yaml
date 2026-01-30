@@ -3,5 +3,18 @@ kind: HTTPRoute
 metadata:
   name: http-n8n
 spec:
+  parentRefs:
+    - name: homelab-gw
+      namespace: dev-networking
+      sectionName: http
   hostnames:
     - n8n.apps.192-168-58-2.sslip.io
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ak-outpost-shared-outpost
+          namespace: dev-auth
+          port: 9000

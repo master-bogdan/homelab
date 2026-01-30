@@ -7,7 +7,7 @@ spec:
     - opensearch.example.invalid
   parentRefs:
     - name: homelab-gw
-      namespace: networking
+      namespace: prod-networking
       sectionName: https
   rules:
     - matches:

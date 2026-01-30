@@ -2,7 +2,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: homelab-gw-tls
-  namespace: networking
+  namespace: staging-networking
 spec:
   secretName: homelab-gw-tls
   issuerRef:

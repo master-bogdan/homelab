@@ -1,0 +1,104 @@
+fullnameOverride: fluent-bit-staging
+
+kind: DaemonSet
+
+service:
+  type: ClusterIP
+
+env:
+  - name: ES_USER
+    value: "admin"
+  - name: ES_PASSWORD
+    value: "StagingOpensearchAdmin123!"
+
+config:
+  service: |
+    [SERVICE]
+        Flush        5
+        Daemon       Off
+        Log_Level    info
+        Parsers_File /fluent-bit/etc/parsers.conf
+
+        HTTP_Server  On
+        HTTP_Listen  0.0.0.0
+        HTTP_Port    2020
+
+  inputs: |
+    [INPUT]
+        Name              tail
+        Path              /var/log/containers/*.log
+        Parser            cri
+        Tag               kube.*
+        Mem_Buf_Limit     20MB
+        Skip_Long_Lines   On
+        Refresh_Interval  10
+        Inotify_Watcher   Off
+        DB                /var/log/flb_kube.db
+        DB.locking        true
+
+  filters: |
+    # 1) Add Kubernetes metadata (namespace, pod, labels, etc.)
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Kube_URL            https://kubernetes.default.svc:443
+        Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+        Merge_Log           On
+        Kube_Tag_Prefix     kube.var.log.containers.
+        Labels              On
+        Annotations         Off
+
+    # 2) Route ONLY your notes API logs into a dedicated tag
+    #    If label matches, retag to kube.app.notes and DROP the original (Keep=false)
+    [FILTER]
+        Name                rewrite_tag
+        Match               kube.*
+        Rule                $kubernetes['labels']['app']  ^ephermal-notes-api$  kube.app.notes  true
+        Rule                $kubernetes['labels']['app.kubernetes.io/name']  ^ephermal-notes-api$  kube.app.notes  true
+
+  outputs: |
+    # A) Notes API logs -> notes-staging-YYYY.MM.DD
+    [OUTPUT]
+        Name                  opensearch
+        Match                 kube.app.notes
+        Host                  opensearch-cluster-master.staging-observability.svc.cluster.local
+        Port                  9200
+        TLS                   On
+        TLS.verify            Off
+        HTTP_User             ${ES_USER}
+        HTTP_Passwd           ${ES_PASSWORD}
+        Logstash_Format       On
+        Logstash_Prefix       notes-staging
+        Suppress_Type_Name    On
+        Replace_Dots          On
+        Retry_Limit           False
+
+    # B) Everything else -> k8s-staging-YYYY.MM.DD
+    [OUTPUT]
+        Name                  opensearch
+        Match                 kube.*
+        Host                  opensearch-cluster-master.staging-observability.svc.cluster.local
+        Port                  9200
+        TLS                   On
+        TLS.verify            Off
+        HTTP_User             ${ES_USER}
+        HTTP_Passwd           ${ES_PASSWORD}
+        Logstash_Format       On
+        Logstash_Prefix       k8s-staging
+        Suppress_Type_Name    On
+        Replace_Dots          On
+        Retry_Limit           False
+
+resources:
+  limits:
+    memory: 200Mi
+  requests:
+    cpu: 100m
+    memory: 100Mi
+
+podSecurityContext:
+  runAsUser: 0
+
+securityContext:
+  privileged: true
