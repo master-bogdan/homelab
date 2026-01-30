@@ -7,8 +7,8 @@ REGISTRY          ?= docker.io/masterbogdan0
 TAG               ?= latest
 ENV               ?= dev
 APP               ?=
-# Optional fallback overlay for mixed environments (e.g., prod-dev -> prod)
-ENV_FALLBACK      ?= $(if $(filter prod-dev,$(ENV)),prod,)
+# Optional fallback overlay for mixed environments (e.g., staging -> prod)
+ENV_FALLBACK      ?= $(if $(filter staging,$(ENV)),prod,)
 ROOT_DIR          := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 SCRIPTS_DIR       := $(ROOT_DIR)/scripts
 
@@ -19,11 +19,11 @@ UI_PUBLIC_BUCKET        ?= public
 SEAWEEDFS_NAMESPACE     ?= platform
 SEAWEED_PUBLIC_BASE_DEV      ?= http://storage.apps.192-168-58-2.sslip.io:30080
 SEAWEED_PUBLIC_BASE_PROD     ?= https://storage.example.invalid
-SEAWEED_PUBLIC_BASE_PROD_DEV ?= https://storage.apps.192-168-58-2.sslip.io
+SEAWEED_PUBLIC_BASE_STAGING ?= https://storage.apps.192-168-58-2.sslip.io
 ifeq ($(ENV),prod)
 SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_PROD)
-else ifeq ($(ENV),prod-dev)
-SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_PROD_DEV)
+else ifeq ($(ENV),staging)
+SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_STAGING)
 else
 SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_DEV)
 endif
@@ -351,7 +351,7 @@ help:
 	@echo "  deploy-ui-all                      # Build + upload all"
 	@echo ""
 	@echo "☸  Kubernetes (Layer-based)"
-	@echo "  ENV=prod-dev uses overlays/prod-dev when present, otherwise falls back to prod"
+	@echo "  ENV=staging uses overlays/staging when present, otherwise falls back to prod"
 	@echo "  deploy-namespaces   / delete-namespaces   / validate-namespaces"
 	@echo "  deploy-networking   / delete-networking   / validate-networking"
 	@echo "  deploy-secrets      / delete-secrets      / validate-secrets"

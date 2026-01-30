@@ -7,8 +7,8 @@ This stack lives under `k8s/secrets` and provides:
 ## Deploy
 
 ```bash
-make deploy-namespaces ENV=prod-dev   # or ENV=prod
-make deploy-secrets ENV=prod-dev
+make deploy-namespaces ENV=staging   # or ENV=prod
+make deploy-secrets ENV=staging
 ```
 
 ## After deploy (Vault bootstrap)
@@ -21,7 +21,7 @@ kubectl -n secrets exec -it deploy/vault -- vault operator unseal
 kubectl -n secrets exec -it deploy/vault -- vault login <root-token>
 ```
 
-> In `prod-dev` we use dev mode (no unseal, root token in logs).
+> In `staging` we use dev mode (no unseal, root token in logs).
 
 ### 2) Enable KV v2 and Kubernetes auth
 
@@ -60,7 +60,7 @@ kubectl -n secrets exec -i deploy/vault -- vault write auth/kubernetes/role/home
   ttl=1h
 ```
 
-For `ENV=prod-dev`, use role name `homelab-prod-dev` and the same policy.
+For `ENV=staging`, use role name `homelab-staging` and the same policy.
 
 ### 5) Put secrets into Vault
 

@@ -13,4 +13,4 @@ helmCharts:
     releaseName: traefik
     namespace: networking
     includeCRDs: true
-    valuesFile: values-prod-dev.yaml
+    valuesFile: values-staging.yaml
