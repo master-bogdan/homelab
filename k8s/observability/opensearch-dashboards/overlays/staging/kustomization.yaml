@@ -5,6 +5,7 @@ namespace: staging-observability
 resources:
   - ../../base
 
+  - external-secret.yaml
 patches:
   - target:
       kind: HTTPRoute

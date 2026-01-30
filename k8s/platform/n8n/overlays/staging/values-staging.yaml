@@ -8,14 +8,6 @@ securityContext:
   runAsUser: 0
   runAsGroup: 0
 
-podSecurityContext:
-  fsGroup: 0
-  fsGroupChangePolicy: OnRootMismatch
-
-image:
-  repository: n8nio/n8n
-  pullPolicy: IfNotPresent
-
 service:
   type: ClusterIP
   port: 5678
@@ -23,6 +15,14 @@ service:
 
 ingress:
   enabled: false
+
+podSecurityContext:
+  fsGroup: 0
+  fsGroupChangePolicy: OnRootMismatch
+
+image:
+  repository: n8nio/n8n
+  pullPolicy: IfNotPresent
 
 nodes:
   builtin:
@@ -35,49 +35,59 @@ main:
     enabled: true
     volumeName: "n8n-main-data"
     mountPath: "/home/node/.n8n"
-    size: 5Gi
+    size: 10Gi
     accessMode: ReadWriteOnce
-    storageClass: standard
+
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
+      cpu: 200m
       memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
 db:
   type: postgresdb
 
 externalPostgresql:
-  host: postgresql-service.staging-db.svc.cluster.local
+  host: ""
   port: 5432
-  database: n8n_staging
-  username: n8n_staging
-  password: n8n-staging-password
+  database: ""
+  username: ""
+  existingSecret: "n8n-postgres-staging"
 
 externalRedis:
-  host: redis-service.staging-db.svc.cluster.local
+  host: ""
   port: 6379
-  username: default
-  password: redis-secret
+  username: "default"
+  existingSecret: "n8n-redis-staging"
 
-# --- Queue mode (minimal) ---
 worker:
   mode: queue
-  count: 1
-  concurrency: 5
+  count: 2
+  concurrency: 10
   extraEnvVars:
     N8N_SECURE_COOKIE: "true"
 
 webhook:
   mode: queue
-  count: 1
+  count: 2
   url: "https://n8n.apps.192-168-58-2.sslip.io"
   extraEnvVars:
     N8N_SECURE_COOKIE: "true"
 
-encryptionKey: "STAGING_ENCRYPTION_KEY_32_CHARS_1234"
+encryptionKey: ""
+existingEncryptionKeySecret: "n8n-encryption-staging"
 
 diagnostics:
   enabled: false
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  labels:
+    release: prometheus
+  include:
+    defaultMetrics: true
+    apiEndpoints: true
+    queueMetrics: true

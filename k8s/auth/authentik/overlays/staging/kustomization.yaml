@@ -5,6 +5,7 @@ namespace: staging-auth
 resources:
   - ../../base
 
+  - external-secret.yaml
 helmCharts:
   - name: authentik
     repo: https://charts.goauthentik.io

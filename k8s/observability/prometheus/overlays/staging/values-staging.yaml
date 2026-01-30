@@ -1,12 +1,11 @@
 server:
   persistentVolume:
     enabled: true
-    size: 5Gi
-    storageClass: standard
+    size: 10Gi
     accessModes:
       - ReadWriteOnce
 
-  retention: "7d"
+  retention: "15d"
 
   service:
     type: ClusterIP
@@ -27,7 +26,6 @@ alertmanager:
   persistentVolume:
     enabled: true
     size: 2Gi
-    storageClass: standard
     accessModes:
       - ReadWriteOnce
 

@@ -5,6 +5,7 @@ namespace: staging-platform
 resources:
   - ../../base
 
+  - external-secret.yaml
 patches:
   - target:
       kind: HTTPRoute

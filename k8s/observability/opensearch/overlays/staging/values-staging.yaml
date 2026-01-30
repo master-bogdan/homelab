@@ -1,4 +1,3 @@
-# values-staging.yaml (opensearch)
 singleNode: true
 replicas: 1
 
@@ -13,14 +12,28 @@ roles:
 
 extraEnvs:
   - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
-    value: "StagingOpensearchAdmin123!"
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-admin-staging
+        key: password
+  - name: OPENSEARCH_OPENID_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-oidc-staging
+        key: client_id
+  - name: OPENSEARCH_OPENID_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-oidc-staging
+        key: client_secret
 
-opensearchJavaOpts: "-Xms512m -Xmx512m"
+opensearchJavaOpts: "-Xms1g -Xmx1g"
 
 persistence:
   enabled: true
-  size: 5Gi
-  storageClass: standard
+  size: 10Gi
+  accessModes:
+    - ReadWriteOnce
 
 resources:
   requests:
@@ -62,8 +75,8 @@ securityConfig:
                     subject_key: sub
                     roles_key: groups
                     openid_connect_url: "https://auth.apps.192-168-58-2.sslip.io/application/o/opensearch/.well-known/openid-configuration"
-                    client_id: "dNgxJIOxOrEExrV3Pxnd1eqsZJLU1aOTnzBoAux3"
-                    client_secret: "mqe85y4dvgC3BuyZeAQ8egnxp3DS72zpwQzHcqp607Pt3rSMAZPNnXYWtyDia61aT6IOzCCgURsrm7F7jX2nl5k69uajXbK8DXixl85a1zflByxjimisBspFECTerqgU"
+                    client_id: "${OPENSEARCH_OPENID_CLIENT_ID}"
+                    client_secret: "${OPENSEARCH_OPENID_CLIENT_SECRET}"
                 authentication_backend:
                   type: noop
               basic_internal_auth_domain:

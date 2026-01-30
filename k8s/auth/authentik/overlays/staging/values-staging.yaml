@@ -1,44 +1,143 @@
 authentik:
-  # IMPORTANT: generate ~60-char random key and keep stable
-  # Example: openssl rand 60 | base64 -w 0
-  secret_key: "CHANGE_ME_LONG_RANDOM_STAGING_KEY"
-
-  # Optional but nice for dev — you can leave enabled or disable
-  error_reporting:
-    enabled: false
-
   log_level: info
+  error_reporting:
+    enabled: true
 
-  postgresql:
-    host: "postgresql-service.staging-db.svc.cluster.local"
-    port: 5432
-    name: "authentik"
-    user: "authentik"
-    password: "change_me_pass"
-
-  redis:
-    host: "redis-service.staging-db.svc.cluster.local"
-    port: 6379
-    password: "superssecret"
-
-  # Email – can be stubbed in dev
-  email:
-    host: ""
-    port: 587
-    username: ""
-    password: ""
-    use_tls: false
-    use_ssl: false
-    from: "authentik@example.local"
-
-# Disable Helm-bundled Postgres & Redis; we use our own
 postgresql:
   enabled: false
 
 redis:
   enabled: false
 
-# No ingress here – Traefik/Gateway will front this later
 server:
   ingress:
     enabled: false
+  env:
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_SECRET_KEY
+    - name: AUTHENTIK_POSTGRESQL__HOST
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_POSTGRESQL__HOST
+    - name: AUTHENTIK_POSTGRESQL__PORT
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_POSTGRESQL__PORT
+    - name: AUTHENTIK_POSTGRESQL__NAME
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_POSTGRESQL__NAME
+    - name: AUTHENTIK_POSTGRESQL__USER
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_POSTGRESQL__USER
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_POSTGRESQL__PASSWORD
+    - name: AUTHENTIK_REDIS__HOST
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_REDIS__HOST
+    - name: AUTHENTIK_REDIS__PORT
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_REDIS__PORT
+    - name: AUTHENTIK_REDIS__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_REDIS__PASSWORD
+    - name: AUTHENTIK_EMAIL__HOST
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_EMAIL__HOST
+    - name: AUTHENTIK_EMAIL__PORT
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_EMAIL__PORT
+    - name: AUTHENTIK_EMAIL__USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_EMAIL__USERNAME
+    - name: AUTHENTIK_EMAIL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_EMAIL__PASSWORD
+    - name: AUTHENTIK_EMAIL__FROM
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_EMAIL__FROM
+    - name: AUTHENTIK_EMAIL__USE_TLS
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_EMAIL__USE_TLS
+    - name: AUTHENTIK_EMAIL__USE_SSL
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_EMAIL__USE_SSL
+
+worker:
+  env:
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_SECRET_KEY
+    - name: AUTHENTIK_POSTGRESQL__HOST
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_POSTGRESQL__HOST
+    - name: AUTHENTIK_POSTGRESQL__PORT
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_POSTGRESQL__PORT
+    - name: AUTHENTIK_POSTGRESQL__NAME
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_POSTGRESQL__NAME
+    - name: AUTHENTIK_POSTGRESQL__USER
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_POSTGRESQL__USER
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_POSTGRESQL__PASSWORD
+    - name: AUTHENTIK_REDIS__HOST
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_REDIS__HOST
+    - name: AUTHENTIK_REDIS__PORT
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_REDIS__PORT
+    - name: AUTHENTIK_REDIS__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-staging-creds
+          key: AUTHENTIK_REDIS__PASSWORD

@@ -1,9 +1,32 @@
-# values-staging.yaml (opensearch-dashboards)
 fullnameOverride: opensearch-dashboards-staging
 
-opensearchHosts: '[\"https://opensearch-cluster-master.staging-observability.svc.cluster.local:9200\"]'
-opensearchUsername: "admin"
-opensearchPassword: "StagingOpensearchAdmin123!"
+opensearchHosts:
+  - "https://opensearch-cluster-master.staging-observability.svc.cluster.local:9200"
+
+opensearchUsername: "${OPENSEARCH_DASHBOARDS_USERNAME}"
+opensearchPassword: "${OPENSEARCH_DASHBOARDS_PASSWORD}"
+
+extraEnvs:
+  - name: OPENSEARCH_DASHBOARDS_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-auth-staging
+        key: username
+  - name: OPENSEARCH_DASHBOARDS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-auth-staging
+        key: password
+  - name: OPENSEARCH_DASHBOARDS_OIDC_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-oidc-staging
+        key: client_id
+  - name: OPENSEARCH_DASHBOARDS_OIDC_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-oidc-staging
+        key: client_secret
 
 opensearchSecurity:
   enabled: true
@@ -11,25 +34,32 @@ opensearchSecurity:
 config:
   opensearch_dashboards.yml: |
     opensearch.hosts: ["https://opensearch-cluster-master.staging-observability.svc.cluster.local:9200"]
-    opensearch.username: "admin"
-    opensearch.password: "StagingOpensearchAdmin123!"
+    opensearch.username: "${OPENSEARCH_DASHBOARDS_USERNAME}"
+    opensearch.password: "${OPENSEARCH_DASHBOARDS_PASSWORD}"
     opensearch.ssl.verificationMode: none
 
     opensearch.requestHeadersAllowlist: ["Authorization", "securitytenant"]
 
     opensearch_security.auth.type: "openid"
     opensearch_security.openid.connect_url: "https://auth.apps.192-168-58-2.sslip.io/application/o/opensearch/.well-known/openid-configuration"
-    opensearch_security.openid.client_id: "dNgxJIOxOrEExrV3Pxnd1eqsZJLU1aOTnzBoAux3"
-    opensearch_security.openid.client_secret: "mqe85y4dvgC3BuyZeAQ8egnxp3DS72zpwQzHcqp607Pt3rSMAZPNnXYWtyDia61aT6IOzCCgURsrm7F7jX2nl5k69uajXbK8DXixl85a1zflByxjimisBspFECTerqgU"
+    opensearch_security.openid.client_id: "${OPENSEARCH_DASHBOARDS_OIDC_CLIENT_ID}"
+    opensearch_security.openid.client_secret: "${OPENSEARCH_DASHBOARDS_OIDC_CLIENT_SECRET}"
     opensearch_security.openid.scope: "openid profile email"
     opensearch_security.openid.base_redirect_url: "https://opensearch.apps.192-168-58-2.sslip.io"
 
-    # IMPORTANT when Dashboards is served over plain HTTP
-    opensearch_security.cookie.secure: false
+    opensearch_security.cookie.secure: true
 
 service:
   type: ClusterIP
   port: 5601
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "1Gi"
 
 ingress:
   enabled: false

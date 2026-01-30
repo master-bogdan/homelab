@@ -15,5 +15,5 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: opensearch-dashboards-dev
+        - name: opensearch-dashboards-staging
           port: 5601

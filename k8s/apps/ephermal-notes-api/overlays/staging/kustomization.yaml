@@ -5,11 +5,14 @@ kind: Kustomization
 namespace: staging-apps
 resources:
   - ../../base
-  - secret.yaml
-  - configmap.yaml
+  - external-config.yaml
 
 patches:
   - target:
       kind: HTTPRoute
       name: http-ephermal-notes-api
     path: httproute-patch.yaml
+  - target:
+      kind: Deployment
+      name: ephermal-notes-api-deploy
+    path: deploy-patch.yaml
