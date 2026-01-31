@@ -9,6 +9,7 @@ ENV               ?= dev
 APP               ?=
 # Optional fallback overlay for mixed environments (e.g., staging -> prod)
 ENV_FALLBACK      ?= $(if $(filter staging,$(ENV)),prod,)
+MINIKUBE_PROFILE  ?= homelab-$(ENV)
 ROOT_DIR          := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 SCRIPTS_DIR       := $(ROOT_DIR)/scripts
 
@@ -543,9 +544,9 @@ validate-observability:
 	$(call k8s_dry_run_helm_list,$(OBS_HELM_DIRS))
 	@echo "✅ Observability validated"
 
-# ---- Databases (dev only) ----
+# ---- Databases (dev + staging) ----
 deploy-databases: deploy-namespaces
-ifeq ($(ENV),dev)
+ifneq (,$(filter $(ENV),dev staging))
 	$(call k8s_apply_list,$(DATABASE_DIRS))
 	@echo "✅ Databases deployed"
 else
@@ -553,14 +554,14 @@ else
 endif
 
 delete-databases:
-ifeq ($(ENV),dev)
+ifneq (,$(filter $(ENV),dev staging))
 	$(call k8s_delete_list,$(DATABASE_DELETE_DIRS))
 else
 	@echo "⚠️  Databases skipped in $(ENV) environment"
 endif
 
 validate-databases:
-ifeq ($(ENV),dev)
+ifneq (,$(filter $(ENV),dev staging))
 	$(call k8s_dry_run_list,$(DATABASE_DIRS))
 	@echo "✅ Databases validated"
 else
@@ -626,3 +627,7 @@ deploy-all: validate-all deploy-namespaces deploy-networking deploy-secrets depl
 
 delete-all: delete-apps delete-observability delete-platform delete-databases delete-auth delete-secrets delete-networking delete-namespaces
 	@echo "✅ Full stack deleted (ENV=$(ENV))"
+
+# ---- Minikube Helpers ----
+update-minikube-ip:
+	@ENV=$(ENV) PROFILE=$(MINIKUBE_PROFILE) "$(SCRIPTS_DIR)/update-minikube-ip.sh"

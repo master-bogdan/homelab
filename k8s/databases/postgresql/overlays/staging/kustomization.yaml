@@ -4,3 +4,9 @@ kind: Kustomization
 namespace: staging-db
 resources:
   - ../../base
+  - external-secret.yaml
+  - config-map.yaml
+
+patches:
+  - path: delete-secret.yaml
+  - path: delete-configmap.yaml
