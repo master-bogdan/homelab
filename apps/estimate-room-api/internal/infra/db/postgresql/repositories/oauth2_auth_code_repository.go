@@ -7,17 +7,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
 )
 
 type oauth2AuthCodeRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewOauth2AuthCodeRepository(db *pgxpool.Pool) Oauth2AuthCodeRepository {
+func NewOauth2AuthCodeRepository(db *pgxpool.Pool) *oauth2AuthCodeRepository {
 	return &oauth2AuthCodeRepository{db: db}
 }
 
-func (r *oauth2AuthCodeRepository) Create(model *Oauth2AuthCodeModel) error {
+func (r *oauth2AuthCodeRepository) Create(model *models.Oauth2AuthCodeModel) error {
 	const query = `
 		INSERT INTO oauth2_auth_codes (
 			auth_code_id, client_id, user_id, oidc_session_id, code,
@@ -47,7 +48,7 @@ func (r *oauth2AuthCodeRepository) Create(model *Oauth2AuthCodeModel) error {
 	return err
 }
 
-func (r *oauth2AuthCodeRepository) FindByCode(code string) (*Oauth2AuthCodeModel, error) {
+func (r *oauth2AuthCodeRepository) FindByCode(code string) (*models.Oauth2AuthCodeModel, error) {
 	const query = `
 		SELECT auth_code_id, client_id, user_id, oidc_session_id, code,
 			redirect_uri, scopes, code_challenge, code_challenge_method, is_used, expires_at, created_at
@@ -55,7 +56,7 @@ func (r *oauth2AuthCodeRepository) FindByCode(code string) (*Oauth2AuthCodeModel
 		WHERE code = $1
 	`
 
-	var model Oauth2AuthCodeModel
+	var model models.Oauth2AuthCodeModel
 	row := r.db.QueryRow(context.Background(), query, code)
 	err := row.Scan(
 		&model.AuthCodeID,

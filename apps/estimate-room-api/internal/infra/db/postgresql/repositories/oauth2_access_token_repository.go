@@ -7,17 +7,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
 )
 
 type oauth2AccessTokenRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewOauth2AccessTokenRepository(db *pgxpool.Pool) Oauth2AccessTokenRepository {
+func NewOauth2AccessTokenRepository(db *pgxpool.Pool) *oauth2AccessTokenRepository {
 	return &oauth2AccessTokenRepository{db: db}
 }
 
-func (r *oauth2AccessTokenRepository) Create(model *Oauth2AccessTokenModel) error {
+func (r *oauth2AccessTokenRepository) Create(model *models.Oauth2AccessTokenModel) error {
 	const query = `
 		INSERT INTO oauth2_access_tokens (
 			access_token_id, user_id, client_id, oidc_session_id, refresh_token_id,
@@ -47,7 +48,7 @@ func (r *oauth2AccessTokenRepository) Create(model *Oauth2AccessTokenModel) erro
 	return err
 }
 
-func (r *oauth2AccessTokenRepository) FindByToken(token string) (*Oauth2AccessTokenModel, error) {
+func (r *oauth2AccessTokenRepository) FindByToken(token string) (*models.Oauth2AccessTokenModel, error) {
 	const query = `
 		SELECT access_token_id, user_id, client_id, oidc_session_id, refresh_token_id,
 			scopes, token, issued_at, expires_at, issuer, is_revoked, created_at
@@ -55,7 +56,7 @@ func (r *oauth2AccessTokenRepository) FindByToken(token string) (*Oauth2AccessTo
 		WHERE token = $1
 	`
 
-	var model Oauth2AccessTokenModel
+	var model models.Oauth2AccessTokenModel
 	row := r.db.QueryRow(context.Background(), query, token)
 	err := row.Scan(
 		&model.AccessTokenID,

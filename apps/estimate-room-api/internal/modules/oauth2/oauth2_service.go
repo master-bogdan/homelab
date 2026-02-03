@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
 	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
@@ -31,24 +31,24 @@ type Oauth2Service interface {
 }
 
 type oauth2Service struct {
-	clientRepo       repositories.Oauth2ClientRepository
-	authCodeRepo     repositories.Oauth2AuthCodeRepository
-	userRepo         repositories.UserRepository
-	oidcSessionRepo  repositories.Oauth2OidcSessionRepository
-	refreshTokenRepo repositories.Oauth2RefreshTokenRepository
-	accessTokenRepo  repositories.Oauth2AccessTokenRepository
+	clientRepo       Oauth2ClientRepository
+	authCodeRepo     Oauth2AuthCodeRepository
+	userRepo         UserRepository
+	oidcSessionRepo  Oauth2OidcSessionRepository
+	refreshTokenRepo Oauth2RefreshTokenRepository
+	accessTokenRepo  Oauth2AccessTokenRepository
 	tokenKey         []byte
 	issuer           string
 	logger           *slog.Logger
 }
 
 func NewOauth2Service(
-	clientRepo repositories.Oauth2ClientRepository,
-	authCodeRepo repositories.Oauth2AuthCodeRepository,
-	userRepo repositories.UserRepository,
-	oidcSessionRepo repositories.Oauth2OidcSessionRepository,
-	refreshTokenRepo repositories.Oauth2RefreshTokenRepository,
-	accessTokenRepo repositories.Oauth2AccessTokenRepository,
+	clientRepo Oauth2ClientRepository,
+	authCodeRepo Oauth2AuthCodeRepository,
+	userRepo UserRepository,
+	oidcSessionRepo Oauth2OidcSessionRepository,
+	refreshTokenRepo Oauth2RefreshTokenRepository,
+	accessTokenRepo Oauth2AccessTokenRepository,
 	tokenKey []byte,
 	issuer string,
 ) Oauth2Service {
@@ -113,7 +113,7 @@ func (s *oauth2Service) CreateAuthCode(dto *oauth2dto.CreateOauthCodeDTO) (strin
 	}
 	code := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(b)
 
-	authCode := &repositories.Oauth2AuthCodeModel{
+	authCode := &models.Oauth2AuthCodeModel{
 		ClientID:            dto.ClientID,
 		UserID:              dto.UserID,
 		OidcSessionID:       dto.OidcSessionID,
@@ -134,7 +134,7 @@ func (s *oauth2Service) CreateAuthCode(dto *oauth2dto.CreateOauthCodeDTO) (strin
 
 func (s *oauth2Service) CreateOidcSession(dto *oauth2dto.CreateOidcSessionDTO) (string, error) {
 	s.logger.Info("CreateOidcSession")
-	oidcSession := &repositories.OidcSessionModel{
+	oidcSession := &models.OidcSessionModel{
 		UserID:   dto.UserID,
 		ClientID: dto.ClientID,
 		Nonce:    dto.Nonce,
@@ -248,7 +248,7 @@ func (s *oauth2Service) GenerateTokenPair(userID, clientID, oidcSessionID string
 	refreshTokenDuration := time.Hour * 24 * 30 // 30 days
 	idTokenDuration := time.Minute * 15         // 15 minutes
 
-	refreshTokenPayload := repositories.Oauth2RefreshTokenModel{
+	refreshTokenPayload := models.Oauth2RefreshTokenModel{
 		UserID:        userID,
 		ClientID:      clientID,
 		OidcSessionID: oidcSessionID,
@@ -268,7 +268,7 @@ func (s *oauth2Service) GenerateTokenPair(userID, clientID, oidcSessionID string
 		return oauth2dto.TokenResponseDTO{}, err
 	}
 
-	accessTokenPayload := repositories.Oauth2AccessTokenModel{
+	accessTokenPayload := models.Oauth2AccessTokenModel{
 		UserID:         userID,
 		ClientID:       clientID,
 		OidcSessionID:  oidcSessionID,

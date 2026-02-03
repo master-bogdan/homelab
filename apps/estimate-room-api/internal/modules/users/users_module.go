@@ -3,7 +3,6 @@ package users
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 )
 
@@ -15,7 +14,7 @@ type UsersModule struct {
 type UsersModuleDeps struct {
 	Router      chi.Router
 	AuthService auth.AuthService
-	UserRepo    repositories.UserRepository
+	UserRepo    UserRepository
 }
 
 func NewUsersModule(deps UsersModuleDeps) *UsersModule {

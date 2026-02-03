@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 )
@@ -11,22 +12,22 @@ import (
 var ErrUnauthorized = errors.New("unauthorized")
 
 type UsersService interface {
-	GetCurrentUser(r *http.Request) (*repositories.UserModel, error)
+	GetCurrentUser(r *http.Request) (*models.UserModel, error)
 }
 
 type usersService struct {
 	authService auth.AuthService
-	userRepo    repositories.UserRepository
+	userRepo    UserRepository
 }
 
-func NewUsersService(authService auth.AuthService, userRepo repositories.UserRepository) UsersService {
+func NewUsersService(authService auth.AuthService, userRepo UserRepository) UsersService {
 	return &usersService{
 		authService: authService,
 		userRepo:    userRepo,
 	}
 }
 
-func (s *usersService) GetCurrentUser(r *http.Request) (*repositories.UserModel, error) {
+func (s *usersService) GetCurrentUser(r *http.Request) (*models.UserModel, error) {
 	userID, err := s.authService.CheckAuth(r)
 	if err != nil {
 		if errors.Is(err, auth.ErrMissingToken) {

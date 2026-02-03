@@ -1,4 +1,4 @@
-package repositories
+package models
 
 import "time"
 
@@ -13,10 +13,4 @@ type UserModel struct {
 	UpdatedAt    time.Time
 	LastLoginAt  *time.Time
 	DeletedAt    *time.Time
-}
-
-type UserRepository interface {
-	FindByID(userID string) (*UserModel, error)
-	FindByEmail(email string) (*UserModel, error)
-	Create(email, passwordHash string) (string, error)
 }

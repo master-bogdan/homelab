@@ -7,17 +7,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
 )
 
 type oauth2OidcSessionRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewOauth2OidcSessionRepository(db *pgxpool.Pool) Oauth2OidcSessionRepository {
+func NewOauth2OidcSessionRepository(db *pgxpool.Pool) *oauth2OidcSessionRepository {
 	return &oauth2OidcSessionRepository{db: db}
 }
 
-func (r *oauth2OidcSessionRepository) Create(model *OidcSessionModel) (string, error) {
+func (r *oauth2OidcSessionRepository) Create(model *models.OidcSessionModel) (string, error) {
 	const query = `
 		INSERT INTO oauth2_oidc_sessions (oidc_session_id, user_id, client_id, nonce)
 		VALUES ($1, $2, $3, $4)
@@ -42,14 +43,14 @@ func (r *oauth2OidcSessionRepository) Create(model *OidcSessionModel) (string, e
 	return model.OidcSessionID, nil
 }
 
-func (r *oauth2OidcSessionRepository) FindByID(sessionID string) (*OidcSessionModel, error) {
+func (r *oauth2OidcSessionRepository) FindByID(sessionID string) (*models.OidcSessionModel, error) {
 	const query = `
 		SELECT oidc_session_id, user_id, client_id, nonce, created_at
 		FROM oauth2_oidc_sessions
 		WHERE oidc_session_id = $1
 	`
 
-	var model OidcSessionModel
+	var model models.OidcSessionModel
 	row := r.db.QueryRow(context.Background(), query, sessionID)
 	err := row.Scan(&model.OidcSessionID, &model.UserID, &model.ClientID, &model.Nonce, &model.CreatedAt)
 	if err != nil {

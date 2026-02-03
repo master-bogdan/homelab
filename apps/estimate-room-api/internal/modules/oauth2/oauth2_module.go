@@ -3,7 +3,6 @@ package oauth2
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
 )
 
 type Oauth2Module struct {
@@ -15,12 +14,12 @@ type Oauth2ModuleDeps struct {
 	Router           chi.Router
 	TokenKey         string
 	Issuer           string
-	ClientRepo       repositories.Oauth2ClientRepository
-	AuthCodeRepo     repositories.Oauth2AuthCodeRepository
-	UserRepo         repositories.UserRepository
-	OidcSessionRepo  repositories.Oauth2OidcSessionRepository
-	RefreshTokenRepo repositories.Oauth2RefreshTokenRepository
-	AccessTokenRepo  repositories.Oauth2AccessTokenRepository
+	ClientRepo       Oauth2ClientRepository
+	AuthCodeRepo     Oauth2AuthCodeRepository
+	UserRepo         UserRepository
+	OidcSessionRepo  Oauth2OidcSessionRepository
+	RefreshTokenRepo Oauth2RefreshTokenRepository
+	AccessTokenRepo  Oauth2AccessTokenRepository
 }
 
 func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {

@@ -7,17 +7,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
 )
 
 type userRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewUserRepository(db *pgxpool.Pool) UserRepository {
+func NewUserRepository(db *pgxpool.Pool) *userRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) FindByID(userID string) (*UserModel, error) {
+func (r *userRepository) FindByID(userID string) (*models.UserModel, error) {
 	const query = `
 		SELECT user_id, email, password_hash, github_id, display_name, avatar_url,
 			created_at, updated_at, last_login_at, deleted_at
@@ -25,7 +26,7 @@ func (r *userRepository) FindByID(userID string) (*UserModel, error) {
 		WHERE user_id = $1
 	`
 
-	var user UserModel
+	var user models.UserModel
 	row := r.db.QueryRow(context.Background(), query, userID)
 	err := row.Scan(
 		&user.UserID,
@@ -49,7 +50,7 @@ func (r *userRepository) FindByID(userID string) (*UserModel, error) {
 	return &user, nil
 }
 
-func (r *userRepository) FindByEmail(email string) (*UserModel, error) {
+func (r *userRepository) FindByEmail(email string) (*models.UserModel, error) {
 	const query = `
 		SELECT user_id, email, password_hash, github_id, display_name, avatar_url,
 			created_at, updated_at, last_login_at, deleted_at
@@ -57,7 +58,7 @@ func (r *userRepository) FindByEmail(email string) (*UserModel, error) {
 		WHERE email = $1
 	`
 
-	var user UserModel
+	var user models.UserModel
 	row := r.db.QueryRow(context.Background(), query, email)
 	err := row.Scan(
 		&user.UserID,

@@ -7,17 +7,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
 )
 
 type oauth2RefreshTokenRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewOauth2RefreshTokenRepository(db *pgxpool.Pool) Oauth2RefreshTokenRepository {
+func NewOauth2RefreshTokenRepository(db *pgxpool.Pool) *oauth2RefreshTokenRepository {
 	return &oauth2RefreshTokenRepository{db: db}
 }
 
-func (r *oauth2RefreshTokenRepository) Create(model *Oauth2RefreshTokenModel) (string, error) {
+func (r *oauth2RefreshTokenRepository) Create(model *models.Oauth2RefreshTokenModel) (string, error) {
 	const query = `
 		INSERT INTO oauth2_refresh_tokens (
 			refresh_token_id, user_id, client_id, oidc_session_id, scopes,
@@ -49,7 +50,7 @@ func (r *oauth2RefreshTokenRepository) Create(model *Oauth2RefreshTokenModel) (s
 	return model.RefreshTokenID, nil
 }
 
-func (r *oauth2RefreshTokenRepository) FindByToken(token string) (*Oauth2RefreshTokenModel, error) {
+func (r *oauth2RefreshTokenRepository) FindByToken(token string) (*models.Oauth2RefreshTokenModel, error) {
 	const query = `
 		SELECT refresh_token_id, user_id, client_id, oidc_session_id, scopes,
 			token, issued_at, expires_at, is_revoked, created_at
@@ -57,7 +58,7 @@ func (r *oauth2RefreshTokenRepository) FindByToken(token string) (*Oauth2Refresh
 		WHERE token = $1
 	`
 
-	var model Oauth2RefreshTokenModel
+	var model models.Oauth2RefreshTokenModel
 	row := r.db.QueryRow(context.Background(), query, token)
 	err := row.Scan(
 		&model.RefreshTokenID,

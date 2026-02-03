@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 )
@@ -20,15 +20,15 @@ var ErrMissingToken = errors.New("missing access token")
 
 type authService struct {
 	tokenKey        []byte
-	accessTokenRepo repositories.Oauth2AccessTokenRepository
-	oidcSessionRepo repositories.Oauth2OidcSessionRepository
+	accessTokenRepo AccessTokenRepository
+	oidcSessionRepo OidcSessionRepository
 	logger          *slog.Logger
 }
 
 func NewAuthService(
 	tokenKey string,
-	accessTokenRepo repositories.Oauth2AccessTokenRepository,
-	oidcSessionRepo repositories.Oauth2OidcSessionRepository,
+	accessTokenRepo AccessTokenRepository,
+	oidcSessionRepo OidcSessionRepository,
 ) AuthService {
 	log := logger.L().With(slog.String("module", "auth"))
 	return &authService{
@@ -55,7 +55,7 @@ func (s *authService) checkToken(token string) (UserID string, err error) {
 		return "", errors.New("invalid or expired access token")
 	}
 
-	parsedToken, err := utils.ParseToken[repositories.Oauth2AccessTokenModel](s.tokenKey, storedToken.Token)
+	parsedToken, err := utils.ParseToken[models.Oauth2AccessTokenModel](s.tokenKey, storedToken.Token)
 	if err != nil {
 		return "", errors.New("invalid or expired access token")
 	}
