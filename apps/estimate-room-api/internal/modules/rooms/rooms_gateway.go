@@ -8,20 +8,24 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 )
 
 type roomsGateway struct {
-	wsManager *ws.Manager
+	wsManager   *ws.Manager
+	authService auth.AuthService
 }
 
 func NewRoomsGateway(
 	wsManager *ws.Manager,
+	authService auth.AuthService,
 ) ws.Gateway {
 	return &roomsGateway{
-		wsManager: wsManager,
+		wsManager:   wsManager,
+		authService: authService,
 	}
 }
 
@@ -32,10 +36,22 @@ func NewRoomsGateway(
 // @Param roomID path string true "Room ID"
 // @Param clientID query string false "Client ID"
 // @Success 101 {string} string "Switching Protocols"
+// @Failure 401 {object} utils.ErrorResponse
 // @Failure 400 {object} utils.ErrorResponse
 // @Failure 500 {object} utils.ErrorResponse
 // @Router /rooms/{roomID}/ws [get]
 func (g *roomsGateway) HandleConnection(w http.ResponseWriter, r *http.Request) {
+	if g.authService != nil {
+		if _, err := g.authService.CheckAuth(r); err != nil {
+			msg := "invalid or expired access token"
+			if errors.Is(err, auth.ErrMissingToken) {
+				msg = "missing access token"
+			}
+			utils.WriteResponseError(w, http.StatusUnauthorized, msg)
+			return
+		}
+	}
+
 	channelID := chi.URLParam(r, "roomID")
 	if channelID == "" {
 		utils.WriteResponseError(w, http.StatusBadRequest, "roomID is required")

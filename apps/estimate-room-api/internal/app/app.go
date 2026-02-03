@@ -55,6 +55,12 @@ func (deps *AppDeps) SetupApp() {
 	accessTokenRepo := repositories.NewOauth2AccessTokenRepository(deps.DB)
 
 	deps.Router.Route("/api/v1", func(r chi.Router) {
+		authModule := auth.NewAuthModule(auth.AuthModuleDeps{
+			TokenKey:        deps.Cfg.Server.PasetoSymmetricKey,
+			AccessTokenRepo: accessTokenRepo,
+			OidcSessionRepo: oidcSessionRepo,
+		})
+
 		health.NewHealthModule(health.HealthModuleDeps{
 			Router:             r,
 			DB:                 deps.DB,
@@ -63,8 +69,9 @@ func (deps *AppDeps) SetupApp() {
 		})
 
 		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
-			Router:    r,
-			WsManager: wsManager,
+			Router:      r,
+			WsManager:   wsManager,
+			AuthService: authModule.Service,
 		})
 
 		oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
@@ -77,12 +84,6 @@ func (deps *AppDeps) SetupApp() {
 			OidcSessionRepo:  oidcSessionRepo,
 			RefreshTokenRepo: refreshTokenRepo,
 			AccessTokenRepo:  accessTokenRepo,
-		})
-
-		authModule := auth.NewAuthModule(auth.AuthModuleDeps{
-			TokenKey:        deps.Cfg.Server.PasetoSymmetricKey,
-			AccessTokenRepo: accessTokenRepo,
-			OidcSessionRepo: oidcSessionRepo,
 		})
 
 		users.NewUsersModule(users.UsersModuleDeps{
