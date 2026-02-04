@@ -145,6 +145,27 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	validateClientDTO := &oauth2dto.AuthorizeQueryDTO{
+		ClientID:            loginDTO.ClientID,
+		RedirectURI:         loginDTO.RedirectURI,
+		ResponseType:        loginDTO.ResponseType,
+		Scopes:              loginDTO.Scopes,
+		State:               loginDTO.State,
+		CodeChallenge:       loginDTO.CodeChallenge,
+		CodeChallengeMethod: loginDTO.CodeChallengeMethod,
+		Nonce:               loginDTO.Nonce,
+	}
+	if err = validateClientDTO.Validate(); err != nil {
+		c.logger.Error(fmt.Sprintf("invalid client query %s", err.Error()))
+		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err = c.service.ValidateClient(validateClientDTO); err != nil {
+		c.logger.Error(err.Error())
+		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	userDTO := &oauth2dto.UserDTO{
 		Email:    loginDTO.Email,
 		Password: loginDTO.Password,
@@ -250,7 +271,7 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 
 	switch body.GrantType {
 	case "authorization_code":
-		tokens, err := c.service.GetAuthorizationTokens(body)
+		tokens, err := c.service.GetAuthorizationTokens(r.Context(), body)
 		if err != nil {
 			c.logger.Error(err.Error())
 			utils.WriteResponseError(w, http.StatusUnauthorized, err.Error())
@@ -260,7 +281,7 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 		utils.WriteResponse(w, http.StatusOK, tokens)
 		return
 	case "refresh_token":
-		tokens, err := c.service.GetRefreshTokens(body)
+		tokens, err := c.service.GetRefreshTokens(r.Context(), body)
 		if err != nil {
 			c.logger.Error(err.Error())
 			utils.WriteResponseError(w, http.StatusUnauthorized, err.Error())

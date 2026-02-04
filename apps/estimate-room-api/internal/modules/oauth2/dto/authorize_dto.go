@@ -24,7 +24,7 @@ func (s *AuthorizeQueryDTO) Validate() error {
 
 	scopes := strings.FieldsSeq(s.Scopes)
 
-	for v := range scopes {
+	for _, v := range scopes {
 		isValidScope := slices.Contains(validScopes, v)
 
 		if !isValidScope {

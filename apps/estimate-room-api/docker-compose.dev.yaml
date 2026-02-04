@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   redis:
@@ -10,6 +10,20 @@ services:
       - redis-data:/data
     command: ["redis-server", "--appendonly", "yes"]
 
+  postgres:
+    image: postgres:15
+    container_name: estimate-room-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: estimate_room
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
 volumes:
   redis-data:
+    driver: local
+  postgres-data:
     driver: local

@@ -237,9 +237,6 @@ func BuildGithubProfile(user *githubUserResponse, emails []githubEmailResponse) 
 	}
 
 	email := selectGithubEmail(emails)
-	if email == nil && user.Email != nil && *user.Email != "" {
-		email = user.Email
-	}
 
 	var avatarURL *string
 	if user.AvatarURL != "" {

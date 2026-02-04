@@ -18,7 +18,7 @@ func NewOauth2RefreshTokenRepository(db *pgxpool.Pool) *oauth2RefreshTokenReposi
 	return &oauth2RefreshTokenRepository{db: db}
 }
 
-func (r *oauth2RefreshTokenRepository) Create(model *models.Oauth2RefreshTokenModel) (string, error) {
+func (r *oauth2RefreshTokenRepository) Create(ctx context.Context, model *models.Oauth2RefreshTokenModel) (string, error) {
 	const query = `
 		INSERT INTO oauth2_refresh_tokens (
 			refresh_token_id, user_id, client_id, oidc_session_id, scopes,
@@ -31,7 +31,7 @@ func (r *oauth2RefreshTokenRepository) Create(model *models.Oauth2RefreshTokenMo
 	}
 
 	_, err := r.db.Exec(
-		context.Background(),
+		ctx,
 		query,
 		model.RefreshTokenID,
 		model.UserID,
@@ -50,7 +50,7 @@ func (r *oauth2RefreshTokenRepository) Create(model *models.Oauth2RefreshTokenMo
 	return model.RefreshTokenID, nil
 }
 
-func (r *oauth2RefreshTokenRepository) FindByToken(token string) (*models.Oauth2RefreshTokenModel, error) {
+func (r *oauth2RefreshTokenRepository) FindByToken(ctx context.Context, token string) (*models.Oauth2RefreshTokenModel, error) {
 	const query = `
 		SELECT refresh_token_id, user_id, client_id, oidc_session_id, scopes,
 			token, issued_at, expires_at, is_revoked, created_at
@@ -59,7 +59,7 @@ func (r *oauth2RefreshTokenRepository) FindByToken(token string) (*models.Oauth2
 	`
 
 	var model models.Oauth2RefreshTokenModel
-	row := r.db.QueryRow(context.Background(), query, token)
+	row := r.db.QueryRow(ctx, query, token)
 	err := row.Scan(
 		&model.RefreshTokenID,
 		&model.UserID,
@@ -82,13 +82,13 @@ func (r *oauth2RefreshTokenRepository) FindByToken(token string) (*models.Oauth2
 	return &model, nil
 }
 
-func (r *oauth2RefreshTokenRepository) Revoke(refreshTokenID string) error {
+func (r *oauth2RefreshTokenRepository) Revoke(ctx context.Context, refreshTokenID string) error {
 	const query = `
 		UPDATE oauth2_refresh_tokens
 		SET is_revoked = true
 		WHERE refresh_token_id = $1
 	`
 
-	_, err := r.db.Exec(context.Background(), query, refreshTokenID)
+	_, err := r.db.Exec(ctx, query, refreshTokenID)
 	return err
 }

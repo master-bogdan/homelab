@@ -18,7 +18,7 @@ func NewOauth2AccessTokenRepository(db *pgxpool.Pool) *oauth2AccessTokenReposito
 	return &oauth2AccessTokenRepository{db: db}
 }
 
-func (r *oauth2AccessTokenRepository) Create(model *models.Oauth2AccessTokenModel) error {
+func (r *oauth2AccessTokenRepository) Create(ctx context.Context, model *models.Oauth2AccessTokenModel) error {
 	const query = `
 		INSERT INTO oauth2_access_tokens (
 			access_token_id, user_id, client_id, oidc_session_id, refresh_token_id,
@@ -31,7 +31,7 @@ func (r *oauth2AccessTokenRepository) Create(model *models.Oauth2AccessTokenMode
 	}
 
 	_, err := r.db.Exec(
-		context.Background(),
+		ctx,
 		query,
 		model.AccessTokenID,
 		model.UserID,
@@ -48,7 +48,7 @@ func (r *oauth2AccessTokenRepository) Create(model *models.Oauth2AccessTokenMode
 	return err
 }
 
-func (r *oauth2AccessTokenRepository) FindByToken(token string) (*models.Oauth2AccessTokenModel, error) {
+func (r *oauth2AccessTokenRepository) FindByToken(ctx context.Context, token string) (*models.Oauth2AccessTokenModel, error) {
 	const query = `
 		SELECT access_token_id, user_id, client_id, oidc_session_id, refresh_token_id,
 			scopes, token, issued_at, expires_at, issuer, is_revoked, created_at
@@ -57,7 +57,7 @@ func (r *oauth2AccessTokenRepository) FindByToken(token string) (*models.Oauth2A
 	`
 
 	var model models.Oauth2AccessTokenModel
-	row := r.db.QueryRow(context.Background(), query, token)
+	row := r.db.QueryRow(ctx, query, token)
 	err := row.Scan(
 		&model.AccessTokenID,
 		&model.UserID,
@@ -82,13 +82,13 @@ func (r *oauth2AccessTokenRepository) FindByToken(token string) (*models.Oauth2A
 	return &model, nil
 }
 
-func (r *oauth2AccessTokenRepository) Revoke(accessTokenID string) error {
+func (r *oauth2AccessTokenRepository) Revoke(ctx context.Context, accessTokenID string) error {
 	const query = `
 		UPDATE oauth2_access_tokens
 		SET is_revoked = true
 		WHERE access_token_id = $1
 	`
 
-	_, err := r.db.Exec(context.Background(), query, accessTokenID)
+	_, err := r.db.Exec(ctx, query, accessTokenID)
 	return err
 }

@@ -1,4 +1,4 @@
-.PHONY: build run test lint compose-up compose-down run-compose migrate-up migrate-down migrate-create docs-gen swagger-gen
+.PHONY: build run test lint compose-up compose-down run-compose migrate-up migrate-down migrate-create swagger-generate
 
 # Build the API binary
 build:

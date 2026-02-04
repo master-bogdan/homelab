@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS oauth2_auth_codes (
 	redirect_uri TEXT NOT NULL,
 	scopes TEXT[] NOT NULL,
 	code_challenge TEXT NOT NULL,
-	code_challenge_method TEXT NOT NULL,
+	code_challenge_method TEXT NOT NULL CHECK (code_challenge_method IN ('plain', 'S256')),
 	is_used BOOLEAN NOT NULL DEFAULT false,
 	expires_at TIMESTAMPTZ NOT NULL,
 	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

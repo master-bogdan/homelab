@@ -1,6 +1,10 @@
 package oauth2
 
-import "github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
+import (
+	"context"
+
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
+)
 
 type Oauth2ClientRepository interface {
 	FindByID(clientID string) (*models.Oauth2ClientModel, error)
@@ -18,15 +22,15 @@ type Oauth2OidcSessionRepository interface {
 }
 
 type Oauth2RefreshTokenRepository interface {
-	Create(model *models.Oauth2RefreshTokenModel) (string, error)
-	FindByToken(token string) (*models.Oauth2RefreshTokenModel, error)
-	Revoke(refreshTokenID string) error
+	Create(ctx context.Context, model *models.Oauth2RefreshTokenModel) (string, error)
+	FindByToken(ctx context.Context, token string) (*models.Oauth2RefreshTokenModel, error)
+	Revoke(ctx context.Context, refreshTokenID string) error
 }
 
 type Oauth2AccessTokenRepository interface {
-	Create(model *models.Oauth2AccessTokenModel) error
-	FindByToken(token string) (*models.Oauth2AccessTokenModel, error)
-	Revoke(accessTokenID string) error
+	Create(ctx context.Context, model *models.Oauth2AccessTokenModel) error
+	FindByToken(ctx context.Context, token string) (*models.Oauth2AccessTokenModel, error)
+	Revoke(ctx context.Context, accessTokenID string) error
 }
 
 type UserRepository interface {

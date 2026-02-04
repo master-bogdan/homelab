@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -55,7 +56,7 @@ func TestGetMe_ReturnsUser(t *testing.T) {
 	sessionID := testutils.SeedSession(t, db, userID, clientID, "nonce123")
 
 	svc := testutils.NewOauth2Service(db)
-	tokens, err := svc.GenerateTokenPair(userID, clientID, sessionID, []string{"user"})
+	tokens, err := svc.GenerateTokenPair(context.Background(), userID, clientID, sessionID, []string{"user"})
 	if err != nil {
 		t.Fatalf("failed to generate token pair: %v", err)
 	}

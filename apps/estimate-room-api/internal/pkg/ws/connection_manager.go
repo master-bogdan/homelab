@@ -3,7 +3,10 @@ package ws
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -115,9 +118,12 @@ func (m *Manager) run() {
 }
 
 func (m *Manager) HandleWS(w http.ResponseWriter, r *http.Request, channelID, clientID string, gateway Gateway) {
-	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		InsecureSkipVerify: true,
-	})
+	if !isOriginAllowed(r) {
+		http.Error(w, "invalid origin", http.StatusForbidden)
+		return
+	}
+
+	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		logger.L().Error("WebSocket accept error", "err", err)
 		return
@@ -135,6 +141,36 @@ func (m *Manager) HandleWS(w http.ResponseWriter, r *http.Request, channelID, cl
 
 	go m.writeHandler(client)
 	m.readHandler(client)
+}
+
+func isOriginAllowed(r *http.Request) bool {
+	origin := strings.TrimSpace(r.Header.Get("Origin"))
+	if origin == "" {
+		return true
+	}
+
+	originURL, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+
+	originHost := hostOnly(originURL.Host)
+	requestHost := hostOnly(r.Host)
+	if originHost == "" || requestHost == "" {
+		return false
+	}
+
+	return strings.EqualFold(originHost, requestHost)
+}
+
+func hostOnly(hostport string) string {
+	if hostport == "" {
+		return ""
+	}
+	if host, _, err := net.SplitHostPort(hostport); err == nil {
+		return host
+	}
+	return hostport
 }
 
 func (m *Manager) readHandler(client *Client) {
@@ -203,7 +239,6 @@ func (m *Manager) BroadcastToChannel(channelID string, data []byte) {
 		select {
 		case client.Send <- data:
 		default:
-			close(client.Send)
 			m.unregister <- client
 		}
 	}

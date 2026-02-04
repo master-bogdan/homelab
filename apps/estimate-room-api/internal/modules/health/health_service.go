@@ -59,14 +59,18 @@ func (s *healthService) CheckReadiness(ctx context.Context) (ReadinessStatus, er
 		Redis:  "up",
 	}
 
-	err := s.db.Ping(ctx)
-	if err != nil {
+	if s.db == nil {
+		status.DB = "down"
+		status.Status = "not OK"
+	} else if err := s.db.Ping(ctx); err != nil {
 		status.DB = "down"
 		status.Status = "not OK"
 	}
 
-	err = s.redis.Ping(ctx).Err()
-	if err != nil {
+	if s.redis == nil {
+		status.Redis = "down"
+		status.Status = "not OK"
+	} else if err := s.redis.Ping(ctx).Err(); err != nil {
 		status.Redis = "down"
 		status.Status = "not OK"
 	}

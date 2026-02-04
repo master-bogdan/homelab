@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -45,11 +46,16 @@ func (s *authService) CheckAuth(r *http.Request) (UserID string, err error) {
 		return "", ErrMissingToken
 	}
 
-	return s.checkToken(token)
+	ctx := context.Background()
+	if r != nil {
+		ctx = r.Context()
+	}
+
+	return s.checkToken(ctx, token)
 }
 
-func (s *authService) checkToken(token string) (UserID string, err error) {
-	storedToken, err := s.accessTokenRepo.FindByToken(token)
+func (s *authService) checkToken(ctx context.Context, token string) (UserID string, err error) {
+	storedToken, err := s.accessTokenRepo.FindByToken(ctx, token)
 	if err != nil {
 		s.logger.Error("invalid or expired access token")
 		return "", errors.New("invalid or expired access token")

@@ -1,10 +1,10 @@
 # Use the official Golang image matching go.mod
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Set environment variables for static build
 ENV CGO_ENABLED=0 \
-    GOOS=linux \
-    GOARCH=amd64
+  GOOS=linux \
+  GOARCH=amd64
 
 # Set working directory inside container
 WORKDIR /build

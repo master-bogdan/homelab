@@ -14,7 +14,6 @@ import (
 type WsServer struct {
 	pubClient *redis.Client
 	subClient *redis.Client
-	pubsub    *redis.PubSub
 	ctx       context.Context
 	cancel    context.CancelFunc
 	wg        sync.WaitGroup
@@ -31,22 +30,27 @@ func NewWsServer(pubClient, subClient *redis.Client) *WsServer {
 }
 
 func (s *WsServer) Subscribe(channel string, onMessage func([]byte)) {
-	s.wg.Go(func() {
-		s.pubsub = s.subClient.Subscribe(s.ctx, channel)
-		defer s.pubsub.Close()
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		pubsub := s.subClient.Subscribe(s.ctx, channel)
+		defer pubsub.Close()
 
-		ch := s.pubsub.Channel()
+		ch := pubsub.Channel()
 		for {
 			select {
 			case <-s.ctx.Done():
 				return
-			case msg := <-ch:
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
 				if msg != nil {
 					onMessage([]byte(msg.Payload))
 				}
 			}
 		}
-	})
+	}()
 }
 
 func (s *WsServer) Publish(channel string, message any) error {

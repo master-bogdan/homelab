@@ -77,19 +77,35 @@ func MigrateCreate(name string) (string, string, error) {
 		return "", "", fmt.Errorf("failed to create migrations directory: %w", err)
 	}
 
-	timestamp := time.Now().Unix()
+	timestamp := time.Now().UnixNano()
 
 	upFile := filepath.Join(migrationsDir, fmt.Sprintf("%d_%s.up.sql", timestamp, name))
 	downFile := filepath.Join(migrationsDir, fmt.Sprintf("%d_%s.down.sql", timestamp, name))
 
-	err = os.WriteFile(upFile, []byte("-- Write your UP migration here\n"), 0644)
+	up, err := os.OpenFile(upFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create up migration file: %w", err)
 	}
+	_, err = up.WriteString("-- Write your UP migration here\n")
+	closeErr := up.Close()
+	if err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return "", "", fmt.Errorf("failed to write up migration file: %w", err)
+	}
 
-	err = os.WriteFile(downFile, []byte("-- Write your Down migration here\n"), 0644)
+	down, err := os.OpenFile(downFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create down migration file: %w", err)
+	}
+	_, err = down.WriteString("-- Write your Down migration here\n")
+	closeErr = down.Close()
+	if err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return "", "", fmt.Errorf("failed to write down migration file: %w", err)
 	}
 
 	return upFile, downFile, nil

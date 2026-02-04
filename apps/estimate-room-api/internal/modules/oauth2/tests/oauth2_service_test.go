@@ -113,7 +113,7 @@ func TestAuthorizationCodeExchange(t *testing.T) {
 		t.Fatalf("create code: %v", err)
 	}
 
-	tokens, err := svc.GetAuthorizationTokens(&oauth2dto.GetTokenDTO{
+	tokens, err := svc.GetAuthorizationTokens(context.Background(), &oauth2dto.GetTokenDTO{
 		GrantType:    "authorization_code",
 		ClientID:     clientID,
 		RedirectURI:  redirectURI,
@@ -170,7 +170,7 @@ func TestAuthCodeExpires(t *testing.T) {
 		t.Fatalf("expire code: %v", err)
 	}
 
-	_, err = svc.GetAuthorizationTokens(&oauth2dto.GetTokenDTO{
+	_, err = svc.GetAuthorizationTokens(context.Background(), &oauth2dto.GetTokenDTO{
 		GrantType:    "authorization_code",
 		ClientID:     clientID,
 		RedirectURI:  redirectURI,
