@@ -3,6 +3,7 @@ package oauth2utils
 import (
 	"fmt"
 	"html"
+	"net/url"
 	"strings"
 )
 
@@ -19,6 +20,7 @@ var formKeyMap = map[string]string{
 
 func CreateLoginHtml(params map[string]any) string {
 	var hiddenFields strings.Builder
+	queryValues := url.Values{}
 	for key, val := range params {
 		formKey := key
 		mapped, ok := formKeyMap[key]
@@ -29,6 +31,12 @@ func CreateLoginHtml(params map[string]any) string {
 
 		strVal := fmt.Sprintf("%v", val)
 		hiddenFields.WriteString(`<input type="hidden" name="` + html.EscapeString(formKey) + `" value="` + html.EscapeString(strVal) + `"/>` + "\n")
+		queryValues.Set(formKey, strVal)
+	}
+
+	githubURL := "/api/v1/oauth2/github/login"
+	if encoded := queryValues.Encode(); encoded != "" {
+		githubURL += "?" + encoded
 	}
 
 	return `
@@ -45,6 +53,9 @@ func CreateLoginHtml(params map[string]any) string {
 		input[type="email"], input[type="password"] { width: 100%; padding: 0.6rem; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
 		button { width: 100%; padding: 0.8rem; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; }
 		button:hover { background-color: #0056b3; }
+		.divider { margin: 1.2rem 0; text-align: center; color: #666; font-size: 0.9rem; }
+		.github-btn { display: block; text-align: center; text-decoration: none; padding: 0.8rem; background-color: #111; color: #fff; border-radius: 6px; font-size: 1rem; }
+		.github-btn:hover { background-color: #000; }
 	</style>
 </head>
 <body>
@@ -61,6 +72,8 @@ func CreateLoginHtml(params map[string]any) string {
 
 			<button type="submit">Sign In</button>
 		</form>
+		<div class="divider">or</div>
+		<a class="github-btn" href="` + html.EscapeString(githubURL) + `">Continue with GitHub</a>
 	</div>
 </body>
 </html>

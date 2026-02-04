@@ -32,5 +32,8 @@ type Oauth2AccessTokenRepository interface {
 type UserRepository interface {
 	FindByID(userID string) (*models.UserModel, error)
 	FindByEmail(email string) (*models.UserModel, error)
+	FindByGithubID(githubID string) (*models.UserModel, error)
 	Create(email, passwordHash string) (string, error)
+	CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error)
+	UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error
 }

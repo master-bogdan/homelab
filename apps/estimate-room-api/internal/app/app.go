@@ -2,6 +2,7 @@
 package app
 
 import (
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
+	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
@@ -53,6 +55,7 @@ func (deps *AppDeps) SetupApp() {
 	oidcSessionRepo := repositories.NewOauth2OidcSessionRepository(deps.DB)
 	refreshTokenRepo := repositories.NewOauth2RefreshTokenRepository(deps.DB)
 	accessTokenRepo := repositories.NewOauth2AccessTokenRepository(deps.DB)
+	githubScopes := strings.Fields(deps.Cfg.Github.Scopes)
 
 	deps.Router.Route("/api/v1", func(r chi.Router) {
 		authModule := auth.NewAuthModule(auth.AuthModuleDeps{
@@ -84,6 +87,13 @@ func (deps *AppDeps) SetupApp() {
 			OidcSessionRepo:  oidcSessionRepo,
 			RefreshTokenRepo: refreshTokenRepo,
 			AccessTokenRepo:  accessTokenRepo,
+			Github: oauth2utils.GithubConfig{
+				ClientID:     deps.Cfg.Github.ClientID,
+				ClientSecret: deps.Cfg.Github.ClientSecret,
+				RedirectURL:  deps.Cfg.Github.RedirectURL,
+				StateSecret:  deps.Cfg.Github.StateSecret,
+				Scopes:       githubScopes,
+			},
 		})
 
 		users.NewUsersModule(users.UsersModuleDeps{

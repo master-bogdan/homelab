@@ -1,9 +1,12 @@
 package oauth2
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
 	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
@@ -17,19 +20,28 @@ type Oauth2Controller interface {
 	Login(w http.ResponseWriter, r *http.Request)
 	ShowLoginForm(w http.ResponseWriter, r *http.Request)
 	GetTokens(w http.ResponseWriter, r *http.Request)
+	GithubLogin(w http.ResponseWriter, r *http.Request)
+	GithubCallback(w http.ResponseWriter, r *http.Request)
 }
 
 type oauth2Controller struct {
-	service Oauth2Service
-	logger  *slog.Logger
+	service       Oauth2Service
+	logger        *slog.Logger
+	github        oauth2utils.GithubConfig
+	stateTokenKey []byte
+	httpClient    *http.Client
 }
 
 func NewOauth2Controller(
 	oauth2Service Oauth2Service,
+	github oauth2utils.GithubConfig,
 ) Oauth2Controller {
 	return &oauth2Controller{
-		service: oauth2Service,
-		logger:  logger.L().With(slog.String("module", "oauth")),
+		service:       oauth2Service,
+		logger:        logger.L().With(slog.String("module", "oauth")),
+		github:        github,
+		stateTokenKey: []byte(github.StateSecret),
+		httpClient:    &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -261,6 +273,161 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 		c.logger.Error("unsupported grant_type")
 		utils.WriteResponseError(w, http.StatusBadRequest, "unsupported grant_type")
 	}
+}
+
+// GithubLogin godoc
+// @Summary Login with GitHub
+// @Description Redirects to GitHub OAuth authorize URL.
+// @Tags oauth2
+// @Router /api/v1/oauth2/github/login [get]
+func (c *oauth2Controller) GithubLogin(w http.ResponseWriter, r *http.Request) {
+	if !c.github.IsConfigured() {
+		utils.WriteResponseError(w, http.StatusInternalServerError, "github oauth is not configured")
+		return
+	}
+
+	query := parseAuthorizeQuery(r)
+	if err := query.Validate(); err != nil {
+		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := c.service.ValidateClient(query); err != nil {
+		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	stateToken, err := oauth2utils.CreateGithubState(c.stateTokenKey, oauth2utils.AuthorizeQueryFromDTO(query))
+	if err != nil {
+		utils.WriteResponseError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	redirectURL := oauth2utils.BuildGithubAuthorizeURL(c.github, stateToken)
+	http.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
+// GithubCallback godoc
+// @Summary GitHub OAuth callback
+// @Description Handles GitHub OAuth callback and issues internal auth code.
+// @Tags oauth2
+// @Router /api/v1/oauth2/github/callback [get]
+func (c *oauth2Controller) GithubCallback(w http.ResponseWriter, r *http.Request) {
+	if !c.github.IsConfigured() {
+		utils.WriteResponseError(w, http.StatusInternalServerError, "github oauth is not configured")
+		return
+	}
+
+	if r.URL.Query().Get("error") != "" {
+		utils.WriteResponseError(w, http.StatusUnauthorized, "github authentication failed")
+		return
+	}
+
+	code := r.URL.Query().Get("code")
+	stateToken := r.URL.Query().Get("state")
+	if code == "" || stateToken == "" {
+		utils.WriteResponseError(w, http.StatusBadRequest, "code and state are required")
+		return
+	}
+
+	state, err := oauth2utils.ParseGithubState(c.stateTokenKey, stateToken)
+	if err != nil {
+		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	query := oauth2utils.AuthorizeQueryFromState(state).ToDTO()
+	if err := query.Validate(); err != nil {
+		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := c.service.ValidateClient(query); err != nil {
+		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	accessToken, err := oauth2utils.ExchangeGithubCode(ctx, c.httpClient, c.github, code)
+	if err != nil {
+		utils.WriteResponseError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	user, err := oauth2utils.FetchGithubUser(ctx, c.httpClient, accessToken)
+	if err != nil {
+		utils.WriteResponseError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	emails, err := oauth2utils.FetchGithubEmails(ctx, c.httpClient, accessToken)
+	if err != nil {
+		c.logger.Warn("failed to fetch github emails", "err", err)
+	}
+
+	profile := oauth2utils.BuildGithubProfile(user, emails)
+	userID, err := c.service.GetOrCreateUserFromGithub(profile)
+	if err != nil {
+		if errors.Is(err, repositories.ErrUserNotFound) {
+			utils.WriteResponseError(w, http.StatusNotFound, "user not found")
+			return
+		}
+		utils.WriteResponseError(w, http.StatusInternalServerError, "failed to login with github")
+		return
+	}
+
+	oidcSessionDTO := &oauth2dto.CreateOidcSessionDTO{
+		UserID:   userID,
+		ClientID: query.ClientID,
+		Nonce:    query.Nonce,
+	}
+	if err := oidcSessionDTO.Validate(); err != nil {
+		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	oidcSessionID, err := c.service.CreateOidcSession(oidcSessionDTO)
+	if err != nil {
+		utils.WriteResponseError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_id",
+		Value:    oidcSessionID,
+		HttpOnly: true,
+		Secure:   r.TLS != nil,
+		Path:     "/",
+	})
+
+	createAuthCodeDTO := &oauth2dto.CreateOauthCodeDTO{
+		ClientID:            query.ClientID,
+		UserID:              userID,
+		OidcSessionID:       oidcSessionID,
+		RedirectURI:         query.RedirectURI,
+		CodeChallenge:       query.CodeChallenge,
+		CodeChallengeMethod: query.CodeChallengeMethod,
+		Scopes:              query.Scopes,
+	}
+	if err := createAuthCodeDTO.Validate(); err != nil {
+		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	authCode, err := c.service.CreateAuthCode(createAuthCodeDTO)
+	if err != nil {
+		utils.WriteResponseError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	redirectTo := query.RedirectURI + "?code=" + authCode
+	if query.State != "" {
+		redirectTo += "&state=" + query.State
+	}
+
+	http.Redirect(w, r, redirectTo, http.StatusFound)
 }
 
 func parseAuthorizeQuery(r *http.Request) *oauth2dto.AuthorizeQueryDTO {

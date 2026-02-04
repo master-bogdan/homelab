@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
 	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
+	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 )
@@ -25,6 +27,7 @@ type Oauth2Service interface {
 	GetLoggedInUserID(sessionID string) (string, error)
 	AuthenticateUser(dto *oauth2dto.UserDTO) (string, error)
 	RegisterUser(dto *oauth2dto.UserDTO) (string, error)
+	GetOrCreateUserFromGithub(profile oauth2utils.GithubProfile) (string, error)
 	GetAuthorizationTokens(dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error)
 	GetRefreshTokens(dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error)
 	GenerateTokenPair(userID, clientID, oidcSessionID string, scopes []string) (oauth2dto.TokenResponseDTO, error)
@@ -178,6 +181,39 @@ func (s *oauth2Service) RegisterUser(dto *oauth2dto.UserDTO) (string, error) {
 	}
 
 	return userID, err
+}
+
+func (s *oauth2Service) GetOrCreateUserFromGithub(profile oauth2utils.GithubProfile) (string, error) {
+	if profile.ID == "" {
+		return "", errors.New("github id is required")
+	}
+
+	user, err := s.userRepo.FindByGithubID(profile.ID)
+	if err == nil {
+		if err := s.userRepo.UpdateGithubProfile(user.UserID, profile.ID, profile.DisplayName, profile.AvatarURL, profile.Email); err != nil {
+			return "", err
+		}
+		return user.UserID, nil
+	}
+
+	if !errors.Is(err, repositories.ErrUserNotFound) {
+		return "", err
+	}
+
+	if profile.Email != nil && *profile.Email != "" {
+		userByEmail, err := s.userRepo.FindByEmail(*profile.Email)
+		if err == nil {
+			if err := s.userRepo.UpdateGithubProfile(userByEmail.UserID, profile.ID, profile.DisplayName, profile.AvatarURL, profile.Email); err != nil {
+				return "", err
+			}
+			return userByEmail.UserID, nil
+		}
+		if !errors.Is(err, repositories.ErrUserNotFound) {
+			return "", err
+		}
+	}
+
+	return s.userRepo.CreateWithGithub(profile.Email, profile.ID, profile.DisplayName, profile.AvatarURL)
 }
 
 func (s *oauth2Service) GetAuthorizationTokens(dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error) {

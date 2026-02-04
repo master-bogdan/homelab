@@ -19,6 +19,13 @@ type Config struct {
 		RedisURL         string `env:"REDIS_URL"`
 		IsAutoMigrations bool   `env:"IS_AUTO_MIGRATIONS"`
 	}
+	Github struct {
+		ClientID     string `env:"GITHUB_CLIENT_ID"`
+		ClientSecret string `env:"GITHUB_CLIENT_SECRET"`
+		RedirectURL  string `env:"GITHUB_REDIRECT_URL"`
+		StateSecret  string `env:"GITHUB_STATE_SECRET"`
+		Scopes       string `env:"GITHUB_SCOPES"`
+	}
 }
 
 func LoadConfig() (*Config, error) {

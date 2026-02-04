@@ -3,6 +3,7 @@ package oauth2
 
 import (
 	"github.com/go-chi/chi/v5"
+	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 )
 
 type Oauth2Module struct {
@@ -20,6 +21,7 @@ type Oauth2ModuleDeps struct {
 	OidcSessionRepo  Oauth2OidcSessionRepository
 	RefreshTokenRepo Oauth2RefreshTokenRepository
 	AccessTokenRepo  Oauth2AccessTokenRepository
+	Github           oauth2utils.GithubConfig
 }
 
 func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
@@ -34,13 +36,15 @@ func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
 		deps.Issuer,
 	)
 
-	ctrl := NewOauth2Controller(svc)
+	ctrl := NewOauth2Controller(svc, deps.Github)
 
 	deps.Router.Route("/oauth2", func(r chi.Router) {
 		r.Get("/authorize", ctrl.Authorize)
 		r.Get("/login", ctrl.ShowLoginForm)
 		r.Post("/login", ctrl.Login)
 		r.Post("/token", ctrl.GetTokens)
+		r.Get("/github/login", ctrl.GithubLogin)
+		r.Get("/github/callback", ctrl.GithubCallback)
 	})
 
 	return &Oauth2Module{

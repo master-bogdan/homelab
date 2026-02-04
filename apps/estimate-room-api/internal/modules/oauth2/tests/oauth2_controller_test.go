@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
+	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
 )
 
@@ -43,6 +44,7 @@ func setupTest(t *testing.T) (*chi.Mux, *pgxpool.Pool, string, string, string, s
 			OidcSessionRepo:  oidcSessionRepo,
 			RefreshTokenRepo: refreshTokenRepo,
 			AccessTokenRepo:  accessTokenRepo,
+			Github:           oauth2utils.GithubConfig{},
 		})
 	})
 
