@@ -9,7 +9,7 @@ import (
 
 type RoomsModule struct {
 	Controller RoomsController
-	Gateway    ws.Gateway
+	Gateway    *roomsGateway
 }
 
 type RoomsModuleDeps struct {
@@ -20,11 +20,11 @@ type RoomsModuleDeps struct {
 
 func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	controller := NewRoomsController()
-	gateway := NewRoomsGateway(deps.WsManager, deps.AuthService)
+	gateway := NewRoomsGateway(deps.WsManager)
 
-	deps.Router.Route("/rooms", func(r chi.Router) {
-		r.Get("/{roomID}/ws", gateway.HandleConnection)
-	})
+	deps.WsManager.Subscribe(EventRoomJoin, gateway.OnEvent)
+	deps.WsManager.Subscribe(EventRoomLeave, gateway.OnEvent)
+	deps.WsManager.Subscribe(EventRoomMessage, gateway.OnEvent)
 
 	return &RoomsModule{
 		Controller: controller,

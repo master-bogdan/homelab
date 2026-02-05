@@ -2,6 +2,7 @@
 package app
 
 import (
+	"net/http"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 	"github.com/redis/go-redis/v9"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -100,6 +102,15 @@ func (deps *AppDeps) SetupApp() {
 			Router:      r,
 			AuthService: authModule.Service,
 			UserRepo:    userRepo,
+		})
+
+		r.Get("/ws", func(w http.ResponseWriter, req *http.Request) {
+			userID, err := authModule.Service.CheckAuth(req)
+			if err != nil {
+				utils.WriteResponseError(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
+			wsManager.Connect(w, req, userID)
 		})
 	})
 }

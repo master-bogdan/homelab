@@ -60,28 +60,13 @@
                 }
             }
         },
-        "/rooms/{roomID}/ws": {
+        "/ws": {
             "get": {
-                "description": "Upgrades the HTTP request to a WebSocket for the given room.",
+                "description": "Upgrades the HTTP request to a WebSocket connection.",
                 "tags": [
-                    "rooms"
+                    "ws"
                 ],
-                "summary": "Room WebSocket connection",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Room ID",
-                        "name": "roomID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Client ID",
-                        "name": "clientID",
-                        "in": "query"
-                    }
-                ],
+                "summary": "WebSocket connection",
                 "responses": {
                     "101": {
                         "description": "Switching Protocols",
@@ -89,8 +74,14 @@
                             "type": "string"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/utils.ErrorResponse"
                         }

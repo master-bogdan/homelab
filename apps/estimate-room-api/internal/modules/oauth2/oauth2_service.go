@@ -89,7 +89,7 @@ func (s *oauth2Service) ValidateClient(dto *oauth2dto.AuthorizeQueryDTO) error {
 		return errors.New("unsupported grant_type")
 	}
 
-	for _, scope := range strings.FieldsSeq(dto.Scopes) {
+	for _, scope := range strings.Fields(dto.Scopes) {
 		if !slices.Contains(client.Scopes, scope) {
 			return errors.New("invalid scope")
 		}

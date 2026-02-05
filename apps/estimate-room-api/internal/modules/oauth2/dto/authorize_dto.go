@@ -1,3 +1,4 @@
+// Package oauth2dto is a collection of oauth dtos
 package oauth2dto
 
 import (
@@ -22,7 +23,7 @@ type AuthorizeQueryDTO struct {
 func (s *AuthorizeQueryDTO) Validate() error {
 	validScopes := []string{"openid", "admin", "user"}
 
-	scopes := strings.FieldsSeq(s.Scopes)
+	scopes := strings.Fields(s.Scopes)
 
 	for _, v := range scopes {
 		isValidScope := slices.Contains(validScopes, v)

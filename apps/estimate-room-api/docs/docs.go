@@ -67,50 +67,41 @@ const docTemplate = `{
                 }
             }
         },
-        "/rooms/{roomID}/ws": {
-            "get": {
-                "description": "Upgrades the HTTP request to a WebSocket for the given room.",
-                "tags": [
-                    "rooms"
-                ],
-                "summary": "Room WebSocket connection",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Room ID",
-                        "name": "roomID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Client ID",
-                        "name": "clientID",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "101": {
-                        "description": "Switching Protocols",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        }
+		"/ws": {
+			"get": {
+				"description": "Upgrades the HTTP request to a WebSocket connection.",
+				"tags": [
+					"ws"
+				],
+				"summary": "WebSocket connection",
+				"responses": {
+					"101": {
+						"description": "Switching Protocols",
+						"schema": {
+							"type": "string"
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"schema": {
+							"$ref": "#/definitions/utils.ErrorResponse"
+						}
+					},
+					"403": {
+						"description": "Forbidden",
+						"schema": {
+							"$ref": "#/definitions/utils.ErrorResponse"
+						}
+					},
+					"500": {
+						"description": "Internal Server Error",
+						"schema": {
+							"$ref": "#/definitions/utils.ErrorResponse"
+						}
+					}
+				}
+			}
+		}
     },
     "definitions": {
         "health.LivenessStatus": {
