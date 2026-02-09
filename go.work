@@ -1,0 +1,6 @@
+go 1.25.5
+
+use (
+	./apps/ephermal-notes-api
+	./apps/estimate-room-api
+)
