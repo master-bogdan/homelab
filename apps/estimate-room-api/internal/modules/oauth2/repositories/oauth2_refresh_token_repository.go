@@ -1,4 +1,4 @@
-package repositories
+package oauth2repositories
 
 import (
 	"context"
@@ -7,8 +7,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
+	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
 )
+
+type Oauth2RefreshTokenRepository interface {
+	Create(ctx context.Context, model *oauth2models.Oauth2RefreshTokenModel) (string, error)
+	FindByToken(ctx context.Context, token string) (*oauth2models.Oauth2RefreshTokenModel, error)
+	Revoke(ctx context.Context, refreshTokenID string) error
+}
 
 type oauth2RefreshTokenRepository struct {
 	db *pgxpool.Pool
@@ -18,7 +24,7 @@ func NewOauth2RefreshTokenRepository(db *pgxpool.Pool) *oauth2RefreshTokenReposi
 	return &oauth2RefreshTokenRepository{db: db}
 }
 
-func (r *oauth2RefreshTokenRepository) Create(ctx context.Context, model *models.Oauth2RefreshTokenModel) (string, error) {
+func (r *oauth2RefreshTokenRepository) Create(ctx context.Context, model *oauth2models.Oauth2RefreshTokenModel) (string, error) {
 	const query = `
 		INSERT INTO oauth2_refresh_tokens (
 			refresh_token_id, user_id, client_id, oidc_session_id, scopes,
@@ -50,7 +56,7 @@ func (r *oauth2RefreshTokenRepository) Create(ctx context.Context, model *models
 	return model.RefreshTokenID, nil
 }
 
-func (r *oauth2RefreshTokenRepository) FindByToken(ctx context.Context, token string) (*models.Oauth2RefreshTokenModel, error) {
+func (r *oauth2RefreshTokenRepository) FindByToken(ctx context.Context, token string) (*oauth2models.Oauth2RefreshTokenModel, error) {
 	const query = `
 		SELECT refresh_token_id, user_id, client_id, oidc_session_id, scopes,
 			token, issued_at, expires_at, is_revoked, created_at
@@ -58,7 +64,7 @@ func (r *oauth2RefreshTokenRepository) FindByToken(ctx context.Context, token st
 		WHERE token = $1
 	`
 
-	var model models.Oauth2RefreshTokenModel
+	var model oauth2models.Oauth2RefreshTokenModel
 	row := r.db.QueryRow(ctx, query, token)
 	err := row.Scan(
 		&model.RefreshTokenID,

@@ -2,15 +2,15 @@ package oauth2
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
 
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
+	stdErrors "errors"
 	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/errors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 )
@@ -178,7 +178,7 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := c.service.AuthenticateUser(userDTO)
 	if err != nil {
-		if err == repositories.ErrUserNotFound {
+		if err == apperrors.ErrUserNotFound {
 			c.logger.Warn("user not found")
 			userID, err = c.service.RegisterUser(userDTO)
 			if err != nil || userID == "" {
@@ -391,7 +391,7 @@ func (c *oauth2Controller) GithubCallback(w http.ResponseWriter, r *http.Request
 	profile := oauth2utils.BuildGithubProfile(user, emails)
 	userID, err := c.service.GetOrCreateUserFromGithub(profile)
 	if err != nil {
-		if errors.Is(err, repositories.ErrUserNotFound) {
+		if stdErrors.Is(err, apperrors.ErrUserNotFound) {
 			utils.WriteResponseError(w, http.StatusNotFound, "user not found")
 			return
 		}

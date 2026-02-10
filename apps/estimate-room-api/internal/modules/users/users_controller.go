@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	usersdto "github.com/master-bogdan/estimate-room-api/internal/modules/users/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/errors"
@@ -61,7 +60,7 @@ func (c *usersController) GetMe(w http.ResponseWriter, r *http.Request) {
 				Instance: r.URL.Path,
 				Errors:   []errors.ErrorItem{},
 			})
-		case stdErrors.Is(err, repositories.ErrUserNotFound):
+		case stdErrors.Is(err, errors.ErrUserNotFound):
 			errors.Write(w, errors.Problem{
 				Type:     "https://api.estimateroom.com/problems/not-found",
 				Title:    "Not Found",
