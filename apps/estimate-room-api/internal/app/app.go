@@ -2,7 +2,6 @@
 package app
 
 import (
-	"net/http"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -19,9 +18,8 @@ import (
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
-	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
-	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 	"github.com/redis/go-redis/v9"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -32,7 +30,7 @@ type AppDeps struct {
 	Cfg                *config.Config
 	Router             chi.Router
 	IsGracefulShutdown *atomic.Bool
-	Ws                 *ws.WsServer
+	WsServer           ws.PubSub
 }
 
 func (deps *AppDeps) SetupApp() {
@@ -48,14 +46,18 @@ func (deps *AppDeps) SetupApp() {
 		httpSwagger.URL("/swagger/doc.json"),
 	))
 
-	wsManager := ws.NewManager(deps.Ws, "app")
-
 	githubScopes := strings.Fields(deps.Cfg.Github.Scopes)
 
 	deps.Router.Route("/api/v1", func(r chi.Router) {
 		authModule := auth.NewAuthModule(auth.AuthModuleDeps{
 			TokenKey: deps.Cfg.Server.PasetoSymmetricKey,
 			DB:       deps.DB,
+		})
+
+		wsModule := ws.NewWsModule(ws.WsModuleDeps{
+			Router:      r,
+			AuthService: authModule.Service,
+			Server:      deps.WsServer,
 		})
 
 		health.NewHealthModule(health.HealthModuleDeps{
@@ -67,7 +69,7 @@ func (deps *AppDeps) SetupApp() {
 
 		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
 			Router:      r,
-			WsManager:   wsManager,
+			WsService:   wsModule.Service,
 			AuthService: authModule.Service,
 		})
 
@@ -91,15 +93,6 @@ func (deps *AppDeps) SetupApp() {
 				StateSecret:  deps.Cfg.Github.StateSecret,
 				Scopes:       githubScopes,
 			},
-		})
-
-		r.Get("/ws", func(w http.ResponseWriter, req *http.Request) {
-			userID, err := authModule.Service.CheckAuth(req)
-			if err != nil {
-				utils.WriteResponseError(w, http.StatusUnauthorized, "unauthorized")
-				return
-			}
-			wsManager.Connect(w, req, userID)
 		})
 	})
 }

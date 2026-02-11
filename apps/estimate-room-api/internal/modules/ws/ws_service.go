@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -28,26 +26,19 @@ type Client struct {
 	Send   chan []byte
 }
 
-type ClientInfo struct {
-	UserID string
-	ConnID string
-}
-
-type EventHandler func(ClientInfo, Event)
-
-type Manager struct {
+type Service struct {
 	clients       map[*Client]bool
 	userClients   map[string]map[*Client]bool
 	register      chan *Client
 	unregister    chan *Client
 	mu            sync.RWMutex
-	server        *WsServer
+	server        PubSub
 	channel       string
 	subscriptions map[string][]EventHandler
 }
 
-func NewManager(server *WsServer, channel string) *Manager {
-	m := &Manager{
+func NewService(server PubSub, channel string) *Service {
+	s := &Service{
 		clients:       make(map[*Client]bool),
 		userClients:   make(map[string]map[*Client]bool),
 		register:      make(chan *Client),
@@ -57,13 +48,15 @@ func NewManager(server *WsServer, channel string) *Manager {
 		subscriptions: make(map[string][]EventHandler),
 	}
 
-	go m.run()
+	go s.run()
 
-	server.Subscribe(channel, func(data []byte) {
-		m.broadcastRaw(data)
-	})
+	if server != nil {
+		server.Subscribe(channel, func(data []byte) {
+			s.broadcastRaw(data)
+		})
+	}
 
-	return m
+	return s
 }
 
 func clientInfo(client *Client) ClientInfo {
@@ -73,54 +66,50 @@ func clientInfo(client *Client) ClientInfo {
 	}
 }
 
-func (m *Manager) run() {
+func (s *Service) run() {
 	for {
 		select {
-		case client := <-m.register:
-			m.mu.Lock()
-			m.clients[client] = true
+		case client := <-s.register:
+			s.mu.Lock()
+			s.clients[client] = true
 
-			if m.userClients[client.UserID] == nil {
-				m.userClients[client.UserID] = make(map[*Client]bool)
+			if s.userClients[client.UserID] == nil {
+				s.userClients[client.UserID] = make(map[*Client]bool)
 			}
-			m.userClients[client.UserID][client] = true
-			m.mu.Unlock()
+			s.userClients[client.UserID][client] = true
+			s.mu.Unlock()
 
-			m.logConnect(clientInfo(client))
+			s.logConnect(clientInfo(client))
 
-		case client := <-m.unregister:
-			m.mu.Lock()
-			if _, ok := m.clients[client]; ok {
-				delete(m.clients, client)
-				delete(m.userClients[client.UserID], client)
-				if len(m.userClients[client.UserID]) == 0 {
-					delete(m.userClients, client.UserID)
+		case client := <-s.unregister:
+			s.mu.Lock()
+			if _, ok := s.clients[client]; ok {
+				delete(s.clients, client)
+				delete(s.userClients[client.UserID], client)
+				if len(s.userClients[client.UserID]) == 0 {
+					delete(s.userClients, client.UserID)
 				}
 				close(client.Send)
 			}
-			m.mu.Unlock()
+			s.mu.Unlock()
 
-			m.logDisconnect(clientInfo(client))
+			s.logDisconnect(clientInfo(client))
 		}
 	}
 }
 
-func (m *Manager) Subscribe(eventType string, handler EventHandler) {
+func (s *Service) Subscribe(eventType string, handler EventHandler) {
 	if strings.TrimSpace(eventType) == "" || handler == nil {
 		return
 	}
-	m.mu.Lock()
-	m.subscriptions[eventType] = append(m.subscriptions[eventType], handler)
-	m.mu.Unlock()
+	s.mu.Lock()
+	s.subscriptions[eventType] = append(s.subscriptions[eventType], handler)
+	s.mu.Unlock()
 }
 
-func (m *Manager) Connect(w http.ResponseWriter, r *http.Request, userID string) {
+func (s *Service) Connect(w http.ResponseWriter, r *http.Request, userID string) {
 	if strings.TrimSpace(userID) == "" {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-	if !isOriginAllowed(r) {
-		http.Error(w, "invalid origin", http.StatusForbidden)
 		return
 	}
 
@@ -138,48 +127,18 @@ func (m *Manager) Connect(w http.ResponseWriter, r *http.Request, userID string)
 		Send:   make(chan []byte, 256),
 	}
 
-	m.kickUserConnections(userID)
+	s.disconnectUserConnections(userID)
 
-	m.register <- client
+	s.register <- client
 
-	go m.writeHandler(client)
-	m.sendHello(client)
-	m.readHandler(client)
+	go s.writeHandler(client)
+	s.sendHello(client)
+	s.readHandler(client)
 }
 
-func isOriginAllowed(r *http.Request) bool {
-	origin := strings.TrimSpace(r.Header.Get("Origin"))
-	if origin == "" {
-		return true
-	}
-
-	originURL, err := url.Parse(origin)
-	if err != nil {
-		return false
-	}
-
-	originHost := hostOnly(originURL.Host)
-	requestHost := hostOnly(r.Host)
-	if originHost == "" || requestHost == "" {
-		return false
-	}
-
-	return strings.EqualFold(originHost, requestHost)
-}
-
-func hostOnly(hostport string) string {
-	if hostport == "" {
-		return ""
-	}
-	if host, _, err := net.SplitHostPort(hostport); err == nil {
-		return host
-	}
-	return hostport
-}
-
-func (m *Manager) readHandler(client *Client) {
+func (s *Service) readHandler(client *Client) {
 	defer func() {
-		m.unregister <- client
+		s.unregister <- client
 		client.Conn.Close(websocket.StatusNormalClosure, "")
 	}()
 
@@ -187,23 +146,23 @@ func (m *Manager) readHandler(client *Client) {
 	for {
 		_, message, err := client.Conn.Read(ctx)
 		if err != nil {
-			m.logError(clientInfo(client), err)
+			s.logError(clientInfo(client), err)
 			break
 		}
 		var event Event
 		if err := json.Unmarshal(message, &event); err != nil {
-			m.logError(clientInfo(client), err)
+			s.logError(clientInfo(client), err)
 			continue
 		}
 		if strings.TrimSpace(event.Type) == "" {
-			m.logError(clientInfo(client), errors.New("missing event type"))
+			s.logError(clientInfo(client), errors.New("missing event type"))
 			continue
 		}
-		m.dispatchEvent(clientInfo(client), event)
+		s.dispatchEvent(clientInfo(client), event)
 	}
 }
 
-func (m *Manager) writeHandler(client *Client) {
+func (s *Service) writeHandler(client *Client) {
 	pingTicker := time.NewTicker(pingInterval)
 	defer pingTicker.Stop()
 
@@ -216,7 +175,7 @@ func (m *Manager) writeHandler(client *Client) {
 			ctx := context.Background()
 			err := client.Conn.Write(ctx, websocket.MessageText, message)
 			if err != nil {
-				m.logError(clientInfo(client), err)
+				s.logError(clientInfo(client), err)
 				return
 			}
 		case <-pingTicker.C:
@@ -224,7 +183,7 @@ func (m *Manager) writeHandler(client *Client) {
 			err := client.Conn.Ping(ctx)
 			cancel()
 			if err != nil {
-				m.logError(clientInfo(client), err)
+				s.logError(clientInfo(client), err)
 				client.Conn.Close(websocket.StatusNormalClosure, "ping timeout")
 				return
 			}
@@ -232,63 +191,66 @@ func (m *Manager) writeHandler(client *Client) {
 	}
 }
 
-func (m *Manager) broadcastRaw(data []byte) {
-	m.mu.RLock()
-	clients := make([]*Client, 0, len(m.clients))
-	for client := range m.clients {
+func (s *Service) broadcastRaw(data []byte) {
+	s.mu.RLock()
+	clients := make([]*Client, 0, len(s.clients))
+	for client := range s.clients {
 		clients = append(clients, client)
 	}
-	m.mu.RUnlock()
+	s.mu.RUnlock()
 
 	for _, client := range clients {
 		select {
 		case client.Send <- data:
 		default:
-			m.unregister <- client
+			s.unregister <- client
 		}
 	}
 }
 
-func (m *Manager) Broadcast(message any) error {
-	return m.server.Publish(m.channel, message)
+func (s *Service) Broadcast(message any) error {
+	if s.server == nil {
+		return errors.New("ws server is not initialized")
+	}
+	return s.server.Publish(s.channel, message)
 }
 
-func (m *Manager) kickUserConnections(userID string) {
-	m.mu.RLock()
-	existing := make([]*Client, 0, len(m.userClients[userID]))
-	for client := range m.userClients[userID] {
+func (s *Service) disconnectUserConnections(userID string) {
+	s.mu.RLock()
+	existing := make([]*Client, 0, len(s.userClients[userID]))
+	for client := range s.userClients[userID] {
 		existing = append(existing, client)
 	}
-	m.mu.RUnlock()
+	s.mu.RUnlock()
 
 	for _, client := range existing {
 		_ = client.Conn.Close(websocket.StatusPolicyViolation, "another connection opened")
 	}
 }
 
-func (m *Manager) dispatchEvent(info ClientInfo, event Event) {
-	m.mu.RLock()
-	handlers := append([]EventHandler(nil), m.subscriptions[event.Type]...)
-	m.mu.RUnlock()
+func (s *Service) dispatchEvent(info ClientInfo, event Event) {
+	s.mu.RLock()
+	handlers := append([]EventHandler(nil), s.subscriptions[event.Type]...)
+	s.mu.RUnlock()
 
 	for _, handler := range handlers {
 		handler(info, event)
 	}
 }
 
-func (m *Manager) logConnect(info ClientInfo) {
+func (s *Service) logConnect(info ClientInfo) {
 	logger.L().Info("ws connected", "user_id", info.UserID, "conn_id", info.ConnID)
 }
 
-func (m *Manager) logDisconnect(info ClientInfo) {
+func (s *Service) logDisconnect(info ClientInfo) {
 	logger.L().Info("ws disconnected", "user_id", info.UserID, "conn_id", info.ConnID)
 }
 
-func (m *Manager) logError(info ClientInfo, err error) {
+func (s *Service) logError(info ClientInfo, err error) {
 	logger.L().Error("ws error", "user_id", info.UserID, "conn_id", info.ConnID, "err", err)
 }
 
-func (m *Manager) sendHello(client *Client) {
+func (s *Service) sendHello(client *Client) {
 	payload, err := json.Marshal(map[string]string{
 		"connId": client.ConnID,
 		"userId": client.UserID,
@@ -309,6 +271,6 @@ func (m *Manager) sendHello(client *Client) {
 	select {
 	case client.Send <- data:
 	default:
-		m.unregister <- client
+		s.unregister <- client
 	}
 }

@@ -4,7 +4,7 @@ package rooms
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
-	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 )
 
 type RoomsModule struct {
@@ -14,17 +14,17 @@ type RoomsModule struct {
 
 type RoomsModuleDeps struct {
 	Router      chi.Router
-	WsManager   *ws.Manager
+	WsService   *ws.Service
 	AuthService auth.AuthService
 }
 
 func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	controller := NewRoomsController()
-	gateway := NewRoomsGateway(deps.WsManager)
+	gateway := NewRoomsGateway(deps.WsService)
 
-	deps.WsManager.Subscribe(EventRoomJoin, gateway.OnEvent)
-	deps.WsManager.Subscribe(EventRoomLeave, gateway.OnEvent)
-	deps.WsManager.Subscribe(EventRoomMessage, gateway.OnEvent)
+	deps.WsService.Subscribe(EventRoomJoin, gateway.OnEvent)
+	deps.WsService.Subscribe(EventRoomLeave, gateway.OnEvent)
+	deps.WsService.Subscribe(EventRoomMessage, gateway.OnEvent)
 
 	return &RoomsModule{
 		Controller: controller,
