@@ -4,7 +4,8 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/httputils"
 )
 
 type HealthController interface {
@@ -33,11 +34,14 @@ func NewHealthController(
 // @Tags health
 // @Produce json
 // @Success 200 {object} ReadinessStatus
-// @Failure 503 {object} utils.ErrorResponse
+// @Failure 503 {object} apperrors.HttpError
 // @Router /api/v1/health/readyz [get]
 func (c *healthController) CheckReadiness(w http.ResponseWriter, r *http.Request) {
 	if c.isGracefulShutdown != nil && c.isGracefulShutdown.Load() {
-		utils.WriteResponseError(w, http.StatusServiceUnavailable, "graceful shutdown")
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(
+			apperrors.ErrServiceUnavailable,
+			apperrors.HttpError{Detail: "graceful shutdown"},
+		))
 		return
 	}
 
@@ -48,7 +52,7 @@ func (c *healthController) CheckReadiness(w http.ResponseWriter, r *http.Request
 		code = http.StatusServiceUnavailable
 	}
 
-	utils.WriteResponse(w, code, status)
+	httputils.WriteResponse(w, status, httputils.WriteResponseOptions{Status: code})
 }
 
 // CheckHealth godoc
@@ -57,11 +61,14 @@ func (c *healthController) CheckReadiness(w http.ResponseWriter, r *http.Request
 // @Tags health
 // @Produce json
 // @Success 200 {object} LivenessStatus
-// @Failure 503 {object} utils.ErrorResponse
+// @Failure 503 {object} apperrors.HttpError
 // @Router /api/v1/health/healthz [get]
 func (c *healthController) CheckHealth(w http.ResponseWriter, r *http.Request) {
 	if c.isGracefulShutdown != nil && c.isGracefulShutdown.Load() {
-		utils.WriteResponseError(w, http.StatusServiceUnavailable, "graceful shutdown")
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(
+			apperrors.ErrServiceUnavailable,
+			apperrors.HttpError{Detail: "graceful shutdown"},
+		))
 		return
 	}
 
@@ -72,5 +79,5 @@ func (c *healthController) CheckHealth(w http.ResponseWriter, r *http.Request) {
 		code = http.StatusServiceUnavailable
 	}
 
-	utils.WriteResponse(w, code, status)
+	httputils.WriteResponse(w, status, httputils.WriteResponseOptions{Status: code})
 }

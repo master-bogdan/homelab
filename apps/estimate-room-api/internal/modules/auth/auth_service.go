@@ -8,28 +8,32 @@ import (
 	"strings"
 	"time"
 
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
+	authmodels "github.com/master-bogdan/estimate-room-api/internal/modules/auth/models"
+	authrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/auth/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 )
 
 type AuthService interface {
 	CheckAuth(r *http.Request) (UserID string, err error)
+	CreateOidcSession(model *authmodels.OidcSessionModel) (string, error)
+	GetOidcSessionByID(sessionID string) (*authmodels.OidcSessionModel, error)
+	CreateAccessToken(ctx context.Context, model *authmodels.Oauth2AccessTokenModel) error
 }
 
 var ErrMissingToken = errors.New("missing access token")
 
 type authService struct {
 	tokenKey        []byte
-	accessTokenRepo AccessTokenRepository
-	oidcSessionRepo OidcSessionRepository
+	accessTokenRepo authrepositories.AccessTokenRepository
+	oidcSessionRepo authrepositories.OidcSessionRepository
 	logger          *slog.Logger
 }
 
 func NewAuthService(
 	tokenKey string,
-	accessTokenRepo AccessTokenRepository,
-	oidcSessionRepo OidcSessionRepository,
+	accessTokenRepo authrepositories.AccessTokenRepository,
+	oidcSessionRepo authrepositories.OidcSessionRepository,
 ) AuthService {
 	log := logger.L().With(slog.String("module", "auth"))
 	return &authService{
@@ -54,6 +58,18 @@ func (s *authService) CheckAuth(r *http.Request) (UserID string, err error) {
 	return s.checkToken(ctx, token)
 }
 
+func (s *authService) CreateOidcSession(model *authmodels.OidcSessionModel) (string, error) {
+	return s.oidcSessionRepo.Create(model)
+}
+
+func (s *authService) GetOidcSessionByID(sessionID string) (*authmodels.OidcSessionModel, error) {
+	return s.oidcSessionRepo.FindByID(sessionID)
+}
+
+func (s *authService) CreateAccessToken(ctx context.Context, model *authmodels.Oauth2AccessTokenModel) error {
+	return s.accessTokenRepo.Create(ctx, model)
+}
+
 func (s *authService) checkToken(ctx context.Context, token string) (UserID string, err error) {
 	storedToken, err := s.accessTokenRepo.FindByToken(ctx, token)
 	if err != nil {
@@ -61,7 +77,7 @@ func (s *authService) checkToken(ctx context.Context, token string) (UserID stri
 		return "", errors.New("invalid or expired access token")
 	}
 
-	parsedToken, err := utils.ParseToken[models.Oauth2AccessTokenModel](s.tokenKey, storedToken.Token)
+	parsedToken, err := utils.ParseToken[authmodels.Oauth2AccessTokenModel](s.tokenKey, storedToken.Token)
 	if err != nil {
 		return "", errors.New("invalid or expired access token")
 	}

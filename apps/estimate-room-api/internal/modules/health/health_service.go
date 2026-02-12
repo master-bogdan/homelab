@@ -4,25 +4,14 @@ import (
 	"context"
 	"time"
 
+	healthdto "github.com/master-bogdan/estimate-room-api/internal/modules/health/dto"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
 
-type LivenessStatus struct {
-	Status string        `json:"status"`
-	Uptime time.Duration `json:"uptime" swaggertype:"string"`
-}
-
-type ReadinessStatus struct {
-	Status string        `json:"status"`
-	Uptime time.Duration `json:"uptime" swaggertype:"string"`
-	DB     string        `json:"db"`
-	Redis  string        `json:"redis"`
-}
-
 type HealthService interface {
-	CheckHealth(ctx context.Context) (LivenessStatus, error)
-	CheckReadiness(ctx context.Context) (ReadinessStatus, error)
+	CheckHealth(ctx context.Context) (healthdto.LivenessStatus, error)
+	CheckReadiness(ctx context.Context) (healthdto.ReadinessStatus, error)
 }
 
 type healthService struct {
@@ -44,15 +33,15 @@ func NewHealthService(deps HealthServiceDeps) HealthService {
 	}
 }
 
-func (s *healthService) CheckHealth(ctx context.Context) (LivenessStatus, error) {
-	return LivenessStatus{
+func (s *healthService) CheckHealth(ctx context.Context) (healthdto.LivenessStatus, error) {
+	return healthdto.LivenessStatus{
 		Status: "OK",
 		Uptime: time.Since(s.started),
 	}, nil
 }
 
-func (s *healthService) CheckReadiness(ctx context.Context) (ReadinessStatus, error) {
-	status := ReadinessStatus{
+func (s *healthService) CheckReadiness(ctx context.Context) (healthdto.ReadinessStatus, error) {
+	status := healthdto.ReadinessStatus{
 		Status: "OK",
 		Uptime: time.Since(s.started),
 		DB:     "up",

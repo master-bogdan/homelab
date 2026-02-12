@@ -3,6 +3,9 @@ package oauth2
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
+	oauth2repositories "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/repositories"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 )
 
@@ -12,26 +15,26 @@ type Oauth2Module struct {
 }
 
 type Oauth2ModuleDeps struct {
-	Router           chi.Router
-	TokenKey         string
-	Issuer           string
-	ClientRepo       Oauth2ClientRepository
-	AuthCodeRepo     Oauth2AuthCodeRepository
-	UserRepo         UserRepository
-	OidcSessionRepo  Oauth2OidcSessionRepository
-	RefreshTokenRepo Oauth2RefreshTokenRepository
-	AccessTokenRepo  Oauth2AccessTokenRepository
-	Github           oauth2utils.GithubConfig
+	Router      chi.Router
+	DB          *pgxpool.Pool
+	TokenKey    string
+	Issuer      string
+	UserService UserService
+	AuthService auth.AuthService
+	Github      oauth2utils.GithubConfig
 }
 
 func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
+	clientRepo := oauth2repositories.NewOauth2ClientRepository(deps.DB)
+	authCodeRepo := oauth2repositories.NewOauth2AuthCodeRepository(deps.DB)
+	refreshTokenRepo := oauth2repositories.NewOauth2RefreshTokenRepository(deps.DB)
+
 	svc := NewOauth2Service(
-		deps.ClientRepo,
-		deps.AuthCodeRepo,
-		deps.UserRepo,
-		deps.OidcSessionRepo,
-		deps.RefreshTokenRepo,
-		deps.AccessTokenRepo,
+		clientRepo,
+		authCodeRepo,
+		refreshTokenRepo,
+		deps.UserService,
+		deps.AuthService,
 		[]byte(deps.TokenKey),
 		deps.Issuer,
 	)

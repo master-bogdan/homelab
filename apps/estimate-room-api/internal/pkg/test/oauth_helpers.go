@@ -5,11 +5,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql"
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
+	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 )
 
@@ -61,23 +64,28 @@ func ResetOauthTables(t *testing.T, db *pgxpool.Pool) {
 }
 
 func NewOauth2Service(db *pgxpool.Pool) oauth2.Oauth2Service {
-	clientRepo := repositories.NewOauth2ClientRepository(db)
-	authCodeRepo := repositories.NewOauth2AuthCodeRepository(db)
-	userRepo := repositories.NewUserRepository(db)
-	oidcSessionRepo := repositories.NewOauth2OidcSessionRepository(db)
-	refreshTokenRepo := repositories.NewOauth2RefreshTokenRepository(db)
-	accessTokenRepo := repositories.NewOauth2AccessTokenRepository(db)
+	authModule := auth.NewAuthModule(auth.AuthModuleDeps{
+		TokenKey: TestTokenKey,
+		DB:       db,
+	})
 
-	return oauth2.NewOauth2Service(
-		clientRepo,
-		authCodeRepo,
-		userRepo,
-		oidcSessionRepo,
-		refreshTokenRepo,
-		accessTokenRepo,
-		[]byte(TestTokenKey),
-		TestIssuer,
-	)
+	usersModule := users.NewUsersModule(users.UsersModuleDeps{
+		Router:      chi.NewRouter(),
+		DB:          db,
+		AuthService: authModule.Service,
+	})
+
+	oauth2Module := oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
+		Router:      chi.NewRouter(),
+		DB:          db,
+		TokenKey:    TestTokenKey,
+		Issuer:      TestIssuer,
+		UserService: usersModule.Service,
+		AuthService: authModule.Service,
+		Github:      oauth2utils.GithubConfig{},
+	})
+
+	return oauth2Module.Service
 }
 
 func SeedClient(t *testing.T, db *pgxpool.Pool, redirectURI string, scopes []string) string {

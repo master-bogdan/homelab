@@ -2,7 +2,6 @@
 package app
 
 import (
-	"net/http"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -13,16 +12,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
-	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
-	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 	"github.com/redis/go-redis/v9"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -33,7 +30,7 @@ type AppDeps struct {
 	Cfg                *config.Config
 	Router             chi.Router
 	IsGracefulShutdown *atomic.Bool
-	Ws                 *ws.WsServer
+	WsServer           ws.PubSub
 }
 
 func (deps *AppDeps) SetupApp() {
@@ -49,21 +46,18 @@ func (deps *AppDeps) SetupApp() {
 		httpSwagger.URL("/swagger/doc.json"),
 	))
 
-	wsManager := ws.NewManager(deps.Ws, "app")
-
-	clientRepo := repositories.NewOauth2ClientRepository(deps.DB)
-	authCodeRepo := repositories.NewOauth2AuthCodeRepository(deps.DB)
-	userRepo := repositories.NewUserRepository(deps.DB)
-	oidcSessionRepo := repositories.NewOauth2OidcSessionRepository(deps.DB)
-	refreshTokenRepo := repositories.NewOauth2RefreshTokenRepository(deps.DB)
-	accessTokenRepo := repositories.NewOauth2AccessTokenRepository(deps.DB)
 	githubScopes := strings.Fields(deps.Cfg.Github.Scopes)
 
 	deps.Router.Route("/api/v1", func(r chi.Router) {
 		authModule := auth.NewAuthModule(auth.AuthModuleDeps{
-			TokenKey:        deps.Cfg.Server.PasetoSymmetricKey,
-			AccessTokenRepo: accessTokenRepo,
-			OidcSessionRepo: oidcSessionRepo,
+			TokenKey: deps.Cfg.Server.PasetoSymmetricKey,
+			DB:       deps.DB,
+		})
+
+		wsModule := ws.NewWsModule(ws.WsModuleDeps{
+			Router:      r,
+			AuthService: authModule.Service,
+			Server:      deps.WsServer,
 		})
 
 		health.NewHealthModule(health.HealthModuleDeps{
@@ -75,20 +69,23 @@ func (deps *AppDeps) SetupApp() {
 
 		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
 			Router:      r,
-			WsManager:   wsManager,
+			WsService:   wsModule.Service,
+			AuthService: authModule.Service,
+		})
+
+		usersModule := users.NewUsersModule(users.UsersModuleDeps{
+			Router:      r,
+			DB:          deps.DB,
 			AuthService: authModule.Service,
 		})
 
 		oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-			Router:           r,
-			TokenKey:         deps.Cfg.Server.PasetoSymmetricKey,
-			Issuer:           deps.Cfg.Server.Issuer,
-			ClientRepo:       clientRepo,
-			AuthCodeRepo:     authCodeRepo,
-			UserRepo:         userRepo,
-			OidcSessionRepo:  oidcSessionRepo,
-			RefreshTokenRepo: refreshTokenRepo,
-			AccessTokenRepo:  accessTokenRepo,
+			Router:      r,
+			DB:          deps.DB,
+			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
+			Issuer:      deps.Cfg.Server.Issuer,
+			UserService: usersModule.Service,
+			AuthService: authModule.Service,
 			Github: oauth2utils.GithubConfig{
 				ClientID:     deps.Cfg.Github.ClientID,
 				ClientSecret: deps.Cfg.Github.ClientSecret,
@@ -96,21 +93,6 @@ func (deps *AppDeps) SetupApp() {
 				StateSecret:  deps.Cfg.Github.StateSecret,
 				Scopes:       githubScopes,
 			},
-		})
-
-		users.NewUsersModule(users.UsersModuleDeps{
-			Router:      r,
-			AuthService: authModule.Service,
-			UserRepo:    userRepo,
-		})
-
-		r.Get("/ws", func(w http.ResponseWriter, req *http.Request) {
-			userID, err := authModule.Service.CheckAuth(req)
-			if err != nil {
-				utils.WriteResponseError(w, http.StatusUnauthorized, "unauthorized")
-				return
-			}
-			wsManager.Connect(w, req, userID)
 		})
 	})
 }

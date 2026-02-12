@@ -1,4 +1,4 @@
-package repositories
+package usersrepositories
 
 import (
 	"context"
@@ -7,8 +7,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
+	usersmodels "github.com/master-bogdan/estimate-room-api/internal/modules/users/models"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 )
+
+type UserRepository interface {
+	FindByID(userID string) (*usersmodels.UserModel, error)
+	FindByEmail(email string) (*usersmodels.UserModel, error)
+	FindByGithubID(githubID string) (*usersmodels.UserModel, error)
+	Create(email, passwordHash string) (string, error)
+	CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error)
+	UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error
+}
 
 type userRepository struct {
 	db *pgxpool.Pool
@@ -18,7 +28,7 @@ func NewUserRepository(db *pgxpool.Pool) *userRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) FindByID(userID string) (*models.UserModel, error) {
+func (r *userRepository) FindByID(userID string) (*usersmodels.UserModel, error) {
 	const query = `
 		SELECT user_id, email, password_hash, github_id, display_name, avatar_url,
 			created_at, updated_at, last_login_at, deleted_at
@@ -26,7 +36,7 @@ func (r *userRepository) FindByID(userID string) (*models.UserModel, error) {
 		WHERE user_id = $1
 	`
 
-	var user models.UserModel
+	var user usersmodels.UserModel
 	row := r.db.QueryRow(context.Background(), query, userID)
 	err := row.Scan(
 		&user.UserID,
@@ -46,13 +56,13 @@ func (r *userRepository) FindByID(userID string) (*models.UserModel, error) {
 	}
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, apperrors.ErrUserNotFound
 	}
 
 	return nil, err
 }
 
-func (r *userRepository) FindByEmail(email string) (*models.UserModel, error) {
+func (r *userRepository) FindByEmail(email string) (*usersmodels.UserModel, error) {
 	const query = `
 		SELECT user_id, email, password_hash, github_id, display_name, avatar_url,
 			created_at, updated_at, last_login_at, deleted_at
@@ -60,7 +70,7 @@ func (r *userRepository) FindByEmail(email string) (*models.UserModel, error) {
 		WHERE email = $1
 	`
 
-	var user models.UserModel
+	var user usersmodels.UserModel
 	row := r.db.QueryRow(context.Background(), query, email)
 	err := row.Scan(
 		&user.UserID,
@@ -80,13 +90,13 @@ func (r *userRepository) FindByEmail(email string) (*models.UserModel, error) {
 	}
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, apperrors.ErrUserNotFound
 	}
 
 	return nil, err
 }
 
-func (r *userRepository) FindByGithubID(githubID string) (*models.UserModel, error) {
+func (r *userRepository) FindByGithubID(githubID string) (*usersmodels.UserModel, error) {
 	const query = `
 		SELECT user_id, email, password_hash, github_id, display_name, avatar_url,
 			created_at, updated_at, last_login_at, deleted_at
@@ -94,7 +104,7 @@ func (r *userRepository) FindByGithubID(githubID string) (*models.UserModel, err
 		WHERE github_id = $1
 	`
 
-	var user models.UserModel
+	var user usersmodels.UserModel
 	row := r.db.QueryRow(context.Background(), query, githubID)
 	err := row.Scan(
 		&user.UserID,
@@ -114,7 +124,7 @@ func (r *userRepository) FindByGithubID(githubID string) (*models.UserModel, err
 	}
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrUserNotFound
+		return nil, apperrors.ErrUserNotFound
 	}
 
 	return nil, err

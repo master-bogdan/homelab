@@ -12,9 +12,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
 )
 
@@ -25,26 +26,26 @@ func setupTest(t *testing.T) (*chi.Mux, *pgxpool.Pool, string, string, string, s
 	testutils.ResetOauthTables(t, db)
 
 	router := chi.NewRouter()
-
-	clientRepo := repositories.NewOauth2ClientRepository(db)
-	authCodeRepo := repositories.NewOauth2AuthCodeRepository(db)
-	userRepo := repositories.NewUserRepository(db)
-	oidcSessionRepo := repositories.NewOauth2OidcSessionRepository(db)
-	refreshTokenRepo := repositories.NewOauth2RefreshTokenRepository(db)
-	accessTokenRepo := repositories.NewOauth2AccessTokenRepository(db)
+	authModule := auth.NewAuthModule(auth.AuthModuleDeps{
+		TokenKey: testutils.TestTokenKey,
+		DB:       db,
+	})
 
 	router.Route("/api/v1", func(r chi.Router) {
+		usersModule := users.NewUsersModule(users.UsersModuleDeps{
+			Router:      r,
+			DB:          db,
+			AuthService: authModule.Service,
+		})
+
 		oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-			Router:           r,
-			TokenKey:         testutils.TestTokenKey,
-			Issuer:           testutils.TestIssuer,
-			ClientRepo:       clientRepo,
-			AuthCodeRepo:     authCodeRepo,
-			UserRepo:         userRepo,
-			OidcSessionRepo:  oidcSessionRepo,
-			RefreshTokenRepo: refreshTokenRepo,
-			AccessTokenRepo:  accessTokenRepo,
-			Github:           oauth2utils.GithubConfig{},
+			Router:      r,
+			DB:          db,
+			TokenKey:    testutils.TestTokenKey,
+			Issuer:      testutils.TestIssuer,
+			UserService: usersModule.Service,
+			AuthService: authModule.Service,
+			Github:      oauth2utils.GithubConfig{},
 		})
 	})
 

@@ -1,9 +1,10 @@
-// Package ws is a websockets implementation
-package ws
+// Package wsserver provides websocket server infrastructure.
+package wsserver
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type WsServer struct {
+type Server struct {
 	pubClient *redis.Client
 	subClient *redis.Client
 	ctx       context.Context
@@ -19,17 +20,36 @@ type WsServer struct {
 	wg        sync.WaitGroup
 }
 
-func NewWsServer(pubClient, subClient *redis.Client) *WsServer {
-	ctx, cancel := context.WithCancel(context.Background())
-	return &WsServer{
-		pubClient: pubClient,
-		subClient: subClient,
-		ctx:       ctx,
-		cancel:    cancel,
-	}
+type ServerDeps struct {
+	PubClient *redis.Client
+	SubClient *redis.Client
 }
 
-func (s *WsServer) Subscribe(channel string, onMessage func([]byte)) {
+func NewServer(deps ServerDeps) (*Server, error) {
+	if deps.PubClient == nil {
+		return nil, errors.New("redis pub client is required")
+	}
+	if deps.SubClient == nil {
+		return nil, errors.New("redis sub client is required")
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Server{
+		pubClient: deps.PubClient,
+		subClient: deps.SubClient,
+		ctx:       ctx,
+		cancel:    cancel,
+	}, nil
+}
+
+func (s *Server) Subscribe(channel string, onMessage func([]byte)) {
+	if s == nil || s.subClient == nil {
+		return
+	}
+	if onMessage == nil {
+		return
+	}
+
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
@@ -53,7 +73,10 @@ func (s *WsServer) Subscribe(channel string, onMessage func([]byte)) {
 	}()
 }
 
-func (s *WsServer) Publish(channel string, message any) error {
+func (s *Server) Publish(channel string, message any) error {
+	if s == nil || s.pubClient == nil {
+		return errors.New("redis pub client is not initialized")
+	}
 	data, err := json.Marshal(message)
 	if err != nil {
 		return err
@@ -61,9 +84,15 @@ func (s *WsServer) Publish(channel string, message any) error {
 	return s.pubClient.Publish(s.ctx, channel, data).Err()
 }
 
-func (s *WsServer) Shutdown() {
+func (s *Server) Shutdown() {
+	if s == nil {
+		return
+	}
+
 	logger.L().Info("Shutting down WebSocket server...")
-	s.cancel()
+	if s.cancel != nil {
+		s.cancel()
+	}
 
 	done := make(chan struct{})
 	go func() {

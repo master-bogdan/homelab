@@ -4,19 +4,19 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
-	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 )
 
 type roomsGateway struct {
-	wsManager *ws.Manager
+	wsService *ws.Service
 }
 
 func NewRoomsGateway(
-	wsManager *ws.Manager,
+	wsService *ws.Service,
 ) *roomsGateway {
 	return &roomsGateway{
-		wsManager: wsManager,
+		wsService: wsService,
 	}
 }
 
@@ -38,7 +38,6 @@ func (g *roomsGateway) OnEvent(client ws.ClientInfo, event ws.Event) {
 	}
 }
 
-// SendToRoom publishes a server message to all clients in the room.
 func (g *roomsGateway) SendToRoom(channelID string, data any) error {
 	if channelID == "" {
 		return errors.New("channelID is required")
@@ -57,5 +56,5 @@ func (g *roomsGateway) SendToRoom(channelID string, data any) error {
 		Payload: payload,
 	}
 
-	return g.wsManager.Broadcast(event)
+	return g.wsService.Broadcast(event)
 }

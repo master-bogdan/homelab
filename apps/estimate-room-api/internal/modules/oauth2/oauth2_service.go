@@ -11,15 +11,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/models"
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
+	authmodels "github.com/master-bogdan/estimate-room-api/internal/modules/auth/models"
 	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
+	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
+	oauth2repositories "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/repositories"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
+	usersmodels "github.com/master-bogdan/estimate-room-api/internal/modules/users/models"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 )
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
+
+type UserService interface {
+	FindByID(userID string) (*usersmodels.UserModel, error)
+	FindByEmail(email string) (*usersmodels.UserModel, error)
+	FindByGithubID(githubID string) (*usersmodels.UserModel, error)
+	Create(email, passwordHash string) (string, error)
+	CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error)
+	UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error
+}
 
 type Oauth2Service interface {
 	ValidateClient(dto *oauth2dto.AuthorizeQueryDTO) error
@@ -35,24 +48,22 @@ type Oauth2Service interface {
 }
 
 type oauth2Service struct {
-	clientRepo       Oauth2ClientRepository
-	authCodeRepo     Oauth2AuthCodeRepository
-	userRepo         UserRepository
-	oidcSessionRepo  Oauth2OidcSessionRepository
-	refreshTokenRepo Oauth2RefreshTokenRepository
-	accessTokenRepo  Oauth2AccessTokenRepository
+	clientRepo       oauth2repositories.Oauth2ClientRepository
+	authCodeRepo     oauth2repositories.Oauth2AuthCodeRepository
+	userService      UserService
+	refreshTokenRepo oauth2repositories.Oauth2RefreshTokenRepository
+	authService      auth.AuthService
 	tokenKey         []byte
 	issuer           string
 	logger           *slog.Logger
 }
 
 func NewOauth2Service(
-	clientRepo Oauth2ClientRepository,
-	authCodeRepo Oauth2AuthCodeRepository,
-	userRepo UserRepository,
-	oidcSessionRepo Oauth2OidcSessionRepository,
-	refreshTokenRepo Oauth2RefreshTokenRepository,
-	accessTokenRepo Oauth2AccessTokenRepository,
+	clientRepo oauth2repositories.Oauth2ClientRepository,
+	authCodeRepo oauth2repositories.Oauth2AuthCodeRepository,
+	refreshTokenRepo oauth2repositories.Oauth2RefreshTokenRepository,
+	userService UserService,
+	authService auth.AuthService,
 	tokenKey []byte,
 	issuer string,
 ) Oauth2Service {
@@ -60,10 +71,9 @@ func NewOauth2Service(
 	return &oauth2Service{
 		clientRepo:       clientRepo,
 		authCodeRepo:     authCodeRepo,
-		userRepo:         userRepo,
-		oidcSessionRepo:  oidcSessionRepo,
 		refreshTokenRepo: refreshTokenRepo,
-		accessTokenRepo:  accessTokenRepo,
+		userService:      userService,
+		authService:      authService,
 		tokenKey:         tokenKey,
 		issuer:           issuer,
 		logger:           log,
@@ -100,7 +110,7 @@ func (s *oauth2Service) ValidateClient(dto *oauth2dto.AuthorizeQueryDTO) error {
 
 func (s *oauth2Service) GetLoggedInUserID(sessionID string) (string, error) {
 	s.logger.Info("GetLoggedInUserID")
-	session, err := s.oidcSessionRepo.FindByID(sessionID)
+	session, err := s.authService.GetOidcSessionByID(sessionID)
 	if err != nil {
 		return "", errors.New("session not found")
 	}
@@ -117,7 +127,7 @@ func (s *oauth2Service) CreateAuthCode(dto *oauth2dto.CreateOauthCodeDTO) (strin
 	}
 	code := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(b)
 
-	authCode := &models.Oauth2AuthCodeModel{
+	authCode := &oauth2models.Oauth2AuthCodeModel{
 		ClientID:            dto.ClientID,
 		UserID:              dto.UserID,
 		OidcSessionID:       dto.OidcSessionID,
@@ -138,13 +148,13 @@ func (s *oauth2Service) CreateAuthCode(dto *oauth2dto.CreateOauthCodeDTO) (strin
 
 func (s *oauth2Service) CreateOidcSession(dto *oauth2dto.CreateOidcSessionDTO) (string, error) {
 	s.logger.Info("CreateOidcSession")
-	oidcSession := &models.OidcSessionModel{
+	oidcSession := &authmodels.OidcSessionModel{
 		UserID:   dto.UserID,
 		ClientID: dto.ClientID,
 		Nonce:    dto.Nonce,
 	}
 
-	oidcSessionID, err := s.oidcSessionRepo.Create(oidcSession)
+	oidcSessionID, err := s.authService.CreateOidcSession(oidcSession)
 	if err != nil {
 		return "", err
 	}
@@ -154,7 +164,7 @@ func (s *oauth2Service) CreateOidcSession(dto *oauth2dto.CreateOidcSessionDTO) (
 
 func (s *oauth2Service) AuthenticateUser(dto *oauth2dto.UserDTO) (string, error) {
 	s.logger.Info("AuthenticateUser")
-	user, err := s.userRepo.FindByEmail(dto.Email)
+	user, err := s.userService.FindByEmail(dto.Email)
 	if err != nil {
 		return "", err
 	}
@@ -181,7 +191,7 @@ func (s *oauth2Service) RegisterUser(dto *oauth2dto.UserDTO) (string, error) {
 		return "", err
 	}
 
-	userID, err := s.userRepo.Create(dto.Email, passwordHash)
+	userID, err := s.userService.Create(dto.Email, passwordHash)
 	if err != nil {
 		return "", err
 	}
@@ -194,32 +204,32 @@ func (s *oauth2Service) GetOrCreateUserFromGithub(profile oauth2utils.GithubProf
 		return "", errors.New("github id is required")
 	}
 
-	user, err := s.userRepo.FindByGithubID(profile.ID)
+	user, err := s.userService.FindByGithubID(profile.ID)
 	if err == nil {
-		if err := s.userRepo.UpdateGithubProfile(user.UserID, profile.ID, profile.DisplayName, profile.AvatarURL, profile.Email); err != nil {
+		if err := s.userService.UpdateGithubProfile(user.UserID, profile.ID, profile.DisplayName, profile.AvatarURL, profile.Email); err != nil {
 			return "", err
 		}
 		return user.UserID, nil
 	}
 
-	if !errors.Is(err, repositories.ErrUserNotFound) {
+	if !errors.Is(err, apperrors.ErrUserNotFound) {
 		return "", err
 	}
 
 	if profile.Email != nil && *profile.Email != "" {
-		userByEmail, err := s.userRepo.FindByEmail(*profile.Email)
+		userByEmail, err := s.userService.FindByEmail(*profile.Email)
 		if err == nil {
-			if err := s.userRepo.UpdateGithubProfile(userByEmail.UserID, profile.ID, profile.DisplayName, profile.AvatarURL, profile.Email); err != nil {
+			if err := s.userService.UpdateGithubProfile(userByEmail.UserID, profile.ID, profile.DisplayName, profile.AvatarURL, profile.Email); err != nil {
 				return "", err
 			}
 			return userByEmail.UserID, nil
 		}
-		if !errors.Is(err, repositories.ErrUserNotFound) {
+		if !errors.Is(err, apperrors.ErrUserNotFound) {
 			return "", err
 		}
 	}
 
-	return s.userRepo.CreateWithGithub(profile.Email, profile.ID, profile.DisplayName, profile.AvatarURL)
+	return s.userService.CreateWithGithub(profile.Email, profile.ID, profile.DisplayName, profile.AvatarURL)
 }
 
 func (s *oauth2Service) GetAuthorizationTokens(ctx context.Context, dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error) {
@@ -290,7 +300,7 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 	refreshTokenDuration := time.Hour * 24 * 30 // 30 days
 	idTokenDuration := time.Minute * 15         // 15 minutes
 
-	refreshTokenPayload := models.Oauth2RefreshTokenModel{
+	refreshTokenPayload := oauth2models.Oauth2RefreshTokenModel{
 		UserID:        userID,
 		ClientID:      clientID,
 		OidcSessionID: oidcSessionID,
@@ -310,7 +320,7 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 		return oauth2dto.TokenResponseDTO{}, err
 	}
 
-	accessTokenPayload := models.Oauth2AccessTokenModel{
+	accessTokenPayload := authmodels.Oauth2AccessTokenModel{
 		UserID:         userID,
 		ClientID:       clientID,
 		OidcSessionID:  oidcSessionID,
@@ -327,12 +337,12 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 
 	accessTokenPayload.Token = accessToken
 
-	err = s.accessTokenRepo.Create(ctx, &accessTokenPayload)
+	err = s.authService.CreateAccessToken(ctx, &accessTokenPayload)
 	if err != nil {
 		return oauth2dto.TokenResponseDTO{}, err
 	}
 
-	session, err := s.oidcSessionRepo.FindByID(oidcSessionID)
+	session, err := s.authService.GetOidcSessionByID(oidcSessionID)
 	if err != nil {
 		return oauth2dto.TokenResponseDTO{}, err
 	}

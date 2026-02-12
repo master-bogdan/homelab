@@ -9,11 +9,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	usersdto "github.com/master-bogdan/estimate-room-api/internal/modules/users/dto"
-	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/errors"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
 )
 
@@ -25,21 +24,16 @@ func setupUsersTest(t *testing.T) (*chi.Mux, *pgxpool.Pool) {
 
 	router := chi.NewRouter()
 
-	userRepo := repositories.NewUserRepository(db)
-	accessTokenRepo := repositories.NewOauth2AccessTokenRepository(db)
-	oidcSessionRepo := repositories.NewOauth2OidcSessionRepository(db)
-
 	authModule := auth.NewAuthModule(auth.AuthModuleDeps{
-		TokenKey:        testutils.TestTokenKey,
-		AccessTokenRepo: accessTokenRepo,
-		OidcSessionRepo: oidcSessionRepo,
+		TokenKey: testutils.TestTokenKey,
+		DB:       db,
 	})
 
 	router.Route("/api/v1", func(r chi.Router) {
 		users.NewUsersModule(users.UsersModuleDeps{
 			Router:      r,
+			DB:          db,
 			AuthService: authModule.Service,
-			UserRepo:    userRepo,
 		})
 	})
 
@@ -97,7 +91,7 @@ func TestGetMe_MissingToken_ReturnsUnauthorized(t *testing.T) {
 		t.Fatalf("expected 401 Unauthorized, got %d", rr.Code)
 	}
 
-	var resp apperrors.Problem
+	var resp apperrors.HttpError
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
