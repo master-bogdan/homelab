@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql-deploy
+spec:
+  template:
+    spec:
+      containers:
+        - name: postgresql-container
+          envFrom:
+            - secretRef:
+                name: postgresql-staging-secret

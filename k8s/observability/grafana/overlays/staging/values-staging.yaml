@@ -27,17 +27,15 @@ datasources:
         url: "http://prometheus-server.staging-observability.svc.cluster.local"
         editable: false
 
-env:
-  - name: GF_AUTH_GENERIC_OAUTH_CLIENT_ID
-    valueFrom:
-      secretKeyRef:
-        name: grafana-auth-staging
-        key: client_id
-  - name: GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
-    valueFrom:
-      secretKeyRef:
-        name: grafana-auth-staging
-        key: client_secret
+envValueFrom:
+  GF_AUTH_GENERIC_OAUTH_CLIENT_ID:
+    secretKeyRef:
+      name: grafana-auth-staging
+      key: client_id
+  GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
+    secretKeyRef:
+      name: grafana-auth-staging
+      key: client_secret
 
 grafana.ini:
   server:

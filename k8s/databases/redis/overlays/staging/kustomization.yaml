@@ -7,4 +7,7 @@ resources:
   - external-secret.yaml
 
 patches:
-  - path: delete-secret.yaml
+  - target:
+      kind: Deployment
+      name: redis-deploy
+    path: deployment-patch.yaml

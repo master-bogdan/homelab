@@ -57,8 +57,6 @@ PLATFORM_DIR          := $(KUBERNETES_DIR)/platform
 AUTH_DIR              := $(KUBERNETES_DIR)/auth
 SECRETS_DIR           := $(KUBERNETES_DIR)/secrets
 AUTHENTIK_DIR         := $(AUTH_DIR)/authentik
-AUTHENTIK_FWD_AUTH_DIR := $(AUTH_DIR)/forward-auth
-AUTH_REFERENCE_GRANT  := $(if $(wildcard $(AUTH_DIR)/reference-grant-$(ENV).yaml),$(AUTH_DIR)/reference-grant-$(ENV).yaml,$(AUTH_DIR)/reference-grant-dev.yaml)
 EXTERNAL_SECRETS_DIR  := $(SECRETS_DIR)/external-secrets
 VAULT_DIR             := $(SECRETS_DIR)/vault
 N8N_DIR               := $(PLATFORM_DIR)/n8n
@@ -73,7 +71,6 @@ OPENSEARCH_DASH_DIR   := $(OBSERVABILITY_DIR)/opensearch-dashboards
 # ---- Layer Groups ----
 NETWORKING_DIRS       := $(GATEWAY_DIR)
 NETWORKING_HELM_DIRS  := $(TRAEFIK_DIR) $(CERT_MANAGER_DIR)
-AUTH_DIRS             := $(AUTHENTIK_FWD_AUTH_DIR)
 AUTH_HELM_DIRS        := $(AUTHENTIK_DIR)
 PLATFORM_HELM_DIRS    := $(AUTHENTIK_DIR) $(N8N_DIR) $(SEAWEEDFS_DIR)
 SECRETS_HELM_DIRS     := $(VAULT_DIR) $(EXTERNAL_SECRETS_DIR)
@@ -157,7 +154,7 @@ endef
 
 # Kustomize apply (prefer overlay, fallback to base)
 define k8s_apply_or_base
-	@set -e; ROOT="$(1)"; \
+	set -e; ROOT="$(1)"; \
 	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
 	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
 	if [ -d "$$OVERLAY" ]; then \
@@ -178,7 +175,7 @@ endef
 
 # Kustomize delete
 define k8s_delete_or_base
-	@set -e; ROOT="$(1)"; \
+	set -e; ROOT="$(1)"; \
 	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
 	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
 	if [ -d "$$OVERLAY" ]; then \
@@ -199,7 +196,7 @@ endef
 
 # Helm+Kustomize apply
 define k8s_apply_helm_or_base
-	@set -e; ROOT="$(1)"; \
+	set -e; ROOT="$(1)"; \
 	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
 	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
 	if [ -d "$$OVERLAY" ]; then \
@@ -216,7 +213,7 @@ endef
 
 # Helm+Kustomize delete
 define k8s_delete_helm_or_base
-	@set -e; ROOT="$(1)"; \
+	set -e; ROOT="$(1)"; \
 	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
 	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
 	if [ -d "$$OVERLAY" ]; then \
@@ -233,7 +230,7 @@ endef
 
 # Validate kustomize (dry-run)
 define k8s_dry_run_or_base
-	@set -e; ROOT="$(1)"; \
+	set -e; ROOT="$(1)"; \
 	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
 	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
 	if [ -d "$$OVERLAY" ]; then \
@@ -254,7 +251,7 @@ endef
 
 # Validate helm+kustomize (build-only)
 define k8s_dry_run_helm_or_base
-	@set -e; ROOT="$(1)"; \
+	set -e; ROOT="$(1)"; \
 	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
 	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
 	if [ -d "$$OVERLAY" ]; then \
@@ -505,19 +502,13 @@ validate-secrets:
 # ---- Auth ----
 deploy-auth: deploy-namespaces deploy-secrets
 	$(call k8s_apply_helm_list,$(AUTH_HELM_DIRS))
-	$(call k8s_apply_list,$(AUTH_DIRS))
-	@$(KUBECTL) apply -f "$(AUTH_REFERENCE_GRANT)"
 	@echo "✅ Auth deployed"
 
 delete-auth:
-	@$(KUBECTL) delete --ignore-not-found -f "$(AUTH_REFERENCE_GRANT)"
-	$(call k8s_delete_list,$(AUTH_DIRS))
 	$(call k8s_delete_helm_list,$(AUTH_HELM_DIRS))
 
 validate-auth:
 	$(call k8s_dry_run_helm_list,$(AUTH_HELM_DIRS))
-	$(call k8s_dry_run_list,$(AUTH_DIRS))
-	@$(KUBECTL) apply -f "$(AUTH_REFERENCE_GRANT)" --dry-run=client -o yaml >/dev/null
 	@echo "✅ Auth validated"
 
 # ---- Platform ----

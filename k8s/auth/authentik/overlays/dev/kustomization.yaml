@@ -19,3 +19,9 @@ patches:
       kind: HTTPRoute
       name: http-authentik
     path: httproute-patch.yaml
+  - target:
+      group: gateway.networking.k8s.io
+      version: v1beta1
+      kind: ReferenceGrant
+      name: allow-routes-to-shared-outpost
+    path: reference-grant-patch.yaml

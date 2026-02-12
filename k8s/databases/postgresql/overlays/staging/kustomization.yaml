@@ -5,8 +5,13 @@ namespace: staging-db
 resources:
   - ../../base
   - external-secret.yaml
-  - config-map.yaml
 
 patches:
-  - path: delete-secret.yaml
-  - path: delete-configmap.yaml
+  - target:
+      kind: Deployment
+      name: postgresql-deploy
+    path: deployment-patch.yaml
+  - target:
+      kind: ConfigMap
+      name: postgresql-init-sql
+    path: configmap-patch.yaml

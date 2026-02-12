@@ -3,6 +3,7 @@ kind: ConfigMap
 metadata:
   name: postgresql-init-sql
 data:
+  $patch: replace
   10-n8n.sh: |
     #!/bin/sh
     set -eu
