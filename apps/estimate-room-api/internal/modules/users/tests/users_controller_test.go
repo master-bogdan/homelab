@@ -12,7 +12,7 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	usersdto "github.com/master-bogdan/estimate-room-api/internal/modules/users/dto"
-	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/errors"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
 )
 
@@ -91,7 +91,7 @@ func TestGetMe_MissingToken_ReturnsUnauthorized(t *testing.T) {
 		t.Fatalf("expected 401 Unauthorized, got %d", rr.Code)
 	}
 
-	var resp apperrors.Problem
+	var resp apperrors.HttpError
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}

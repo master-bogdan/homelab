@@ -69,7 +69,7 @@ Table user_settings {
   theme                text
   timezone             text
   locale               text
-  default_deck_id      text  [ref: > decks.deck_id]
+  default_deck_id      deck_type  [ref: > decks.deck_id]
   default_room_options jsonb
 }
 
@@ -83,7 +83,7 @@ Table teams {
 Table team_members {
   team_id   text             [not null, ref: > teams.team_id]
   user_id   text             [not null, ref: > users.user_id]
-  role      team_member_role [not null, default: 'member']
+  role      team_member_role [not null, default: 'MEMBER']
   joined_at timestamptz      [not null, default: `now()`]
 
   Indexes {
@@ -92,34 +92,34 @@ Table team_members {
 }
 
 Table invitations {
-  invintation_id                text              [pk]
+  invitation_id                 text              [pk]
   type              invitation_type   [not null]
   email             text              [not null]
   to_user_id        text              [ref: > users.user_id]
   team_id           text              [ref: > teams.team_id]
   room_id           text              [ref: > rooms.room_id]
   token             text              [not null, unique]
-  status            invitation_status [not null, default: 'pending']
+  status            invitation_status [not null, default: 'PENDING']
   expires_at        timestamptz       [not null]
   created_by_user_id text             [not null, ref: > users.user_id]
   created_at        timestamptz       [not null, default: `now()`]
 }
 
 Table decks {
-  deck_id     text      [pk]
+  deck_id     deck_type [pk]
   name   text      [not null]
   type   deck_type [not null]
   values jsonb     [not null, note: 'JSONB array of strings']
 }
 
 Table rooms {
-  room_id                 text        [pk]
+  room_id                 text        [pk, default: `gen_random_uuid()`]
   code               text        [not null, unique, note: 'short unique string used in URLs']
   name               text        [not null]
   admin_user_id      text        [not null, ref: > users.user_id]
   team_id            text        [ref: > teams.team_id]
-  deck_id            text        [not null, ref: > decks.deck_id]
-  status             room_status [not null, default: 'active']
+  deck_id            deck_type   [not null, default: 'FIBONACCI', ref: > decks.deck_id]
+  status             room_status [not null, default: 'ACTIVE']
   allow_guests       boolean     [not null, default: false]
   allow_spectators   boolean     [not null, default: false]
   round_timer_seconds int        [not null, default: 120]
@@ -133,7 +133,7 @@ Table room_participants {
   room_id    text                 [not null, ref: > rooms.room_id]
   user_id    text                 [ref: > users.user_id, note: 'nullable for guests']
   guest_name text
-  role       room_participant_role [not null, default: 'voter']
+  role       room_participant_role [not null, default: 'VOTER']
   joined_at  timestamptz          [not null, default: `now()`]
   left_at    timestamptz
 }
@@ -144,7 +144,7 @@ Table tasks {
   title               text        [not null]
   description         text
   external_key        text
-  status              task_status [not null, default: 'pending']
+  status              task_status [not null, default: 'PENDING']
   final_estimate_value text
   order_index         int         [not null, default: 0]
   created_at          timestamptz [not null, default: `now()`]
@@ -277,4 +277,3 @@ Table oauth2_access_tokens {
     (token) [name: 'idx_oauth2_access_tokens_token']
   }
 }
-

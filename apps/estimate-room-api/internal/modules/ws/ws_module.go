@@ -6,7 +6,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
-	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/httputils"
 )
 
 const defaultChannel = "app"
@@ -27,7 +28,10 @@ func NewWsModule(deps WsModuleDeps) *WsModule {
 	deps.Router.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
 		userID, err := deps.AuthService.CheckAuth(r)
 		if err != nil {
-			utils.WriteResponseError(w, http.StatusUnauthorized, "unauthorized")
+			httputils.WriteResponseError(w, apperrors.CreateHttpError(
+				apperrors.ErrUnauthorized,
+				apperrors.HttpError{Detail: "unauthorized"},
+			))
 			return
 		}
 		service.Connect(w, r, userID)

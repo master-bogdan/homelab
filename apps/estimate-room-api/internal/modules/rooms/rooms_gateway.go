@@ -38,7 +38,6 @@ func (g *roomsGateway) OnEvent(client ws.ClientInfo, event ws.Event) {
 	}
 }
 
-// SendToRoom publishes a server message to all clients in the room.
 func (g *roomsGateway) SendToRoom(channelID string, data any) error {
 	if channelID == "" {
 		return errors.New("channelID is required")

@@ -10,7 +10,8 @@ import (
 	stdErrors "errors"
 	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
-	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/errors"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/httputils"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 )
@@ -51,14 +52,14 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 	err := query.Validate()
 	if err != nil {
 		c.logger.Error(err.Error())
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	err = c.service.ValidateClient(query)
 	if err != nil {
 		c.logger.Error(err.Error())
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -95,14 +96,14 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 	}
 	if err = createAuthCodeDTO.Validate(); err != nil {
 		c.logger.Error(err.Error())
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	authCode, err := c.service.CreateAuthCode(createAuthCodeDTO)
 	if err != nil {
 		c.logger.Error(err.Error())
-		utils.WriteResponseError(w, http.StatusInternalServerError, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -122,7 +123,7 @@ func (c *oauth2Controller) ShowLoginForm(w http.ResponseWriter, r *http.Request)
 	params, err := utils.StructToMap(query)
 	if err != nil {
 		c.logger.Error("invalid query params")
-		utils.WriteResponseError(w, http.StatusBadRequest, "invalid_query_params")
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: "invalid_query_params"}))
 		return
 	}
 
@@ -135,13 +136,13 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 	loginDTO, err := parseLoginForm(r)
 	if err != nil {
 		c.logger.Error(fmt.Sprintf("invalid body %s", err.Error()))
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	if err = loginDTO.Validate(); err != nil {
 		c.logger.Error(fmt.Sprintf("invalid loginDTO %s", err.Error()))
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -157,12 +158,12 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	if err = validateClientDTO.Validate(); err != nil {
 		c.logger.Error(fmt.Sprintf("invalid client query %s", err.Error()))
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 	if err = c.service.ValidateClient(validateClientDTO); err != nil {
 		c.logger.Error(err.Error())
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -172,7 +173,7 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	if err = userDTO.Validate(); err != nil {
 		c.logger.Error(fmt.Sprintf("invalid userDTO %s", err.Error()))
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -183,16 +184,16 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 			userID, err = c.service.RegisterUser(userDTO)
 			if err != nil || userID == "" {
 				c.logger.Error(err.Error())
-				utils.WriteResponseError(w, http.StatusInternalServerError, "registration failed")
+				httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: "registration failed"}))
 				return
 			}
 		} else if err == ErrInvalidCredentials {
 			c.logger.Warn("invalid credentials")
-			utils.WriteResponseError(w, http.StatusUnauthorized, "invalid credentials")
+			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: "invalid credentials"}))
 			return
 		} else {
 			c.logger.Error(err.Error())
-			utils.WriteResponseError(w, http.StatusInternalServerError, err.Error())
+			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
 			return
 		}
 	}
@@ -205,14 +206,14 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err = oidcSessionDTO.Validate(); err != nil {
 		c.logger.Error(fmt.Sprintf("invalid oidcSessionDTO %s", err.Error()))
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	oidcSessionID, err := c.service.CreateOidcSession(oidcSessionDTO)
 	if err != nil {
 		c.logger.Error(err.Error())
-		utils.WriteResponseError(w, http.StatusInternalServerError, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -235,14 +236,14 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	if err = createAuthCodeDTO.Validate(); err != nil {
 		c.logger.Error(fmt.Sprintf("invalid createAuthCodeDTO %s", err.Error()))
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	authCode, err := c.service.CreateAuthCode(createAuthCodeDTO)
 	if err != nil {
 		c.logger.Error(err.Error())
-		utils.WriteResponseError(w, http.StatusInternalServerError, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -259,13 +260,13 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 	body, err := parseTokenForm(r)
 	if err != nil {
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	if err = body.Validate(); err != nil {
 		c.logger.Error(fmt.Sprintf("invalid query %s", err.Error()))
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -274,25 +275,25 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 		tokens, err := c.service.GetAuthorizationTokens(r.Context(), body)
 		if err != nil {
 			c.logger.Error(err.Error())
-			utils.WriteResponseError(w, http.StatusUnauthorized, err.Error())
+			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: err.Error()}))
 			return
 		}
 
-		utils.WriteResponse(w, http.StatusOK, tokens)
+		httputils.WriteResponse(w, tokens, httputils.WriteResponseOptions{Status: http.StatusOK})
 		return
 	case "refresh_token":
 		tokens, err := c.service.GetRefreshTokens(r.Context(), body)
 		if err != nil {
 			c.logger.Error(err.Error())
-			utils.WriteResponseError(w, http.StatusUnauthorized, err.Error())
+			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: err.Error()}))
 			return
 		}
 
-		utils.WriteResponse(w, http.StatusOK, tokens)
+		httputils.WriteResponse(w, tokens, httputils.WriteResponseOptions{Status: http.StatusOK})
 		return
 	default:
 		c.logger.Error("unsupported grant_type")
-		utils.WriteResponseError(w, http.StatusBadRequest, "unsupported grant_type")
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: "unsupported grant_type"}))
 	}
 }
 
@@ -303,24 +304,24 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 // @Router /api/v1/oauth2/github/login [get]
 func (c *oauth2Controller) GithubLogin(w http.ResponseWriter, r *http.Request) {
 	if !c.github.IsConfigured() {
-		utils.WriteResponseError(w, http.StatusInternalServerError, "github oauth is not configured")
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: "github oauth is not configured"}))
 		return
 	}
 
 	query := parseAuthorizeQuery(r)
 	if err := query.Validate(); err != nil {
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	if err := c.service.ValidateClient(query); err != nil {
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	stateToken, err := oauth2utils.CreateGithubState(c.stateTokenKey, oauth2utils.AuthorizeQueryFromDTO(query))
 	if err != nil {
-		utils.WriteResponseError(w, http.StatusInternalServerError, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -335,36 +336,36 @@ func (c *oauth2Controller) GithubLogin(w http.ResponseWriter, r *http.Request) {
 // @Router /api/v1/oauth2/github/callback [get]
 func (c *oauth2Controller) GithubCallback(w http.ResponseWriter, r *http.Request) {
 	if !c.github.IsConfigured() {
-		utils.WriteResponseError(w, http.StatusInternalServerError, "github oauth is not configured")
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: "github oauth is not configured"}))
 		return
 	}
 
 	if r.URL.Query().Get("error") != "" {
-		utils.WriteResponseError(w, http.StatusUnauthorized, "github authentication failed")
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: "github authentication failed"}))
 		return
 	}
 
 	code := r.URL.Query().Get("code")
 	stateToken := r.URL.Query().Get("state")
 	if code == "" || stateToken == "" {
-		utils.WriteResponseError(w, http.StatusBadRequest, "code and state are required")
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: "code and state are required"}))
 		return
 	}
 
 	state, err := oauth2utils.ParseGithubState(c.stateTokenKey, stateToken)
 	if err != nil {
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	query := oauth2utils.AuthorizeQueryFromState(state).ToDTO()
 	if err := query.Validate(); err != nil {
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	if err := c.service.ValidateClient(query); err != nil {
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -373,13 +374,13 @@ func (c *oauth2Controller) GithubCallback(w http.ResponseWriter, r *http.Request
 
 	accessToken, err := oauth2utils.ExchangeGithubCode(ctx, c.httpClient, c.github, code)
 	if err != nil {
-		utils.WriteResponseError(w, http.StatusUnauthorized, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	user, err := oauth2utils.FetchGithubUser(ctx, c.httpClient, accessToken)
 	if err != nil {
-		utils.WriteResponseError(w, http.StatusUnauthorized, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -392,10 +393,10 @@ func (c *oauth2Controller) GithubCallback(w http.ResponseWriter, r *http.Request
 	userID, err := c.service.GetOrCreateUserFromGithub(profile)
 	if err != nil {
 		if stdErrors.Is(err, apperrors.ErrUserNotFound) {
-			utils.WriteResponseError(w, http.StatusNotFound, "user not found")
+			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrNotFound, apperrors.HttpError{Detail: "user not found"}))
 			return
 		}
-		utils.WriteResponseError(w, http.StatusInternalServerError, "failed to login with github")
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: "failed to login with github"}))
 		return
 	}
 
@@ -405,13 +406,13 @@ func (c *oauth2Controller) GithubCallback(w http.ResponseWriter, r *http.Request
 		Nonce:    query.Nonce,
 	}
 	if err := oidcSessionDTO.Validate(); err != nil {
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	oidcSessionID, err := c.service.CreateOidcSession(oidcSessionDTO)
 	if err != nil {
-		utils.WriteResponseError(w, http.StatusInternalServerError, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
@@ -433,13 +434,13 @@ func (c *oauth2Controller) GithubCallback(w http.ResponseWriter, r *http.Request
 		Scopes:              query.Scopes,
 	}
 	if err := createAuthCodeDTO.Validate(); err != nil {
-		utils.WriteResponseError(w, http.StatusBadRequest, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	authCode, err := c.service.CreateAuthCode(createAuthCodeDTO)
 	if err != nil {
-		utils.WriteResponseError(w, http.StatusInternalServerError, err.Error())
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 

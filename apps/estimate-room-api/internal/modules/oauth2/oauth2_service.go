@@ -18,7 +18,7 @@ import (
 	oauth2repositories "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/repositories"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	usersmodels "github.com/master-bogdan/estimate-room-api/internal/modules/users/models"
-	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/errors"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 )

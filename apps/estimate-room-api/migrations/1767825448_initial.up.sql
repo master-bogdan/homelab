@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TYPE "pkce_challenge_method" AS ENUM (
   'PLAIN',
@@ -64,7 +65,7 @@ CREATE TABLE "user_settings" (
   "theme" text,
   "timezone" text,
   "locale" text,
-  "default_deck_id" text,
+  "default_deck_id" deck_type,
   "default_room_options" jsonb
 );
 
@@ -78,40 +79,40 @@ CREATE TABLE "teams" (
 CREATE TABLE "team_members" (
   "team_id" text NOT NULL,
   "user_id" text NOT NULL,
-  "role" team_member_role NOT NULL DEFAULT 'member',
+  "role" team_member_role NOT NULL DEFAULT 'MEMBER',
   "joined_at" timestamptz NOT NULL DEFAULT (now()),
   PRIMARY KEY ("team_id", "user_id")
 );
 
 CREATE TABLE "invitations" (
-  "invintation_id" text PRIMARY KEY,
+  "invitation_id" text PRIMARY KEY,
   "type" invitation_type NOT NULL,
   "email" text NOT NULL,
   "to_user_id" text,
   "team_id" text,
   "room_id" text,
   "token" text UNIQUE NOT NULL,
-  "status" invitation_status NOT NULL DEFAULT 'pending',
+  "status" invitation_status NOT NULL DEFAULT 'PENDING',
   "expires_at" timestamptz NOT NULL,
   "created_by_user_id" text NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "decks" (
-  "deck_id" text PRIMARY KEY,
+  "deck_id" deck_type PRIMARY KEY,
   "name" text NOT NULL,
   "type" deck_type NOT NULL,
   "values" jsonb NOT NULL
 );
 
 CREATE TABLE "rooms" (
-  "room_id" text PRIMARY KEY,
+  "room_id" text PRIMARY KEY DEFAULT (gen_random_uuid()::text),
   "code" text UNIQUE NOT NULL,
   "name" text NOT NULL,
   "admin_user_id" text NOT NULL,
   "team_id" text,
-  "deck_id" text NOT NULL,
-  "status" room_status NOT NULL DEFAULT 'active',
+  "deck_id" deck_type NOT NULL DEFAULT 'FIBONACCI',
+  "status" room_status NOT NULL DEFAULT 'ACTIVE',
   "allow_guests" boolean NOT NULL DEFAULT false,
   "allow_spectators" boolean NOT NULL DEFAULT false,
   "round_timer_seconds" int NOT NULL DEFAULT 120,
@@ -125,7 +126,7 @@ CREATE TABLE "room_participants" (
   "room_id" text NOT NULL,
   "user_id" text,
   "guest_name" text,
-  "role" room_participant_role NOT NULL DEFAULT 'voter',
+  "role" room_participant_role NOT NULL DEFAULT 'VOTER',
   "joined_at" timestamptz NOT NULL DEFAULT (now()),
   "left_at" timestamptz
 );
@@ -330,4 +331,4 @@ ALTER TABLE "oauth2_access_tokens" ADD FOREIGN KEY ("client_id") REFERENCES "oau
 
 ALTER TABLE "oauth2_access_tokens" ADD FOREIGN KEY ("oidc_session_id") REFERENCES "oauth2_oidc_sessions" ("oidc_session_id");
 
-ALTER TABLE "oauth2_access_tokens" ADD FOREIGN KEY ("refresh_token_id") REFERENCES "oauth2_refresh_tokens" ("refresh_token_id");
+ALTER TABLE "oauth2_access_tokens" ADD FOREIGN KEY ("refresh_token_id") REFERENCES "oauth2_refresh_tokens" ("refresh_token_id") ON DELETE SET NULL;

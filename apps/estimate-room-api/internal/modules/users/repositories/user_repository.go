@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	usersmodels "github.com/master-bogdan/estimate-room-api/internal/modules/users/models"
-	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/errors"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 )
 
 type UserRepository interface {

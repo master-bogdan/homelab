@@ -21,8 +21,8 @@ type UsersModuleDeps struct {
 
 func NewUsersModule(deps UsersModuleDeps) *UsersModule {
 	userRepo := usersrepositories.NewUserRepository(deps.DB)
-	svc := NewUsersService(deps.AuthService, userRepo)
-	ctrl := NewUsersController(svc)
+	svc := NewUsersService(userRepo)
+	ctrl := NewUsersController(svc, deps.AuthService)
 
 	deps.Router.Route("/users", func(r chi.Router) {
 		r.Get("/me", ctrl.GetMe)
