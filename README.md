@@ -113,6 +113,7 @@ Use `ENV=dev` or `ENV=prod` and make sure `kubectl` points at the intended clust
 - `make deploy-all ENV=prod [REGISTRY=<r>] [TAG=<t>]` — Deploy everything (no DBs, prod-ready)
 - `make delete-all ENV=<env>` — Delete full stack
 - `make validate-all ENV=<env>` — Dry-run validate all manifests
+- `make update-minikube-ip ENV=<dev|staging> [MINIKUBE_PROFILE=<profile>]` — Rewrite `*.sslip.io` host IPs in overlays and `Makefile`
 
 ## Repository structure
 
@@ -230,6 +231,7 @@ The Makefile automatically prefers `overlays/$(ENV)` when present; falls back to
 ## Notes
 
 - **Cluster context**: Make sure `kubectl config current-context` points at the cluster you intend to manage (minikube, k3s, etc.) before running make targets.
+- **Minikube IP sync**: Before deploying `ENV=staging` (or `ENV=dev` with sslip routes), run `make update-minikube-ip ENV=staging MINIKUBE_PROFILE=homelab-staging`; if Minikube is not reachable from your shell, use `ENV=staging PROFILE=homelab-staging MINIKUBE_IP=<ip> scripts/update-minikube-ip.sh`.
 - **Dev vs Prod**: `ENV=dev` includes PostgreSQL and Redis; `ENV=prod` omits them.
 - **Validate before deploy**: Use `make validate-all ENV=dev` (dry-run) before deploying.
 - **Kustomize**: All k8s manifests use Kustomize. Overlays can override base patches, replicas, resource limits, etc.

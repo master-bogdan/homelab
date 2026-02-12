@@ -18,9 +18,9 @@ UI_NAME_PATTERN         ?= ui
 UI_BUILD_OUTPUT_DIRS    ?= out build dist
 UI_PUBLIC_BUCKET        ?= public
 SEAWEEDFS_NAMESPACE     ?= $(ENV)-platform
-SEAWEED_PUBLIC_BASE_DEV      ?= http://storage.apps.192-168-58-2.sslip.io:30080
+SEAWEED_PUBLIC_BASE_DEV      ?= http://storage.apps.192-168-76-2.sslip.io:30080
 SEAWEED_PUBLIC_BASE_PROD     ?= https://storage.example.invalid
-SEAWEED_PUBLIC_BASE_STAGING ?= https://storage.apps.192-168-58-2.sslip.io
+SEAWEED_PUBLIC_BASE_STAGING ?= https://storage.apps.192-168-76-2.sslip.io
 ifeq ($(ENV),prod)
 SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_PROD)
 else ifeq ($(ENV),staging)
@@ -131,14 +131,14 @@ endef
 
 # Generic function to iterate over apps with a target
 define for_each_app
-	@for app in $(APPS); do \
+	@set -e; for app in $(APPS); do \
 		APP="$$app" $(MAKE) --no-print-directory $(1); \
 	done
 endef
 
 # Generic function to iterate over apps with k8s manifests
 define for_each_k8s_app
-	@for app in $(APPS); do \
+	@set -e; for app in $(APPS); do \
 		if [ -d "$(KUBERNETES_DIR)/apps/$$app" ]; then \
 			APP="$$app" $(MAKE) --no-print-directory $(1); \
 		fi; \
@@ -147,7 +147,7 @@ endef
 
 # Generic function to iterate over UI apps with a target
 define for_each_ui_app
-	@for app in $(UI_APPS); do \
+	@set -e; for app in $(UI_APPS); do \
 		APP="$$app" $(MAKE) --no-print-directory $(1); \
 	done
 endef
@@ -267,37 +267,37 @@ define k8s_dry_run_helm_or_base
 endef
 
 define k8s_apply_list
-	@for dir in $(1); do \
+	@set -e; for dir in $(1); do \
 		$(call k8s_apply_or_base,$$dir); \
 	done
 endef
 
 define k8s_apply_helm_list
-	@for dir in $(1); do \
+	@set -e; for dir in $(1); do \
 		$(call k8s_apply_helm_or_base,$$dir); \
 	done
 endef
 
 define k8s_delete_list
-	@for dir in $(1); do \
+	@set -e; for dir in $(1); do \
 		$(call k8s_delete_or_base,$$dir); \
 	done
 endef
 
 define k8s_delete_helm_list
-	@for dir in $(1); do \
+	@set -e; for dir in $(1); do \
 		$(call k8s_delete_helm_or_base,$$dir); \
 	done
 endef
 
 define k8s_dry_run_list
-	@for dir in $(1); do \
+	@set -e; for dir in $(1); do \
 		$(call k8s_dry_run_or_base,$$dir); \
 	done
 endef
 
 define k8s_dry_run_helm_list
-	@for dir in $(1); do \
+	@set -e; for dir in $(1); do \
 		$(call k8s_dry_run_helm_or_base,$$dir); \
 	done
 endef
@@ -553,7 +553,22 @@ endif
 
 validate-databases:
 ifneq (,$(filter $(ENV),dev staging))
+ifeq ($(ENV),staging)
+	@if $(KUBECTL) api-resources --api-group=external-secrets.io 2>/dev/null | grep -qi '^externalsecrets'; then \
+		echo "🧪 Dry-run: $(REDIS_DIR)/overlays/staging"; \
+		$(KUBECTL) apply -k "$(REDIS_DIR)/overlays/staging" --dry-run=client --validate=false -o yaml >/dev/null; \
+		echo "🧪 Dry-run: $(POSTGRESQL_DIR)/overlays/staging"; \
+		$(KUBECTL) apply -k "$(POSTGRESQL_DIR)/overlays/staging" --dry-run=client --validate=false -o yaml >/dev/null; \
+	else \
+		echo "⚠️  ExternalSecret CRD not discoverable yet; build-only validation for staging databases"; \
+		echo "🧪 Build-only: $(REDIS_DIR)/overlays/staging"; \
+		$(KUBECTL) kustomize "$(REDIS_DIR)/overlays/staging" >/dev/null; \
+		echo "🧪 Build-only: $(POSTGRESQL_DIR)/overlays/staging"; \
+		$(KUBECTL) kustomize "$(POSTGRESQL_DIR)/overlays/staging" >/dev/null; \
+	fi
+else
 	$(call k8s_dry_run_list,$(DATABASE_DIRS))
+endif
 	@echo "✅ Databases validated"
 else
 	@echo "⚠️  Databases skipped in $(ENV) environment"
@@ -582,7 +597,28 @@ delete-apps:
 validate-app:
 	$(call require_app)
 	$(call require_app_k8s)
-	$(call k8s_dry_run_or_base,$(KUBERNETES_DIR)/apps/$(APP))
+	@set -e; ROOT="$(KUBERNETES_DIR)/apps/$(APP)"; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		TARGET="$$OVERLAY"; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		TARGET="$$FALLBACK"; \
+	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
+		TARGET="$${ROOT}"; \
+	else \
+		TARGET="$${ROOT}/base"; \
+	fi; \
+	if $(KUBECTL) api-resources --api-group=external-secrets.io 2>/dev/null | grep -qi '^externalsecrets' && \
+	   $(KUBECTL) api-resources --api-group=gateway.networking.k8s.io 2>/dev/null | grep -qi '^httproutes'; then \
+		echo "🧪 Dry-run: $$TARGET"; \
+		$(KUBECTL) apply -k "$$TARGET" --dry-run=client --validate=false -o yaml >/dev/null 2>/dev/null || \
+		$(KUBECTL) apply -f "$$TARGET" --dry-run=client --validate=false -o yaml >/dev/null; \
+	else \
+		echo "⚠️  App CRDs not discoverable yet; build-only validation for $(APP)"; \
+		echo "🧪 Build-only: $$TARGET"; \
+		$(KUBECTL) kustomize "$$TARGET" >/dev/null; \
+	fi
 	@echo "✅ $(APP) validated"
 
 validate-apps:

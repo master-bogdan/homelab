@@ -72,7 +72,7 @@ worker:
 webhook:
   mode: queue
   count: 2
-  url: "https://n8n.apps.192-168-58-2.sslip.io"
+  url: "https://n8n.apps.192-168-76-2.sslip.io"
   extraEnvVars:
     N8N_SECURE_COOKIE: "true"
 

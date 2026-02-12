@@ -30,17 +30,21 @@ kubectl config current-context
 ## 2) Update sslip.io hostnames for your Minikube IP
 
 Staging TLS certs and routes use `*.sslip.io` with the Minikube IP encoded as dashes.
-If your IP is not `192.168.58.2`, update the staging overlays + Makefile.
+Run the helper target to rewrite all staging overlays + `Makefile` URLs in one step:
 
 ```bash
-IP=$(minikube ip --profile homelab-staging)
-IP_DASH=${IP//./-}
-
-# Replace all staging sslip.io hostnames + Makefile base URL
-rg -l "192-168-58-2" k8s/**/overlays/staging Makefile | xargs sed -i "s/192-168-58-2/${IP_DASH}/g"
+make update-minikube-ip ENV=staging MINIKUBE_PROFILE=homelab-staging
 ```
 
-If you're on macOS, use `sed -i ''` instead of `sed -i`.
+If you cannot query Minikube from your current shell/session, pass the IP directly:
+
+```bash
+ENV=staging PROFILE=homelab-staging MINIKUBE_IP=<minikube-ip> scripts/update-minikube-ip.sh
+```
+
+Examples:
+- `MINIKUBE_IP=192.168.76.2`
+- `MINIKUBE_IP=192.168.58.2`
 
 ## 3) Deploy namespaces + networking
 

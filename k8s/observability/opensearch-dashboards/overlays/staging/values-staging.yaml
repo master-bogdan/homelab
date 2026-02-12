@@ -41,11 +41,11 @@ config:
     opensearch.requestHeadersAllowlist: ["Authorization", "securitytenant"]
 
     opensearch_security.auth.type: "openid"
-    opensearch_security.openid.connect_url: "https://auth.apps.192-168-58-2.sslip.io/application/o/opensearch/.well-known/openid-configuration"
+    opensearch_security.openid.connect_url: "https://auth.apps.192-168-76-2.sslip.io/application/o/opensearch/.well-known/openid-configuration"
     opensearch_security.openid.client_id: "${OPENSEARCH_DASHBOARDS_OIDC_CLIENT_ID}"
     opensearch_security.openid.client_secret: "${OPENSEARCH_DASHBOARDS_OIDC_CLIENT_SECRET}"
     opensearch_security.openid.scope: "openid profile email"
-    opensearch_security.openid.base_redirect_url: "https://opensearch.apps.192-168-58-2.sslip.io"
+    opensearch_security.openid.base_redirect_url: "https://opensearch.apps.192-168-76-2.sslip.io"
 
     opensearch_security.cookie.secure: true
 

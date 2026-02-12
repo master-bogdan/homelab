@@ -39,7 +39,7 @@ envValueFrom:
 
 grafana.ini:
   server:
-    root_url: "https://grafana.apps.192-168-58-2.sslip.io"
+    root_url: "https://grafana.apps.192-168-76-2.sslip.io"
     serve_from_sub_path: false
 
   auth.generic_oauth:
@@ -55,6 +55,6 @@ grafana.ini:
       'Viewer'
 
     allow_assign_grafana_admin: true
-    auth_url: "https://auth.apps.192-168-58-2.sslip.io/application/o/authorize/"
-    token_url: "https://auth.apps.192-168-58-2.sslip.io/application/o/token/"
-    api_url: "https://auth.apps.192-168-58-2.sslip.io/application/o/userinfo/"
+    auth_url: "https://auth.apps.192-168-76-2.sslip.io/application/o/authorize/"
+    token_url: "https://auth.apps.192-168-76-2.sslip.io/application/o/token/"
+    api_url: "https://auth.apps.192-168-76-2.sslip.io/application/o/userinfo/"

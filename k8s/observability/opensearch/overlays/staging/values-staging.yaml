@@ -74,7 +74,7 @@ securityConfig:
                   config:
                     subject_key: sub
                     roles_key: groups
-                    openid_connect_url: "https://auth.apps.192-168-58-2.sslip.io/application/o/opensearch/.well-known/openid-configuration"
+                    openid_connect_url: "https://auth.apps.192-168-76-2.sslip.io/application/o/opensearch/.well-known/openid-configuration"
                     client_id: "${OPENSEARCH_OPENID_CLIENT_ID}"
                     client_secret: "${OPENSEARCH_OPENID_CLIENT_SECRET}"
                 authentication_backend:
