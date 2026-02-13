@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging-auth
+  labels:
+    name: staging-auth
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging-networking
+  labels:
+    name: staging-networking
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging-cert-manager
+  labels:
+    name: staging-cert-manager
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging-observability
+  labels:
+    name: staging-observability
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging-platform
+  labels:
+    name: staging-platform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging-secrets
+  labels:
+    name: staging-secrets
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging-apps
+  labels:
+    name: staging-apps
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging-db
+  labels:
+    name: staging-db
