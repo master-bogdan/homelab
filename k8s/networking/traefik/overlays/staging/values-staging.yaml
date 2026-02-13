@@ -16,7 +16,6 @@ ports:
 providers:
   kubernetesGateway:
     enabled: true
-    experimentalChannel: true
 
   kubernetesIngress:
     enabled: false

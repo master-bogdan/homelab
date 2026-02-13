@@ -322,7 +322,8 @@ endef
 	deploy-observability delete-observability validate-observability \
 	deploy-databases delete-databases validate-databases \
 	validate-all clean-charts \
-	deploy-all delete-all
+	deploy-all delete-all \
+	update-minikube-ip minikube-tunnel
 
 # ============================
 # Help
@@ -374,6 +375,10 @@ help:
 	@echo "🎯 High-level"
 	@echo "  deploy-all          ENV=dev|prod   # Deploy full stack"
 	@echo "  delete-all          ENV=dev|prod   # Delete full stack"
+	@echo ""
+	@echo "🧰 Minikube"
+	@echo "  update-minikube-ip  ENV=staging    # Rewrite staging *.sslip.io to current minikube IP"
+	@echo "  minikube-tunnel     ENV=staging    # Expose Traefik LoadBalancer on localhost network (keep running)"
 
 apps-list:
 	@echo "$(APPS)"
@@ -697,3 +702,7 @@ delete-all: delete-apps delete-observability delete-platform delete-databases de
 # ---- Minikube Helpers ----
 update-minikube-ip:
 	@ENV=$(ENV) PROFILE=$(MINIKUBE_PROFILE) "$(SCRIPTS_DIR)/update-minikube-ip.sh"
+
+minikube-tunnel:
+	@echo "🚇 Starting minikube tunnel for profile $(MINIKUBE_PROFILE)"
+	@minikube tunnel --profile "$(MINIKUBE_PROFILE)"

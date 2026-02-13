@@ -1,7 +1,7 @@
 # Staging on Minikube (homelab-staging)
 
 This guide brings up the **staging** environment on Minikube with **prod-like configs** and **HTTPS**.
-Staging uses Vault + External Secrets (no hardcoded secrets) and HA Vault in raft mode.
+Staging uses Vault + External Secrets (no hardcoded secrets) with a single Vault replica.
 
 ## Prereqs
 
@@ -55,33 +55,35 @@ make deploy-networking ENV=staging
 
 This installs Gateway API, Traefik, cert-manager, and the gateway routes.
 
-## 4) Deploy secrets stack (Vault + External Secrets)
+## 4) Start reverse proxy exposure in Minikube
+
+Staging uses Traefik Service type `LoadBalancer`. On Minikube, run tunnel so Gateway traffic is reachable on ports `80/443`.
+
+In a separate terminal (keep it running):
+
+```bash
+make minikube-tunnel ENV=staging MINIKUBE_PROFILE=homelab-staging
+```
+
+Quick check:
+
+```bash
+kubectl -n staging-networking get svc traefik-staging
+```
+
+The `EXTERNAL-IP` should be populated (not `<pending>`).
+
+## 5) Deploy secrets stack (Vault + External Secrets)
 
 ```bash
 make deploy-secrets ENV=staging
 ```
 
-### Vault setup (UI + join nodes)
+### Vault setup (UI)
 
 1. Open `https://vault-setup.apps.<IP_DASH>.sslip.io`.
-2. In UI choose `Create a new Raft cluster`, set shares/threshold (recommended `5` / `3`), save unseal keys + root token, and unseal `vault-0`.
-3. Join follower nodes:
-
-```bash
-NS=staging-secrets
-kubectl -n $NS exec -it vault-1 -- sh -c 'VAULT_ADDR=http://127.0.0.1:8200 vault operator raft join http://vault-0.vault-internal:8200'
-kubectl -n $NS exec -it vault-2 -- sh -c 'VAULT_ADDR=http://127.0.0.1:8200 vault operator raft join http://vault-0.vault-internal:8200'
-```
-
-4. Unseal `vault-1` and `vault-2` with the same unseal keys.
-5. Verify cluster:
-
-```bash
-kubectl -n $NS exec -it vault-0 -- sh -c 'VAULT_ADDR=http://127.0.0.1:8200 vault operator raft list-peers'
-kubectl -n $NS get pods -l app.kubernetes.io/name=vault
-```
-
-6. In Vault UI:
+2. In UI initialize Vault, set shares/threshold (recommended `5` / `3`), save unseal keys + root token, and unseal the single Vault pod.
+3. In Vault UI:
    - Enable `KV` at path `kv` (version `v2`).
    - Enable auth method `Kubernetes` at path `kubernetes`.
    - Configure `kubernetes` auth with:
@@ -97,7 +99,7 @@ kubectl -n $NS get pods -l app.kubernetes.io/name=vault
        ```bash
        kubectl -n staging-secrets create token external-secrets
        ```
-7. In UI create ACL policy `homelab-staging`:
+4. In UI create ACL policy `homelab-staging`:
 
 ```hcl
 path "kv/data/staging/*" {
@@ -108,12 +110,12 @@ path "kv/metadata/staging/*" {
 }
 ```
 
-8. In UI create Kubernetes role `homelab-staging`:
+5. In UI create Kubernetes role `homelab-staging`:
    - `bound_service_account_names`: `external-secrets`
    - `bound_service_account_namespaces`: `staging-secrets`
    - `token_policies`: `homelab-staging`
    - `ttl`: `1h`
-9. In UI create KV v2 secrets under `kv/staging/*` (plain strings, no base64).
+6. In UI create KV v2 secrets under `kv/staging/*` (plain strings, no base64).
 
 Paths and keys required:
 
@@ -167,7 +169,7 @@ Paths and keys required:
 - `redis_addr`
 - `redis_password`
 
-## 5) Deploy core stacks
+## 6) Deploy core stacks
 
 ```bash
 make deploy-auth ENV=staging
@@ -183,7 +185,7 @@ Optional: deploy static UI apps
 make deploy-ui-all ENV=staging
 ```
 
-## 6) Verify
+## 7) Verify
 
 ```bash
 kubectl get pods -A
