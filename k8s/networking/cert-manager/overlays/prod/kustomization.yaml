@@ -3,10 +3,6 @@ kind: Kustomization
 
 resources:
   - ../../base
-  - clusterissuer-selfsigned.yaml
-  - certificate-ca.yaml
-  - clusterissuer-homelab.yaml
-  - certificate-gateway.yaml
 
 helmCharts:
   - name: cert-manager
@@ -15,3 +11,4 @@ helmCharts:
     releaseName: cert-manager
     namespace: prod-cert-manager
     includeCRDs: true
+    valuesFile: values-prod.yaml

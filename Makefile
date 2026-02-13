@@ -50,6 +50,7 @@ NETWORKING_DIR        := $(KUBERNETES_DIR)/networking
 TRAEFIK_DIR           := $(NETWORKING_DIR)/traefik
 CERT_MANAGER_DIR      := $(NETWORKING_DIR)/cert-manager
 GATEWAY_DIR           := $(NETWORKING_DIR)/gateway
+CERTIFICATES_DIR      := $(NETWORKING_DIR)/certificates
 DATABASES_DIR         := $(KUBERNETES_DIR)/databases
 REDIS_DIR             := $(DATABASES_DIR)/redis
 POSTGRESQL_DIR        := $(DATABASES_DIR)/postgresql
@@ -58,6 +59,7 @@ AUTH_DIR              := $(KUBERNETES_DIR)/auth
 SECRETS_DIR           := $(KUBERNETES_DIR)/secrets
 AUTHENTIK_DIR         := $(AUTH_DIR)/authentik
 EXTERNAL_SECRETS_DIR  := $(SECRETS_DIR)/external-secrets
+SECRET_STORES_DIR     := $(SECRETS_DIR)/secret-stores
 VAULT_DIR             := $(SECRETS_DIR)/vault
 N8N_DIR               := $(PLATFORM_DIR)/n8n
 SEAWEEDFS_DIR          := $(PLATFORM_DIR)/seaweedfs
@@ -69,11 +71,12 @@ OPENSEARCH_DIR        := $(OBSERVABILITY_DIR)/opensearch
 OPENSEARCH_DASH_DIR   := $(OBSERVABILITY_DIR)/opensearch-dashboards
 
 # ---- Layer Groups ----
-NETWORKING_DIRS       := $(GATEWAY_DIR)
-NETWORKING_HELM_DIRS  := $(TRAEFIK_DIR) $(CERT_MANAGER_DIR)
+NETWORKING_DIRS       := $(CERTIFICATES_DIR) $(GATEWAY_DIR)
+NETWORKING_HELM_DIRS  := $(CERT_MANAGER_DIR) $(TRAEFIK_DIR)
 AUTH_HELM_DIRS        := $(AUTHENTIK_DIR)
 PLATFORM_HELM_DIRS    := $(AUTHENTIK_DIR) $(N8N_DIR) $(SEAWEEDFS_DIR)
 SECRETS_HELM_DIRS     := $(VAULT_DIR) $(EXTERNAL_SECRETS_DIR)
+SECRETS_DIRS          := $(SECRET_STORES_DIR)
 OBS_HELM_DIRS         := $(FLUENTBIT_DIR) $(PROMETHEUS_DIR) $(GRAFANA_DIR) $(OPENSEARCH_DIR) $(OPENSEARCH_DASH_DIR)
 OBS_HELM_DELETE_DIRS  := $(OPENSEARCH_DASH_DIR) $(OPENSEARCH_DIR) $(GRAFANA_DIR) $(PROMETHEUS_DIR) $(FLUENTBIT_DIR)
 DATABASE_DIRS         := $(REDIS_DIR) $(POSTGRESQL_DIR)
@@ -475,6 +478,23 @@ validate-namespaces:
 # ---- Networking ----
 deploy-networking: deploy-namespaces
 	$(call k8s_apply_helm_list,$(NETWORKING_HELM_DIRS))
+	@if [ -d "$(CERTIFICATES_DIR)/overlays/$(ENV)" ]; then \
+		echo "⏳ Waiting for cert-manager CRDs to become Established..."; \
+		$(KUBECTL) wait --for=condition=Established --timeout=180s crd/certificates.cert-manager.io; \
+		$(KUBECTL) wait --for=condition=Established --timeout=180s crd/clusterissuers.cert-manager.io; \
+		echo "⏳ Waiting for cert-manager API discovery..."; \
+		for i in $$(seq 1 45); do \
+			if $(KUBECTL) api-resources --api-group=cert-manager.io 2>/dev/null | grep -q '^certificates[[:space:]]'; then \
+				echo "✅ cert-manager API ready"; \
+				break; \
+			fi; \
+			if [ "$$i" -eq 45 ]; then \
+				echo "❌ cert-manager API (cert-manager.io) did not become discoverable in time"; \
+				exit 1; \
+			fi; \
+			sleep 2; \
+		done; \
+	fi
 	$(call k8s_apply_list,$(NETWORKING_DIRS))
 	@echo "✅ Networking deployed"
 
@@ -484,19 +504,38 @@ delete-networking:
 
 validate-networking:
 	$(call k8s_dry_run_helm_list,$(NETWORKING_HELM_DIRS))
-	@$(KUBECTL) kustomize "$(GATEWAY_DIR)/$(if $(wildcard $(GATEWAY_DIR)/overlays/$(ENV)),overlays/$(ENV),$(if $(ENV_FALLBACK),$(if $(wildcard $(GATEWAY_DIR)/overlays/$(ENV_FALLBACK)),overlays/$(ENV_FALLBACK),base),base))" >/dev/null
+	$(call k8s_dry_run_list,$(NETWORKING_DIRS))
 	@echo "✅ Networking validated"
 
 # ---- Secrets (External Secrets Operator) ----
 deploy-secrets: deploy-namespaces
 	$(call k8s_apply_helm_list,$(SECRETS_HELM_DIRS))
+	@if [ -d "$(SECRET_STORES_DIR)/overlays/$(ENV)" ]; then \
+		echo "⏳ Waiting for External Secrets CRDs to become Established..."; \
+		$(KUBECTL) wait --for=condition=Established --timeout=180s crd/clustersecretstores.external-secrets.io; \
+		echo "⏳ Waiting for External Secrets API discovery..."; \
+		for i in $$(seq 1 45); do \
+			if $(KUBECTL) api-resources --api-group=external-secrets.io 2>/dev/null | grep -q '^clustersecretstores[[:space:]]'; then \
+				echo "✅ external-secrets API ready"; \
+				break; \
+			fi; \
+			if [ "$$i" -eq 45 ]; then \
+				echo "❌ external-secrets API (external-secrets.io) did not become discoverable in time"; \
+				exit 1; \
+			fi; \
+			sleep 2; \
+		done; \
+	fi
+	$(call k8s_apply_list,$(SECRETS_DIRS))
 	@echo "✅ Secrets deployed"
 
 delete-secrets:
+	$(call k8s_delete_list,$(SECRETS_DIRS))
 	$(call k8s_delete_helm_list,$(SECRETS_HELM_DIRS))
 
 validate-secrets:
 	$(call k8s_dry_run_helm_list,$(SECRETS_HELM_DIRS))
+	$(call k8s_dry_run_list,$(SECRETS_DIRS))
 	@echo "✅ Secrets validated"
 
 # ---- Auth ----

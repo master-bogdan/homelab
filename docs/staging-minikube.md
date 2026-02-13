@@ -61,80 +61,59 @@ This installs Gateway API, Traefik, cert-manager, and the gateway routes.
 make deploy-secrets ENV=staging
 ```
 
-### 4a) Initialize and unseal Vault (HA)
+### Vault setup (UI + join nodes)
 
-Staging uses HA raft. Initialize **once** on `vault-0`, then unseal **each** pod with
-the required number of unseal keys (default: 3 of 5).
+1. Open `https://vault-setup.apps.<IP_DASH>.sslip.io`.
+2. In UI choose `Create a new Raft cluster`, set shares/threshold (recommended `5` / `3`), save unseal keys + root token, and unseal `vault-0`.
+3. Join follower nodes:
 
 ```bash
 NS=staging-secrets
-kubectl -n $NS get pods
-
-kubectl -n $NS exec -it vault-0 -- vault operator init
-
-# Unseal vault-0 with 3 different keys:
-kubectl -n $NS exec -it vault-0 -- vault operator unseal <unseal-key-1>
-kubectl -n $NS exec -it vault-0 -- vault operator unseal <unseal-key-2>
-kubectl -n $NS exec -it vault-0 -- vault operator unseal <unseal-key-3>
-
-# Repeat for vault-1 and vault-2:
-kubectl -n $NS exec -it vault-1 -- vault operator unseal <unseal-key-1>
-kubectl -n $NS exec -it vault-1 -- vault operator unseal <unseal-key-2>
-kubectl -n $NS exec -it vault-1 -- vault operator unseal <unseal-key-3>
-
-kubectl -n $NS exec -it vault-2 -- vault operator unseal <unseal-key-1>
-kubectl -n $NS exec -it vault-2 -- vault operator unseal <unseal-key-2>
-kubectl -n $NS exec -it vault-2 -- vault operator unseal <unseal-key-3>
-
-kubectl -n $NS exec -it vault-0 -- vault login <root-token>
+kubectl -n $NS exec -it vault-1 -- sh -c 'VAULT_ADDR=http://127.0.0.1:8200 vault operator raft join http://vault-0.vault-internal:8200'
+kubectl -n $NS exec -it vault-2 -- sh -c 'VAULT_ADDR=http://127.0.0.1:8200 vault operator raft join http://vault-0.vault-internal:8200'
 ```
 
-### 4b) Enable KV v2 + Kubernetes auth
+4. Unseal `vault-1` and `vault-2` with the same unseal keys.
+5. Verify cluster:
 
 ```bash
-kubectl -n $NS exec -it vault-0 -- vault secrets enable -path=kv kv-v2
-kubectl -n $NS exec -it vault-0 -- vault auth enable kubernetes
+kubectl -n $NS exec -it vault-0 -- sh -c 'VAULT_ADDR=http://127.0.0.1:8200 vault operator raft list-peers'
+kubectl -n $NS get pods -l app.kubernetes.io/name=vault
 ```
 
-### 4c) Configure Kubernetes auth for External Secrets
+6. In Vault UI:
+   - Enable `KV` at path `kv` (version `v2`).
+   - Enable auth method `Kubernetes` at path `kubernetes`.
+   - Configure `kubernetes` auth with:
+     - `Kubernetes host`:
+       ```bash
+       kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.server}'; echo
+       ```
+     - `Kubernetes CA Certificate`:
+       ```bash
+       kubectl -n staging-secrets get configmap kube-root-ca.crt -o jsonpath='{.data.ca\.crt}'; echo
+       ```
+     - `Token Reviewer JWT`:
+       ```bash
+       kubectl -n staging-secrets create token external-secrets
+       ```
+7. In UI create ACL policy `homelab-staging`:
 
-```bash
-K8S_HOST=$(kubectl config view --raw --minify --output 'jsonpath={.clusters[0].cluster.server}')
-kubectl -n $NS create token external-secrets > /tmp/es.jwt
-kubectl config view --raw --minify --output 'jsonpath={.clusters[0].cluster.certificate-authority-data}' \
-  | base64 -d > /tmp/ca.crt
-
-kubectl -n $NS exec -i vault-0 -- vault write auth/kubernetes/config \
-  token_reviewer_jwt=@/tmp/es.jwt \
-  kubernetes_host="$K8S_HOST" \
-  kubernetes_ca_cert=@/tmp/ca.crt
-```
-
-### 4d) Create policy + role for staging
-
-```bash
-ENV=staging
-kubectl -n $NS exec -i vault-0 -- vault policy write homelab-$ENV - <<EOF
-path "kv/data/$ENV/*" {
+```hcl
+path "kv/data/staging/*" {
   capabilities = ["read"]
 }
-EOF
-
-kubectl -n $NS exec -i vault-0 -- vault write auth/kubernetes/role/homelab-$ENV \
-  bound_service_account_names=external-secrets \
-  bound_service_account_namespaces=$NS \
-  policies=homelab-$ENV \
-  ttl=1h
+path "kv/metadata/staging/*" {
+  capabilities = ["read", "list"]
+}
 ```
 
-### 4e) Add secrets in the Vault UI (recommended)
-
-Open the Vault UI and create KV v2 secrets under `kv/staging/*`.
-
-1) Open the UI: `https://vault.apps.<IP_DASH>.sslip.io`
-2) Login with the **root token** from `vault operator init`.
-3) Go to **Secrets Engines** → ensure **KV v2** is enabled at path `kv`.
-4) Create the following secrets (plain strings; no base64).
+8. In UI create Kubernetes role `homelab-staging`:
+   - `bound_service_account_names`: `external-secrets`
+   - `bound_service_account_namespaces`: `staging-secrets`
+   - `token_policies`: `homelab-staging`
+   - `ttl`: `1h`
+9. In UI create KV v2 secrets under `kv/staging/*` (plain strings, no base64).
 
 Paths and keys required:
 
