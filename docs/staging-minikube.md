@@ -79,14 +79,46 @@ The `EXTERNAL-IP` should be populated (not `<pending>`).
 make deploy-secrets ENV=staging
 ```
 
-### Vault setup (UI)
+### Vault setup (UI, click-by-click)
 
-1. Open `https://vault-setup.apps.<IP_DASH>.sslip.io`.
-2. In UI initialize Vault, set shares/threshold (recommended `5` / `3`), save unseal keys + root token, and unseal the single Vault pod.
-3. In Vault UI:
-   - Enable `KV` at path `kv` (version `v2`).
-   - Enable auth method `Kubernetes` at path `kubernetes`.
-   - Configure `kubernetes` auth with:
+1. Open Vault setup UI:
+   - URL: `https://vault-setup.apps.<IP_DASH>.sslip.io/ui/`
+
+2. Initialize Vault:
+   - Screen: `Let's set up the initial set of root keys`
+   - `Key shares`: `5`
+   - `Key threshold`: `3`
+   - Click `Initialize`
+   - Save all generated:
+     - `Unseal Key 1..5`
+     - `Initial Root Token`
+
+3. Unseal Vault:
+   - Screen: `Unseal Vault`
+   - Paste 3 different unseal keys (one by one), click `Unseal` after each.
+   - When unsealed, login screen appears.
+   - Login method: `Token`
+   - Paste `Initial Root Token` and sign in.
+
+4. Enable KV secrets engine:
+   - Left menu: `Secrets Engines`
+   - Click `Enable new engine`
+   - Engine: `KV`
+   - `Path`: `kv`
+   - `Version`: `2`
+   - Click `Enable Engine`
+
+5. Enable Kubernetes auth method:
+   - Left menu: `Access`
+   - Tab: `Auth Methods`
+   - Click `Enable new method`
+   - Method: `Kubernetes`
+   - `Path`: `kubernetes`
+   - Click `Enable Method`
+
+6. Configure Kubernetes auth method:
+   - Open `Access` -> `Auth Methods` -> `kubernetes` -> `Configure`
+   - Fill fields:
      - `Kubernetes host`:
        ```bash
        kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.server}'; echo
@@ -99,7 +131,13 @@ make deploy-secrets ENV=staging
        ```bash
        kubectl -n staging-secrets create token external-secrets
        ```
-4. In UI create ACL policy `homelab-staging`:
+   - Click `Save`
+
+7. Create policy for External Secrets:
+   - Left menu: `Policies`
+   - Click `Create ACL policy`
+   - Name: `homelab-staging`
+   - Paste policy:
 
 ```hcl
 path "kv/data/staging/*" {
@@ -110,12 +148,31 @@ path "kv/metadata/staging/*" {
 }
 ```
 
-5. In UI create Kubernetes role `homelab-staging`:
-   - `bound_service_account_names`: `external-secrets`
-   - `bound_service_account_namespaces`: `staging-secrets`
-   - `token_policies`: `homelab-staging`
-   - `ttl`: `1h`
-6. In UI create KV v2 secrets under `kv/staging/*` (plain strings, no base64).
+   - Click `Create policy`
+
+8. Create Kubernetes auth role:
+   - Left menu: `Access` -> `Auth Methods` -> `kubernetes`
+   - Tab: `Roles`
+   - Click `Create role`
+   - `Role Name`: `homelab-staging`
+   - `Bound service account names`: `external-secrets`
+   - `Bound service account namespaces`: `staging-secrets`
+   - `Token policies`: `homelab-staging`
+   - `TTL`: `1h`
+   - Click `Create`
+
+9. Create secrets in UI (`kv/staging/*`):
+   - Left menu: `Secrets Engines` -> `kv`
+   - Click `Create secret`
+   - For each path below, create a secret and add listed keys as plain string values:
+     - `staging/authentik`
+     - `staging/n8n`
+     - `staging/grafana`
+     - `staging/opensearch`
+     - `staging/opensearch-dashboards`
+     - `staging/fluent-bit`
+     - `staging/ephermal-notes-api`
+   - Click `Save` for each secret.
 
 Paths and keys required:
 
