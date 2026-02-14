@@ -1,0 +1,12 @@
+- op: replace
+  path: /spec/from
+  value:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: dev-observability
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: dev-platform
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: dev-secrets

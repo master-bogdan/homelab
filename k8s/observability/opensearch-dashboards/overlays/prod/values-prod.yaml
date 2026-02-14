@@ -1,7 +1,7 @@
 fullnameOverride: opensearch-dashboards-prod
 
 opensearchHosts:
-  - "https://opensearch.observability.svc.cluster.local:9200"
+  - "https://opensearch-cluster-master.prod-observability.svc.cluster.local:9200"
 
 opensearchUsername: "${OPENSEARCH_DASHBOARDS_USERNAME}"
 opensearchPassword: "${OPENSEARCH_DASHBOARDS_PASSWORD}"
@@ -17,9 +17,37 @@ extraEnvs:
       secretKeyRef:
         name: opensearch-dashboards-auth-prod
         key: password
+  - name: OPENSEARCH_DASHBOARDS_OIDC_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-oidc-prod
+        key: client_id
+  - name: OPENSEARCH_DASHBOARDS_OIDC_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-oidc-prod
+        key: client_secret
 
 opensearchSecurity:
   enabled: true
+
+config:
+  opensearch_dashboards.yml: |
+    opensearch.hosts: ["https://opensearch-cluster-master.prod-observability.svc.cluster.local:9200"]
+    opensearch.username: "${OPENSEARCH_DASHBOARDS_USERNAME}"
+    opensearch.password: "${OPENSEARCH_DASHBOARDS_PASSWORD}"
+    opensearch.ssl.verificationMode: none
+
+    opensearch.requestHeadersAllowlist: ["Authorization", "securitytenant"]
+
+    opensearch_security.auth.type: "openid"
+    opensearch_security.openid.connect_url: "https://auth.example.invalid/application/o/opensearch/.well-known/openid-configuration"
+    opensearch_security.openid.client_id: "${OPENSEARCH_DASHBOARDS_OIDC_CLIENT_ID}"
+    opensearch_security.openid.client_secret: "${OPENSEARCH_DASHBOARDS_OIDC_CLIENT_SECRET}"
+    opensearch_security.openid.scope: "openid profile email"
+    opensearch_security.openid.base_redirect_url: "https://opensearch.example.invalid"
+
+    opensearch_security.cookie.secure: true
 
 service:
   type: ClusterIP
@@ -35,3 +63,30 @@ resources:
 
 ingress:
   enabled: false
+
+startupProbe:
+  tcpSocket:
+    port: 5601
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+  successThreshold: 1
+  initialDelaySeconds: 60
+
+livenessProbe:
+  tcpSocket:
+    port: 5601
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 10
+  successThreshold: 1
+  initialDelaySeconds: 60
+
+readinessProbe:
+  tcpSocket:
+    port: 5601
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 10
+  successThreshold: 1
+  initialDelaySeconds: 30

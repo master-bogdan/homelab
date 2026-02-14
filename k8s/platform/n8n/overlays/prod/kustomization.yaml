@@ -1,15 +1,22 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: platform
-
-resources: []
+namespace: prod-platform
+resources:
+  - ../../base
+  - external-secret.yaml
 
 helmCharts:
   - name: n8n
     repo: https://community-charts.github.io/helm-charts
     version: "1.16.10"
     releaseName: n8n
-    namespace: platform
+    namespace: prod-platform
     includeCRDs: true
     valuesFile: values-prod.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-n8n
+    path: httproute-patch.yaml

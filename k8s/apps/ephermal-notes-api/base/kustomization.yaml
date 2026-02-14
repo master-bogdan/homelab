@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
   - deploy.yaml
   - service.yaml
-  - secrets.yaml
+  - http-ephermal-notes-api.yaml

@@ -1,0 +1,92 @@
+fullnameOverride: opensearch-dashboards-staging
+
+opensearchHosts:
+  - "https://opensearch-cluster-master.staging-observability.svc.cluster.local:9200"
+
+opensearchUsername: "${OPENSEARCH_DASHBOARDS_USERNAME}"
+opensearchPassword: "${OPENSEARCH_DASHBOARDS_PASSWORD}"
+
+extraEnvs:
+  - name: OPENSEARCH_DASHBOARDS_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-auth-staging
+        key: username
+  - name: OPENSEARCH_DASHBOARDS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-auth-staging
+        key: password
+  - name: OPENSEARCH_DASHBOARDS_OIDC_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-oidc-staging
+        key: client_id
+  - name: OPENSEARCH_DASHBOARDS_OIDC_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-dashboards-oidc-staging
+        key: client_secret
+
+opensearchSecurity:
+  enabled: true
+
+config:
+  opensearch_dashboards.yml: |
+    opensearch.hosts: ["https://opensearch-cluster-master.staging-observability.svc.cluster.local:9200"]
+    opensearch.username: "${OPENSEARCH_DASHBOARDS_USERNAME}"
+    opensearch.password: "${OPENSEARCH_DASHBOARDS_PASSWORD}"
+    opensearch.ssl.verificationMode: none
+
+    opensearch.requestHeadersAllowlist: ["Authorization", "securitytenant"]
+
+    opensearch_security.auth.type: "openid"
+    opensearch_security.openid.connect_url: "https://auth.apps.192-168-76-2.sslip.io/application/o/opensearch/.well-known/openid-configuration"
+    opensearch_security.openid.client_id: "${OPENSEARCH_DASHBOARDS_OIDC_CLIENT_ID}"
+    opensearch_security.openid.client_secret: "${OPENSEARCH_DASHBOARDS_OIDC_CLIENT_SECRET}"
+    opensearch_security.openid.scope: "openid profile email"
+    opensearch_security.openid.base_redirect_url: "https://opensearch.apps.192-168-76-2.sslip.io"
+
+    opensearch_security.cookie.secure: true
+
+service:
+  type: ClusterIP
+  port: 5601
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "1Gi"
+
+ingress:
+  enabled: false
+
+startupProbe:
+  tcpSocket:
+    port: 5601
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+  successThreshold: 1
+  initialDelaySeconds: 60
+
+livenessProbe:
+  tcpSocket:
+    port: 5601
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 10
+  successThreshold: 1
+  initialDelaySeconds: 60
+
+readinessProbe:
+  tcpSocket:
+    port: 5601
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 10
+  successThreshold: 1
+  initialDelaySeconds: 30

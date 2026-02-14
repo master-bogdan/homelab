@@ -1,10 +1,14 @@
-image:
-  repository: n8nio/n8n
-  tag: "1.0.0"
-  pullPolicy: IfNotPresent
+# --- Basic image & service ---
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: false
+  runAsNonRoot: false
+  runAsUser: 0
+  runAsGroup: 0
 
 service:
-  enabled: true
   type: ClusterIP
   port: 5678
   name: http
@@ -12,36 +16,21 @@ service:
 ingress:
   enabled: false
 
-db:
-  type: postgresdb
+podSecurityContext:
+  fsGroup: 0
+  fsGroupChangePolicy: OnRootMismatch
 
-externalPostgresql:
-  host: ""
-  port: 5432
-  database: ""
-  username: ""
-  existingSecret: ""
+image:
+  repository: n8nio/n8n
+  pullPolicy: IfNotPresent
 
-externalRedis:
-  host: ""
-  port: 6379
-  username: ""
-  existingSecret: ""
-
-worker:
-  mode: queue
-  count: 2
-  concurrency: 10
-
-webhook:
-  mode: queue
-  count: 2
-  url: ""
-
-encryptionKey: ""
-existingEncryptionKeySecret: ""  
+nodes:
+  builtin:
+    enabled: true
 
 main:
+  extraEnvVars:
+    N8N_SECURE_COOKIE: "true"
   persistence:
     enabled: true
     volumeName: "n8n-main-data"
@@ -56,6 +45,39 @@ main:
     limits:
       cpu: 1000m
       memory: 1Gi
+
+db:
+  type: postgresdb
+
+externalPostgresql:
+  host: ""
+  port: 5432
+  database: ""
+  username: ""
+  existingSecret: "n8n-postgres-prod"
+
+externalRedis:
+  host: ""
+  port: 6379
+  username: "default"
+  existingSecret: "n8n-redis-prod"
+
+worker:
+  mode: queue
+  count: 2
+  concurrency: 10
+  extraEnvVars:
+    N8N_SECURE_COOKIE: "true"
+
+webhook:
+  mode: queue
+  count: 2
+  url: "https://n8n.example.invalid"
+  extraEnvVars:
+    N8N_SECURE_COOKIE: "true"
+
+encryptionKey: ""
+existingEncryptionKeySecret: "n8n-encryption-prod"
 
 diagnostics:
   enabled: false

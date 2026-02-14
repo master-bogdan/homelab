@@ -1,15 +1,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: observability
-
-resources: []
+namespace: prod-observability
+resources:
+  - external-secret.yaml
 
 helmCharts:
   - name: opensearch
     repo: https://opensearch-project.github.io/helm-charts/
-    version: "2.30.1"
+    version: "3.4.0"
     releaseName: opensearch
-    namespace: observability
+    namespace: prod-observability
     includeCRDs: true
     valuesFile: values-prod.yaml

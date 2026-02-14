@@ -1,0 +1,19 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-routes-to-shared-outpost
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: observability
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: platform
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: secrets
+  to:
+    - group: ""
+      kind: Service
+      name: ak-outpost-shared-outpost

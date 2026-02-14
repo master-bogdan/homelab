@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: staging-platform
+resources:
+  - ../../base
+
+  - external-secret.yaml
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-n8n
+    path: httproute-patch.yaml
+
+helmCharts:
+  - name: n8n
+    repo: https://community-charts.github.io/helm-charts
+    version: "1.16.10"
+    releaseName: n8n
+    namespace: staging-platform
+    includeCRDs: true
+    valuesFile: values-staging.yaml

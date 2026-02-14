@@ -1,0 +1,125 @@
+singleNode: true
+replicas: 1
+
+clusterName: "homelab-opensearch-staging"
+nodeGroup: "master"
+
+roles:
+  - master
+  - ingest
+  - data
+  - remote_cluster_client
+
+extraEnvs:
+  - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-admin-staging
+        key: password
+  - name: OPENSEARCH_OPENID_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-oidc-staging
+        key: client_id
+  - name: OPENSEARCH_OPENID_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: opensearch-oidc-staging
+        key: client_secret
+
+opensearchJavaOpts: "-Xms1g -Xmx1g"
+
+persistence:
+  enabled: true
+  size: 10Gi
+  accessModes:
+    - ReadWriteOnce
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+  limits:
+    cpu: "1"
+    memory: "2Gi"
+
+httpPort: 9200
+transportPort: 9300
+
+service:
+  type: ClusterIP
+
+securityConfig:
+  enabled: true
+  config:
+    dataComplete: false
+    data:
+      config.yml: |-
+        _meta:
+          type: "config"
+          config_version: 2
+        config:
+          dynamic:
+            http:
+              anonymous_auth_enabled: false
+            authc:
+              openid_auth_domain:
+                description: "Authenticate via OpenID Connect"
+                http_enabled: true
+                transport_enabled: true
+                order: 0
+                http_authenticator:
+                  type: openid
+                  challenge: false
+                  config:
+                    subject_key: sub
+                    roles_key: groups
+                    openid_connect_url: "https://auth.apps.192-168-76-2.sslip.io/application/o/opensearch/.well-known/openid-configuration"
+                    client_id: "${OPENSEARCH_OPENID_CLIENT_ID}"
+                    client_secret: "${OPENSEARCH_OPENID_CLIENT_SECRET}"
+                authentication_backend:
+                  type: noop
+              basic_internal_auth_domain:
+                description: "Authenticate via HTTP Basic"
+                http_enabled: true
+                transport_enabled: true
+                order: 1
+                http_authenticator:
+                  type: basic
+                  challenge: false
+                authentication_backend:
+                  type: internal
+      roles_mapping.yml: |-
+        _meta:
+          type: "rolesmapping"
+          config_version: 2
+        all_access:
+          reserved: false
+          backend_roles:
+            - "admin"
+            - "opensearch-admins"
+            - "authentik Admins"
+          description: "Authentik admins"
+        kibana_user:
+          reserved: false
+          backend_roles:
+            - "kibanauser"
+            - "opensearch-admins"
+            - "opensearch-users"
+            - "authentik Admins"
+          description: "Authentik users with Dashboards access"
+        kibana_server:
+          reserved: false
+          users:
+            - "kibanaserver"
+          description: "OpenSearch Dashboards server user"
+        readall:
+          reserved: false
+          backend_roles:
+            - "readall"
+          description: "Read-only role"
+        manage_snapshots:
+          reserved: false
+          backend_roles:
+            - "snapshotrestore"
+          description: "Snapshot management role"

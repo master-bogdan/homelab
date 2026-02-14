@@ -7,14 +7,27 @@ REGISTRY          ?= docker.io/masterbogdan0
 TAG               ?= latest
 ENV               ?= dev
 APP               ?=
+# Optional fallback overlay for mixed environments (e.g., staging -> prod)
+ENV_FALLBACK      ?= $(if $(filter staging,$(ENV)),prod,)
+MINIKUBE_PROFILE  ?= homelab-$(ENV)
 ROOT_DIR          := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+SCRIPTS_DIR       := $(ROOT_DIR)/scripts
 
 # ---- UI Static Site Config ----
 UI_NAME_PATTERN         ?= ui
 UI_BUILD_OUTPUT_DIRS    ?= out build dist
 UI_PUBLIC_BUCKET        ?= public
-SEAWEEDFS_NAMESPACE     ?= platform
-SEAWEED_PUBLIC_BASE     ?= http://storage.apps.192-168-58-2.sslip.io:30080
+SEAWEEDFS_NAMESPACE     ?= $(ENV)-platform
+SEAWEED_PUBLIC_BASE_DEV      ?= http://storage.apps.192-168-76-2.sslip.io:30080
+SEAWEED_PUBLIC_BASE_PROD     ?= https://storage.example.invalid
+SEAWEED_PUBLIC_BASE_STAGING ?= https://storage.apps.192-168-76-2.sslip.io
+ifeq ($(ENV),prod)
+SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_PROD)
+else ifeq ($(ENV),staging)
+SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_STAGING)
+else
+SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_DEV)
+endif
 SEAWEED_INTERNAL_BASE   ?= http://seaweedfs-s3.$(SEAWEEDFS_NAMESPACE).svc.cluster.local:8333
 SEAWEEDFS_MASTER_ADDR   ?= seaweedfs-master.$(SEAWEEDFS_NAMESPACE):9333
 SEAWEEDFS_FILER_ADDR    ?= seaweedfs-filer-client.$(SEAWEEDFS_NAMESPACE):8888
@@ -35,15 +48,19 @@ KUBERNETES_DIR        := $(ROOT_DIR)/k8s
 NAMESPACES_DIR        := $(KUBERNETES_DIR)/namespaces
 NETWORKING_DIR        := $(KUBERNETES_DIR)/networking
 TRAEFIK_DIR           := $(NETWORKING_DIR)/traefik
+CERT_MANAGER_DIR      := $(NETWORKING_DIR)/cert-manager
 GATEWAY_DIR           := $(NETWORKING_DIR)/gateway
+CERTIFICATES_DIR      := $(NETWORKING_DIR)/certificates
 DATABASES_DIR         := $(KUBERNETES_DIR)/databases
 REDIS_DIR             := $(DATABASES_DIR)/redis
 POSTGRESQL_DIR        := $(DATABASES_DIR)/postgresql
 PLATFORM_DIR          := $(KUBERNETES_DIR)/platform
 AUTH_DIR              := $(KUBERNETES_DIR)/auth
+SECRETS_DIR           := $(KUBERNETES_DIR)/secrets
 AUTHENTIK_DIR         := $(AUTH_DIR)/authentik
-AUTHENTIK_FWD_AUTH_DIR := $(AUTH_DIR)/forward-auth
-AUTH_REFERENCE_GRANT  := $(AUTH_DIR)/reference-grant.yaml
+EXTERNAL_SECRETS_DIR  := $(SECRETS_DIR)/external-secrets
+SECRET_STORES_DIR     := $(SECRETS_DIR)/secret-stores
+VAULT_DIR             := $(SECRETS_DIR)/vault
 N8N_DIR               := $(PLATFORM_DIR)/n8n
 SEAWEEDFS_DIR          := $(PLATFORM_DIR)/seaweedfs
 OBSERVABILITY_DIR     := $(KUBERNETES_DIR)/observability
@@ -53,9 +70,25 @@ PROMETHEUS_DIR        := $(OBSERVABILITY_DIR)/prometheus
 OPENSEARCH_DIR        := $(OBSERVABILITY_DIR)/opensearch
 OPENSEARCH_DASH_DIR   := $(OBSERVABILITY_DIR)/opensearch-dashboards
 
+# ---- Layer Groups ----
+NETWORKING_DIRS       := $(CERTIFICATES_DIR) $(GATEWAY_DIR)
+NETWORKING_HELM_DIRS  := $(CERT_MANAGER_DIR) $(TRAEFIK_DIR)
+AUTH_HELM_DIRS        := $(AUTHENTIK_DIR)
+PLATFORM_HELM_DIRS    := $(AUTHENTIK_DIR) $(N8N_DIR) $(SEAWEEDFS_DIR)
+SECRETS_HELM_DIRS     := $(VAULT_DIR) $(EXTERNAL_SECRETS_DIR)
+SECRETS_DIRS          := $(SECRET_STORES_DIR)
+OBS_HELM_DIRS         := $(FLUENTBIT_DIR) $(PROMETHEUS_DIR) $(GRAFANA_DIR) $(OPENSEARCH_DIR) $(OPENSEARCH_DASH_DIR)
+OBS_HELM_DELETE_DIRS  := $(OPENSEARCH_DASH_DIR) $(OPENSEARCH_DIR) $(GRAFANA_DIR) $(PROMETHEUS_DIR) $(FLUENTBIT_DIR)
+DATABASE_DIRS         := $(REDIS_DIR) $(POSTGRESQL_DIR)
+DATABASE_DELETE_DIRS  := $(POSTGRESQL_DIR) $(REDIS_DIR)
+
 # ---- Discovery ----
 APPS                  := $(notdir $(wildcard $(APPS_DIR)/*))
 KUBECTL               := kubectl
+export APPS_DIR KUBECTL UI_PUBLIC_BUCKET UI_BUILD_OUTPUT_DIRS SEAWEEDFS_NAMESPACE \
+	SEAWEED_PUBLIC_BASE SEAWEED_INTERNAL_BASE SEAWEEDFS_MASTER_ADDR SEAWEEDFS_FILER_ADDR \
+	SEAWEED_ANON_ACTIONS SEAWEED_UPLOAD_IMAGE SEAWEED_UPLOAD_SETUP_CMD SEAWEED_UPLOAD_POD_PREFIX \
+	SEAWEED_UPLOAD_WAIT SEAWEED_UPLOAD_CONNECT_TIMEOUT SEAWEED_UPLOAD_MAX_TIME APP
 
 # ============================
 # Helper Functions
@@ -87,26 +120,52 @@ $(shell \
 )
 endef
 
+# Require APP to be set
+define require_app
+	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
+endef
+
+# Guard for k8s manifests on APP
+define require_app_k8s
+	@if [ ! -d "$(KUBERNETES_DIR)/apps/$(APP)" ]; then \
+		echo "⚠️  No k8s manifests for $(APP)"; exit 0; \
+	fi
+endef
+
 # Generic function to iterate over apps with a target
 define for_each_app
-	@for app in $(APPS); do \
+	@set -e; for app in $(APPS); do \
 		APP="$$app" $(MAKE) --no-print-directory $(1); \
+	done
+endef
+
+# Generic function to iterate over apps with k8s manifests
+define for_each_k8s_app
+	@set -e; for app in $(APPS); do \
+		if [ -d "$(KUBERNETES_DIR)/apps/$$app" ]; then \
+			APP="$$app" $(MAKE) --no-print-directory $(1); \
+		fi; \
 	done
 endef
 
 # Generic function to iterate over UI apps with a target
 define for_each_ui_app
-	@for app in $(UI_APPS); do \
+	@set -e; for app in $(UI_APPS); do \
 		APP="$$app" $(MAKE) --no-print-directory $(1); \
 	done
 endef
 
 # Kustomize apply (prefer overlay, fallback to base)
 define k8s_apply_or_base
-	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🚀 Applying: $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) apply -k "$${ROOT}/overlays/$(ENV)"; \
+	set -e; ROOT="$(1)"; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🚀 Applying: $$OVERLAY"; \
+		$(KUBECTL) apply -k "$$OVERLAY"; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🚀 Applying: $$FALLBACK (fallback)"; \
+		$(KUBECTL) apply -k "$$FALLBACK"; \
 	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
 		echo "🚀 Applying: $${ROOT}"; \
 		$(KUBECTL) apply -k "$${ROOT}"; \
@@ -119,10 +178,15 @@ endef
 
 # Kustomize delete
 define k8s_delete_or_base
-	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🔥 Deleting: $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) delete -k "$${ROOT}/overlays/$(ENV)" --ignore-not-found; \
+	set -e; ROOT="$(1)"; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🔥 Deleting: $$OVERLAY"; \
+		$(KUBECTL) delete -k "$$OVERLAY" --ignore-not-found; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🔥 Deleting: $$FALLBACK (fallback)"; \
+		$(KUBECTL) delete -k "$$FALLBACK" --ignore-not-found; \
 	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
 		echo "🔥 Deleting: $${ROOT}"; \
 		$(KUBECTL) delete -k "$${ROOT}" --ignore-not-found; \
@@ -135,10 +199,15 @@ endef
 
 # Helm+Kustomize apply
 define k8s_apply_helm_or_base
-	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🚀 Applying (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) kustomize --enable-helm "$${ROOT}/overlays/$(ENV)" | $(KUBECTL) apply -f -; \
+	set -e; ROOT="$(1)"; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🚀 Applying (helm+kustomize): $$OVERLAY"; \
+		$(KUBECTL) kustomize --enable-helm "$$OVERLAY" | $(KUBECTL) apply -f -; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🚀 Applying (helm+kustomize): $$FALLBACK (fallback)"; \
+		$(KUBECTL) kustomize --enable-helm "$$FALLBACK" | $(KUBECTL) apply -f -; \
 	else \
 		echo "🚀 Applying (helm+kustomize): $${ROOT}/base"; \
 		$(KUBECTL) kustomize --enable-helm "$${ROOT}/base" | $(KUBECTL) apply -f -; \
@@ -147,10 +216,15 @@ endef
 
 # Helm+Kustomize delete
 define k8s_delete_helm_or_base
-	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🔥 Deleting (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) kustomize --enable-helm "$${ROOT}/overlays/$(ENV)" | $(KUBECTL) delete --ignore-not-found -f -; \
+	set -e; ROOT="$(1)"; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🔥 Deleting (helm+kustomize): $$OVERLAY"; \
+		$(KUBECTL) kustomize --enable-helm "$$OVERLAY" | $(KUBECTL) delete --ignore-not-found -f -; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🔥 Deleting (helm+kustomize): $$FALLBACK (fallback)"; \
+		$(KUBECTL) kustomize --enable-helm "$$FALLBACK" | $(KUBECTL) delete --ignore-not-found -f -; \
 	else \
 		echo "🔥 Deleting (helm+kustomize): $${ROOT}/base"; \
 		$(KUBECTL) kustomize --enable-helm "$${ROOT}/base" | $(KUBECTL) delete --ignore-not-found -f -; \
@@ -159,10 +233,15 @@ endef
 
 # Validate kustomize (dry-run)
 define k8s_dry_run_or_base
-	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🧪 Dry-run: $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) apply -k "$${ROOT}/overlays/$(ENV)" --dry-run=client --validate=false -o yaml >/dev/null; \
+	set -e; ROOT="$(1)"; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🧪 Dry-run: $$OVERLAY"; \
+		$(KUBECTL) apply -k "$$OVERLAY" --dry-run=client --validate=false -o yaml >/dev/null; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🧪 Dry-run: $$FALLBACK (fallback)"; \
+		$(KUBECTL) apply -k "$$FALLBACK" --dry-run=client --validate=false -o yaml >/dev/null; \
 	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
 		echo "🧪 Dry-run: $${ROOT}"; \
 		$(KUBECTL) apply -k "$${ROOT}" --dry-run=client --validate=false -o yaml >/dev/null; \
@@ -175,14 +254,55 @@ endef
 
 # Validate helm+kustomize (build-only)
 define k8s_dry_run_helm_or_base
-	@set -e; ROOT="$(1)"; \
-	if [ -d "$${ROOT}/overlays/$(ENV)" ]; then \
-		echo "🧪 Build-only (helm+kustomize): $${ROOT}/overlays/$(ENV)"; \
-		$(KUBECTL) kustomize --enable-helm "$${ROOT}/overlays/$(ENV)" >/dev/null; \
+	set -e; ROOT="$(1)"; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		echo "🧪 Build-only (helm+kustomize): $$OVERLAY"; \
+		$(KUBECTL) kustomize --enable-helm "$$OVERLAY" >/dev/null; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		echo "🧪 Build-only (helm+kustomize): $$FALLBACK (fallback)"; \
+		$(KUBECTL) kustomize --enable-helm "$$FALLBACK" >/dev/null; \
 	else \
 		echo "🧪 Build-only (helm+kustomize): $${ROOT}/base"; \
 		$(KUBECTL) kustomize --enable-helm "$${ROOT}/base" >/dev/null; \
 	fi
+endef
+
+define k8s_apply_list
+	@set -e; for dir in $(1); do \
+		$(call k8s_apply_or_base,$$dir); \
+	done
+endef
+
+define k8s_apply_helm_list
+	@set -e; for dir in $(1); do \
+		$(call k8s_apply_helm_or_base,$$dir); \
+	done
+endef
+
+define k8s_delete_list
+	@set -e; for dir in $(1); do \
+		$(call k8s_delete_or_base,$$dir); \
+	done
+endef
+
+define k8s_delete_helm_list
+	@set -e; for dir in $(1); do \
+		$(call k8s_delete_helm_or_base,$$dir); \
+	done
+endef
+
+define k8s_dry_run_list
+	@set -e; for dir in $(1); do \
+		$(call k8s_dry_run_or_base,$$dir); \
+	done
+endef
+
+define k8s_dry_run_helm_list
+	@set -e; for dir in $(1); do \
+		$(call k8s_dry_run_helm_or_base,$$dir); \
+	done
 endef
 
 # ============================
@@ -196,12 +316,14 @@ endef
 	deploy-namespaces delete-namespaces validate-namespaces \
 	deploy-app deploy-apps delete-app delete-apps validate-app validate-apps \
 	deploy-networking delete-networking validate-networking \
+	deploy-secrets delete-secrets validate-secrets \
 	deploy-auth delete-auth validate-auth \
 	deploy-platform delete-platform validate-platform \
 	deploy-observability delete-observability validate-observability \
 	deploy-databases delete-databases validate-databases \
 	validate-all clean-charts \
-	deploy-all delete-all
+	deploy-all delete-all \
+	update-minikube-ip minikube-tunnel
 
 # ============================
 # Help
@@ -232,8 +354,10 @@ help:
 	@echo "  deploy-ui-all                      # Build + upload all"
 	@echo ""
 	@echo "☸  Kubernetes (Layer-based)"
+	@echo "  ENV=staging uses overlays/staging when present, otherwise falls back to prod"
 	@echo "  deploy-namespaces   / delete-namespaces   / validate-namespaces"
 	@echo "  deploy-networking   / delete-networking   / validate-networking"
+	@echo "  deploy-secrets      / delete-secrets      / validate-secrets"
 	@echo "  deploy-auth         / delete-auth         / validate-auth"
 	@echo "  deploy-platform     / delete-platform     / validate-platform"
 	@echo "  deploy-observability / delete-observability / validate-observability"
@@ -251,6 +375,10 @@ help:
 	@echo "🎯 High-level"
 	@echo "  deploy-all          ENV=dev|prod   # Deploy full stack"
 	@echo "  delete-all          ENV=dev|prod   # Delete full stack"
+	@echo ""
+	@echo "🧰 Minikube"
+	@echo "  update-minikube-ip  ENV=staging    # Rewrite staging *.sslip.io to current minikube IP"
+	@echo "  minikube-tunnel     ENV=staging    # Expose Traefik LoadBalancer on localhost network (keep running)"
 
 apps-list:
 	@echo "$(APPS)"
@@ -262,14 +390,14 @@ ui-apps-list:
 # Docker Operations
 # ============================
 docker-build:
-	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
+	$(call require_app)
 	@DFILE="$(call resolve_dockerfile,$(APP))"; \
 	if [ -z "$$DFILE" ]; then echo "❌ No Dockerfile for $(APP)"; exit 1; fi; \
 	echo "🐳 Building $(REGISTRY)/$(APP):$(TAG)"; \
 	docker build -t "$(REGISTRY)/$(APP):$(TAG)" -f "$$DFILE" "$(APPS_DIR)/$(APP)"
 
 docker-push:
-	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
+	$(call require_app)
 	@echo "📤 Pushing $(REGISTRY)/$(APP):$(TAG)"; \
 	docker push "$(REGISTRY)/$(APP):$(TAG)"
 
@@ -293,14 +421,10 @@ docker-build-push-all:
 
 deploy-ui-bucket:
 	@echo "🪣 Ensuring bucket exists: $(UI_PUBLIC_BUCKET)"
-	@set -e; \
-	$(KUBECTL) -n "$(SEAWEEDFS_NAMESPACE)" exec -i statefulset/seaweedfs-master -- sh -c \
-		"echo \"s3.bucket.create --name $(UI_PUBLIC_BUCKET)\" | weed shell -master=\"$(SEAWEEDFS_MASTER_ADDR)\" -filer=\"$(SEAWEEDFS_FILER_ADDR)\"" || true; \
-	$(KUBECTL) -n "$(SEAWEEDFS_NAMESPACE)" exec -i statefulset/seaweedfs-master -- sh -c \
-		"echo \"s3.configure --user anonymous --buckets $(UI_PUBLIC_BUCKET) --actions $(SEAWEED_ANON_ACTIONS) --apply true\" | weed shell -master=\"$(SEAWEEDFS_MASTER_ADDR)\" -filer=\"$(SEAWEEDFS_FILER_ADDR)\"" || true
+	@$(SCRIPTS_DIR)/seaweedfs-ui-bucket.sh
 
 deploy-ui-build:
-	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
+	$(call require_app)
 	@APP_DIR="$(APPS_DIR)/$(APP)"; \
 	if [ ! -d "$$APP_DIR" ]; then echo "❌ $$APP_DIR not found"; exit 1; fi; \
 	if [ -z "$(call is_ui_app,$(APP))" ]; then \
@@ -320,75 +444,20 @@ deploy-ui-build-all:
 	@echo "✅ Built all UI apps"
 
 deploy-ui-upload:
-	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
-	@set -e; \
-	APP_DIR="$(APPS_DIR)/$(APP)"; \
-	if [ -z "$(call is_ui_app,$(APP))" ]; then \
+	$(call require_app)
+	@if [ -z "$(call is_ui_app,$(APP))" ]; then \
 		echo "❌ $(APP) is not a UI app"; exit 1; \
-	fi; \
-	OUT_DIR=""; \
-	for dir in $(UI_BUILD_OUTPUT_DIRS); do \
-		if [ -d "$$APP_DIR/$$dir" ]; then OUT_DIR="$$APP_DIR/$$dir"; break; fi; \
-	done; \
-	if [ -z "$$OUT_DIR" ]; then \
-		echo "❌ No build output dir found for $(APP)"; exit 1; \
-	fi; \
-	$(MAKE) --no-print-directory deploy-ui-bucket; \
-	NS="$(SEAWEEDFS_NAMESPACE)"; \
-	POD="$(SEAWEED_UPLOAD_POD_PREFIX)-$(APP)"; \
-	cleanup() { $(KUBECTL) -n "$$NS" delete pod "$$POD" --ignore-not-found >/dev/null; }; \
-	trap cleanup EXIT; \
-	cleanup; \
-	$(KUBECTL) -n "$$NS" run "$$POD" --image="$(SEAWEED_UPLOAD_IMAGE)" --restart=Never --command -- \
-		sh -c "$(SEAWEED_UPLOAD_SETUP_CMD) && sleep 3600"; \
-	$(KUBECTL) -n "$$NS" wait --for=condition=Ready pod/"$$POD" --timeout="$(SEAWEED_UPLOAD_WAIT)"; \
-	echo "📦 Uploading $$OUT_DIR -> $(SEAWEED_INTERNAL_BASE)/$(UI_PUBLIC_BUCKET)/$(APP) (in-cluster)"; \
-	OUT_BASE="$$(basename "$$OUT_DIR")"; \
-	$(KUBECTL) -n "$$NS" exec "$$POD" -- sh -c "mkdir -p /tmp/upload"; \
-	$(KUBECTL) -n "$$NS" cp "$$OUT_DIR" "$$POD:/tmp/upload"; \
-	$(KUBECTL) -n "$$NS" exec "$$POD" -- env \
-		SEAWEED_BASE="$(SEAWEED_INTERNAL_BASE)" \
-		BUCKET="$(UI_PUBLIC_BUCKET)" \
-		APP="$(APP)" \
-		UPLOAD_DIR="/tmp/upload/$$OUT_BASE" \
-		sh -c 'set -e; cd "$$UPLOAD_DIR" && find . -type f | while IFS= read -r f; do \
-			rel="$${f#./}"; \
-			url="$$SEAWEED_BASE/$$BUCKET/$$APP/$$rel"; \
-			content_type="application/octet-stream"; \
-			case "$$rel" in \
-				*.html) content_type="text/html; charset=utf-8" ;; \
-				*.css) content_type="text/css; charset=utf-8" ;; \
-				*.js|*.mjs) content_type="application/javascript; charset=utf-8" ;; \
-				*.json|*.map) content_type="application/json; charset=utf-8" ;; \
-				*.txt) content_type="text/plain; charset=utf-8" ;; \
-				*.svg) content_type="image/svg+xml" ;; \
-				*.png) content_type="image/png" ;; \
-				*.jpg|*.jpeg) content_type="image/jpeg" ;; \
-				*.gif) content_type="image/gif" ;; \
-				*.webp) content_type="image/webp" ;; \
-				*.ico) content_type="image/x-icon" ;; \
-				*.woff2) content_type="font/woff2" ;; \
-				*.woff) content_type="font/woff" ;; \
-				*.ttf) content_type="font/ttf" ;; \
-				*.otf) content_type="font/otf" ;; \
-				*.eot) content_type="application/vnd.ms-fontobject" ;; \
-				*.pdf) content_type="application/pdf" ;; \
-			esac; \
-			echo "  ↥ $$rel"; \
-			curl -sS --fail -X PUT -H "Expect:" -H "Content-Type: $$content_type" \
-				--connect-timeout "$(SEAWEED_UPLOAD_CONNECT_TIMEOUT)" \
-				--max-time "$(SEAWEED_UPLOAD_MAX_TIME)" \
-				--upload-file "$$f" "$$url" -o /dev/null; \
-		done'; \
-	cleanup; \
-	echo "✅ Uploaded $(APP)"
+	fi
+	@$(MAKE) --no-print-directory deploy-ui-bucket
+	@$(SCRIPTS_DIR)/seaweedfs-ui-upload.sh
+	@echo "✅ Uploaded $(APP)"
 
 deploy-ui-upload-all:
 	$(call for_each_ui_app,deploy-ui-upload)
 	@echo "✅ Uploaded all UI apps"
 
 deploy-ui-url:
-	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
+	$(call require_app)
 	@echo "$(SEAWEED_PUBLIC_BASE)/$(UI_PUBLIC_BUCKET)/$(APP)/index.html"
 
 deploy-ui: deploy-ui-build deploy-ui-upload
@@ -413,101 +482,137 @@ validate-namespaces:
 
 # ---- Networking ----
 deploy-networking: deploy-namespaces
-	$(call k8s_apply_helm_or_base,$(TRAEFIK_DIR))
-	$(call k8s_apply_or_base,$(GATEWAY_DIR))
+	$(call k8s_apply_helm_list,$(NETWORKING_HELM_DIRS))
+	@if [ -d "$(CERTIFICATES_DIR)/overlays/$(ENV)" ]; then \
+		echo "⏳ Waiting for cert-manager CRDs to become Established..."; \
+		$(KUBECTL) wait --for=condition=Established --timeout=180s crd/certificates.cert-manager.io; \
+		$(KUBECTL) wait --for=condition=Established --timeout=180s crd/clusterissuers.cert-manager.io; \
+		echo "⏳ Waiting for cert-manager API discovery..."; \
+		for i in $$(seq 1 45); do \
+			if $(KUBECTL) api-resources --api-group=cert-manager.io 2>/dev/null | grep -q '^certificates[[:space:]]'; then \
+				echo "✅ cert-manager API ready"; \
+				break; \
+			fi; \
+			if [ "$$i" -eq 45 ]; then \
+				echo "❌ cert-manager API (cert-manager.io) did not become discoverable in time"; \
+				exit 1; \
+			fi; \
+			sleep 2; \
+		done; \
+	fi
+	$(call k8s_apply_list,$(NETWORKING_DIRS))
 	@echo "✅ Networking deployed"
 
 delete-networking:
-	$(call k8s_delete_or_base,$(GATEWAY_DIR))
-	$(call k8s_delete_helm_or_base,$(TRAEFIK_DIR))
+	$(call k8s_delete_list,$(NETWORKING_DIRS))
+	$(call k8s_delete_helm_list,$(NETWORKING_HELM_DIRS))
 
 validate-networking:
-	$(call k8s_dry_run_helm_or_base,$(TRAEFIK_DIR))
-	@$(KUBECTL) kustomize "$(GATEWAY_DIR)/$(if $(wildcard $(GATEWAY_DIR)/overlays/$(ENV)),overlays/$(ENV),base)" >/dev/null
+	$(call k8s_dry_run_helm_list,$(NETWORKING_HELM_DIRS))
+	$(call k8s_dry_run_list,$(NETWORKING_DIRS))
 	@echo "✅ Networking validated"
 
+# ---- Secrets (External Secrets Operator) ----
+deploy-secrets: deploy-namespaces
+	$(call k8s_apply_helm_list,$(SECRETS_HELM_DIRS))
+	@if [ -d "$(SECRET_STORES_DIR)/overlays/$(ENV)" ]; then \
+		echo "⏳ Waiting for External Secrets CRDs to become Established..."; \
+		$(KUBECTL) wait --for=condition=Established --timeout=180s crd/clustersecretstores.external-secrets.io; \
+		echo "⏳ Waiting for External Secrets API discovery..."; \
+		for i in $$(seq 1 45); do \
+			if $(KUBECTL) api-resources --api-group=external-secrets.io 2>/dev/null | grep -q '^clustersecretstores[[:space:]]'; then \
+				echo "✅ external-secrets API ready"; \
+				break; \
+			fi; \
+			if [ "$$i" -eq 45 ]; then \
+				echo "❌ external-secrets API (external-secrets.io) did not become discoverable in time"; \
+				exit 1; \
+			fi; \
+			sleep 2; \
+		done; \
+	fi
+	$(call k8s_apply_list,$(SECRETS_DIRS))
+	@echo "✅ Secrets deployed"
+
+delete-secrets:
+	$(call k8s_delete_list,$(SECRETS_DIRS))
+	$(call k8s_delete_helm_list,$(SECRETS_HELM_DIRS))
+
+validate-secrets:
+	$(call k8s_dry_run_helm_list,$(SECRETS_HELM_DIRS))
+	$(call k8s_dry_run_list,$(SECRETS_DIRS))
+	@echo "✅ Secrets validated"
+
 # ---- Auth ----
-deploy-auth: deploy-namespaces
-	$(call k8s_apply_helm_or_base,$(AUTHENTIK_DIR))
-	$(call k8s_apply_or_base,$(AUTHENTIK_FWD_AUTH_DIR))
-	@$(KUBECTL) apply -f "$(AUTH_REFERENCE_GRANT)"
+deploy-auth: deploy-namespaces deploy-secrets
+	$(call k8s_apply_helm_list,$(AUTH_HELM_DIRS))
 	@echo "✅ Auth deployed"
 
 delete-auth:
-	@$(KUBECTL) delete --ignore-not-found -f "$(AUTH_REFERENCE_GRANT)"
-	$(call k8s_delete_or_base,$(AUTHENTIK_FWD_AUTH_DIR))
-	$(call k8s_delete_helm_or_base,$(AUTHENTIK_DIR))
+	$(call k8s_delete_helm_list,$(AUTH_HELM_DIRS))
 
 validate-auth:
-	$(call k8s_dry_run_helm_or_base,$(AUTHENTIK_DIR))
-	$(call k8s_dry_run_or_base,$(AUTHENTIK_FWD_AUTH_DIR))
-	@$(KUBECTL) apply -f "$(AUTH_REFERENCE_GRANT)" --dry-run=client -o yaml >/dev/null
+	$(call k8s_dry_run_helm_list,$(AUTH_HELM_DIRS))
 	@echo "✅ Auth validated"
 
 # ---- Platform ----
-deploy-platform: deploy-namespaces
-	$(call k8s_apply_helm_or_base,$(AUTHENTIK_DIR))
-	$(call k8s_apply_helm_or_base,$(N8N_DIR))
-	$(call k8s_apply_helm_or_base,$(SEAWEEDFS_DIR))
+deploy-platform: deploy-namespaces deploy-secrets
+	$(call k8s_apply_helm_list,$(PLATFORM_HELM_DIRS))
 	@echo "✅ Platform deployed"
 
 delete-platform:
-	$(call k8s_delete_helm_or_base,$(SEAWEEDFS_DIR))
-	$(call k8s_delete_helm_or_base,$(N8N_DIR))
-	$(call k8s_delete_helm_or_base,$(AUTHENTIK_DIR))
+	$(call k8s_delete_helm_list,$(PLATFORM_HELM_DIRS))
 
 validate-platform:
-	$(call k8s_dry_run_helm_or_base,$(AUTHENTIK_DIR))
-	$(call k8s_dry_run_helm_or_base,$(N8N_DIR))
-	$(call k8s_dry_run_helm_or_base,$(SEAWEEDFS_DIR))
+	$(call k8s_dry_run_helm_list,$(PLATFORM_HELM_DIRS))
 	@echo "✅ Platform validated"
 
 # ---- Observability ----
-deploy-observability: deploy-namespaces
-	$(call k8s_apply_helm_or_base,$(FLUENTBIT_DIR))
-	$(call k8s_apply_helm_or_base,$(PROMETHEUS_DIR))
-	$(call k8s_apply_helm_or_base,$(GRAFANA_DIR))
-	$(call k8s_apply_helm_or_base,$(OPENSEARCH_DIR))
-	$(call k8s_apply_helm_or_base,$(OPENSEARCH_DASH_DIR))
+deploy-observability: deploy-namespaces deploy-secrets
+	$(call k8s_apply_helm_list,$(OBS_HELM_DIRS))
 	@echo "✅ Observability deployed"
 
 delete-observability:
-	$(call k8s_delete_helm_or_base,$(OPENSEARCH_DASH_DIR))
-	$(call k8s_delete_helm_or_base,$(OPENSEARCH_DIR))
-	$(call k8s_delete_helm_or_base,$(GRAFANA_DIR))
-	$(call k8s_delete_helm_or_base,$(PROMETHEUS_DIR))
-	$(call k8s_delete_helm_or_base,$(FLUENTBIT_DIR))
+	$(call k8s_delete_helm_list,$(OBS_HELM_DELETE_DIRS))
 
 validate-observability:
-	$(call k8s_dry_run_helm_or_base,$(FLUENTBIT_DIR))
-	$(call k8s_dry_run_helm_or_base,$(PROMETHEUS_DIR))
-	$(call k8s_dry_run_helm_or_base,$(GRAFANA_DIR))
-	$(call k8s_dry_run_helm_or_base,$(OPENSEARCH_DIR))
-	$(call k8s_dry_run_helm_or_base,$(OPENSEARCH_DASH_DIR))
+	$(call k8s_dry_run_helm_list,$(OBS_HELM_DIRS))
 	@echo "✅ Observability validated"
 
-# ---- Databases (dev only) ----
+# ---- Databases (dev + staging) ----
 deploy-databases: deploy-namespaces
-ifeq ($(ENV),dev)
-	$(call k8s_apply_or_base,$(REDIS_DIR))
-	$(call k8s_apply_or_base,$(POSTGRESQL_DIR))
+ifneq (,$(filter $(ENV),dev staging))
+	$(call k8s_apply_list,$(DATABASE_DIRS))
 	@echo "✅ Databases deployed"
 else
 	@echo "⚠️  Databases skipped in $(ENV) environment"
 endif
 
 delete-databases:
-ifeq ($(ENV),dev)
-	$(call k8s_delete_or_base,$(POSTGRESQL_DIR))
-	$(call k8s_delete_or_base,$(REDIS_DIR))
+ifneq (,$(filter $(ENV),dev staging))
+	$(call k8s_delete_list,$(DATABASE_DELETE_DIRS))
 else
 	@echo "⚠️  Databases skipped in $(ENV) environment"
 endif
 
 validate-databases:
-ifeq ($(ENV),dev)
-	$(call k8s_dry_run_or_base,$(REDIS_DIR))
-	$(call k8s_dry_run_or_base,$(POSTGRESQL_DIR))
+ifneq (,$(filter $(ENV),dev staging))
+ifeq ($(ENV),staging)
+	@if $(KUBECTL) api-resources --api-group=external-secrets.io 2>/dev/null | grep -qi '^externalsecrets'; then \
+		echo "🧪 Dry-run: $(REDIS_DIR)/overlays/staging"; \
+		$(KUBECTL) apply -k "$(REDIS_DIR)/overlays/staging" --dry-run=client --validate=false -o yaml >/dev/null; \
+		echo "🧪 Dry-run: $(POSTGRESQL_DIR)/overlays/staging"; \
+		$(KUBECTL) apply -k "$(POSTGRESQL_DIR)/overlays/staging" --dry-run=client --validate=false -o yaml >/dev/null; \
+	else \
+		echo "⚠️  ExternalSecret CRD not discoverable yet; build-only validation for staging databases"; \
+		echo "🧪 Build-only: $(REDIS_DIR)/overlays/staging"; \
+		$(KUBECTL) kustomize "$(REDIS_DIR)/overlays/staging" >/dev/null; \
+		echo "🧪 Build-only: $(POSTGRESQL_DIR)/overlays/staging"; \
+		$(KUBECTL) kustomize "$(POSTGRESQL_DIR)/overlays/staging" >/dev/null; \
+	fi
+else
+	$(call k8s_dry_run_list,$(DATABASE_DIRS))
+endif
 	@echo "✅ Databases validated"
 else
 	@echo "⚠️  Databases skipped in $(ENV) environment"
@@ -515,50 +620,53 @@ endif
 
 # ---- Apps ----
 deploy-app:
-	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
-	@if [ ! -d "$(KUBERNETES_DIR)/apps/$(APP)" ]; then \
-		echo "⚠️  No k8s manifests for $(APP)"; exit 0; \
-	fi
+	$(call require_app)
+	$(call require_app_k8s)
 	@$(MAKE) --no-print-directory docker-build-push APP=$(APP)
 	$(call k8s_apply_or_base,$(KUBERNETES_DIR)/apps/$(APP))
 	@echo "✅ Deployed $(APP)"
 
 deploy-apps:
-	@for app in $(APPS); do \
-		if [ -d "$(KUBERNETES_DIR)/apps/$$app" ]; then \
-			APP="$$app" $(MAKE) --no-print-directory deploy-app; \
-		fi; \
-	done
+	$(call for_each_k8s_app,deploy-app)
 	@echo "✅ All apps deployed"
 
 delete-app:
-	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
-	@if [ ! -d "$(KUBERNETES_DIR)/apps/$(APP)" ]; then \
-		echo "⚠️  No k8s manifests for $(APP)"; exit 0; \
-	fi
+	$(call require_app)
+	$(call require_app_k8s)
 	$(call k8s_delete_or_base,$(KUBERNETES_DIR)/apps/$(APP))
 
 delete-apps:
-	@for app in $(APPS); do \
-		if [ -d "$(KUBERNETES_DIR)/apps/$$app" ]; then \
-			APP="$$app" $(MAKE) --no-print-directory delete-app; \
-		fi; \
-	done
+	$(call for_each_k8s_app,delete-app)
 
 validate-app:
-	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
-	@if [ ! -d "$(KUBERNETES_DIR)/apps/$(APP)" ]; then \
-		echo "⚠️  No k8s manifests for $(APP)"; exit 0; \
+	$(call require_app)
+	$(call require_app_k8s)
+	@set -e; ROOT="$(KUBERNETES_DIR)/apps/$(APP)"; \
+	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+	if [ -d "$$OVERLAY" ]; then \
+		TARGET="$$OVERLAY"; \
+	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+		TARGET="$$FALLBACK"; \
+	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
+		TARGET="$${ROOT}"; \
+	else \
+		TARGET="$${ROOT}/base"; \
+	fi; \
+	if $(KUBECTL) api-resources --api-group=external-secrets.io 2>/dev/null | grep -qi '^externalsecrets' && \
+	   $(KUBECTL) api-resources --api-group=gateway.networking.k8s.io 2>/dev/null | grep -qi '^httproutes'; then \
+		echo "🧪 Dry-run: $$TARGET"; \
+		$(KUBECTL) apply -k "$$TARGET" --dry-run=client --validate=false -o yaml >/dev/null 2>/dev/null || \
+		$(KUBECTL) apply -f "$$TARGET" --dry-run=client --validate=false -o yaml >/dev/null; \
+	else \
+		echo "⚠️  App CRDs not discoverable yet; build-only validation for $(APP)"; \
+		echo "🧪 Build-only: $$TARGET"; \
+		$(KUBECTL) kustomize "$$TARGET" >/dev/null; \
 	fi
-	$(call k8s_dry_run_or_base,$(KUBERNETES_DIR)/apps/$(APP))
 	@echo "✅ $(APP) validated"
 
 validate-apps:
-	@for app in $(APPS); do \
-		if [ -d "$(KUBERNETES_DIR)/apps/$$app" ]; then \
-			APP="$$app" $(MAKE) --no-print-directory validate-app; \
-		fi; \
-	done
+	$(call for_each_k8s_app,validate-app)
 	@echo "✅ All apps validated"
 
 # ============================
@@ -573,6 +681,7 @@ validate-all: clean-charts
 	@echo "🧪 Validating all manifests (ENV=$(ENV))..."
 	@$(MAKE) --no-print-directory validate-namespaces
 	@$(MAKE) --no-print-directory validate-networking
+	@$(MAKE) --no-print-directory validate-secrets
 	@$(MAKE) --no-print-directory validate-auth
 	@$(MAKE) --no-print-directory validate-platform
 	@$(MAKE) --no-print-directory validate-observability
@@ -584,8 +693,16 @@ validate-all: clean-charts
 # ============================
 # High-Level Operations
 # ============================
-deploy-all: validate-all deploy-namespaces deploy-networking deploy-auth deploy-databases deploy-platform deploy-observability deploy-apps deploy-ui-all
+deploy-all: validate-all deploy-namespaces deploy-networking deploy-secrets deploy-auth deploy-databases deploy-platform deploy-observability deploy-apps deploy-ui-all
 	@echo "🎉 Full stack deployed (ENV=$(ENV))"
 
-delete-all: delete-apps delete-observability delete-platform delete-databases delete-auth delete-networking delete-namespaces
+delete-all: delete-apps delete-observability delete-platform delete-databases delete-auth delete-secrets delete-networking delete-namespaces
 	@echo "✅ Full stack deleted (ENV=$(ENV))"
+
+# ---- Minikube Helpers ----
+update-minikube-ip:
+	@ENV=$(ENV) PROFILE=$(MINIKUBE_PROFILE) "$(SCRIPTS_DIR)/update-minikube-ip.sh"
+
+minikube-tunnel:
+	@echo "🚇 Starting minikube tunnel for profile $(MINIKUBE_PROFILE)"
+	@minikube tunnel --profile "$(MINIKUBE_PROFILE)"

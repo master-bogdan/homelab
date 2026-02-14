@@ -1,0 +1,11 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-grafana
+spec:
+  hostnames:
+    - grafana.example.invalid
+  parentRefs:
+    - name: homelab-gw
+      namespace: prod-networking
+      sectionName: https

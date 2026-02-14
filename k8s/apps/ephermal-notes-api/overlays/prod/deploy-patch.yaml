@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ephermal-notes-api-deploy
+spec:
+  template:
+    spec:
+      containers:
+        - name: ephermal-notes-api-container
+          envFrom:
+            - secretRef:
+                name: ephermal-notes-api-config

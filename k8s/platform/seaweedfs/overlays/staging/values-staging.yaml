@@ -1,0 +1,58 @@
+global:
+  extraEnvironmentVars:
+    WEED_CLUSTER_SW_MASTER: "seaweedfs-master.staging-platform:9333"
+    WEED_CLUSTER_SW_FILER: "seaweedfs-filer-client.staging-platform:8888"
+
+master:
+  enabled: true
+  replicas: 3
+  persistence:
+    enabled: true
+    storageClass: standard
+    size: 1Gi
+
+volume:
+  enabled: true
+  replicas: 3
+  persistence:
+    enabled: true
+    storageClass: standard
+    size: 1Gi
+
+filer:
+  enabled: true
+  replicas: 2
+  persistence:
+    enabled: true
+    storageClass: standard
+    size: 10Gi
+  s3:
+    enabled: true
+    enableAuth: false
+    createBuckets:
+      - name: personal-website
+        anonymousRead: true
+        collections:
+          - name: public
+      - name: internal-artifacts
+        anonymousRead: false
+
+admin:
+  enabled: true
+  port: 23646
+  grpcPort: 33646
+
+metrics:
+  enabled: true
+
+# --- Network Policies ---
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: networking
+      ports:
+        - protocol: TCP
+          port: 8333

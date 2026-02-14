@@ -1,0 +1,29 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: ephermal-notes-api-config
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: vault-staging
+  target:
+    name: ephermal-notes-api-config
+    creationPolicy: Owner
+  data:
+    - secretKey: SERVER_HOST
+      remoteRef:
+        key: kv/staging/ephermal-notes-api
+        property: server_host
+    - secretKey: SERVER_PORT
+      remoteRef:
+        key: kv/staging/ephermal-notes-api
+        property: server_port
+    - secretKey: REDIS_ADDR
+      remoteRef:
+        key: kv/staging/ephermal-notes-api
+        property: redis_addr
+    - secretKey: REDIS_PASSWORD
+      remoteRef:
+        key: kv/staging/ephermal-notes-api
+        property: redis_password
