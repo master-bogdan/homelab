@@ -30,6 +30,7 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 
 	deps.Router.Route("/rooms", func(r chi.Router) {
 		r.Post("/", ctrl.CreateRoom)
+		r.Get("/{id}", ctrl.GetRoom)
 	})
 
 	deps.WsService.Subscribe(EventRoomJoin, gw.OnEvent)

@@ -2,11 +2,11 @@ package rooms
 
 import (
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	roomsdto "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/dto"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
@@ -17,6 +17,7 @@ import (
 
 type RoomsController interface {
 	CreateRoom(w http.ResponseWriter, r *http.Request)
+	GetRoom(w http.ResponseWriter, r *http.Request)
 }
 
 type roomsController struct {
@@ -36,24 +37,14 @@ func NewRoomsController(service RoomsService, authService auth.AuthService) Room
 func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	userID, err := c.authService.CheckAuth(r)
 	if err != nil {
-		switch {
-		case errors.Is(err, auth.ErrMissingToken):
-			httputils.WriteResponseError(w, apperrors.CreateHttpError(
-				apperrors.ErrUnauthorized,
-				apperrors.HttpError{
-					Detail:   "missing access token",
-					Instance: r.URL.Path,
-				},
-			))
-		default:
-			httputils.WriteResponseError(w, apperrors.CreateHttpError(
-				apperrors.ErrUnauthorized,
-				apperrors.HttpError{
-					Detail:   "invalid or expired access token",
-					Instance: r.URL.Path,
-				},
-			))
-		}
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(
+			apperrors.ErrUnauthorized,
+			apperrors.HttpError{
+				Detail:   err.Error(),
+				Instance: r.URL.Path,
+			},
+		))
+
 		return
 	}
 
@@ -111,4 +102,35 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputils.WriteResponse(w, createdRoom)
+}
+
+func (c *roomsController) GetRoom(w http.ResponseWriter, r *http.Request) {
+	_, err := c.authService.CheckAuth(r)
+	if err != nil {
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(
+			apperrors.ErrUnauthorized,
+			apperrors.HttpError{
+				Detail:   err.Error(),
+				Instance: r.URL.Path,
+			},
+		))
+
+		return
+	}
+
+	roomID := chi.URLParam(r, "id")
+
+	room, err := c.service.GetRoom(roomID)
+	if err != nil {
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(
+			apperrors.ErrBadRequest,
+			apperrors.HttpError{
+				Detail:   err.Error(),
+				Instance: r.URL.Path,
+			},
+		))
+		return
+	}
+
+	httputils.WriteResponse(w, room)
 }

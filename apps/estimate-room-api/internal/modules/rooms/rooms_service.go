@@ -13,6 +13,7 @@ import (
 
 type RoomsService interface {
 	CreateRoom(model roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
+	GetRoom(roomID string) (*roomsmodels.RoomsModel, error)
 }
 
 type roomsService struct {
@@ -41,4 +42,8 @@ func (s *roomsService) CreateRoom(model roomsmodels.RoomsModel) (*roomsmodels.Ro
 	model.Code = code
 
 	return s.roomsRepo.Create(&model)
+}
+
+func (s *roomsService) GetRoom(roomID string) (*roomsmodels.RoomsModel, error) {
+	return s.roomsRepo.FindByID(roomID)
 }
