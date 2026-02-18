@@ -9,7 +9,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httprate"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
@@ -22,10 +21,11 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/redis/go-redis/v9"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"github.com/uptrace/bun"
 )
 
 type AppDeps struct {
-	DB                 *pgxpool.Pool
+	DB                 *bun.DB
 	Redis              *redis.Client
 	Cfg                *config.Config
 	Router             chi.Router
@@ -69,6 +69,7 @@ func (deps *AppDeps) SetupApp() {
 
 		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
 			Router:      r,
+			DB:          deps.DB,
 			WsService:   wsModule.Service,
 			AuthService: authModule.Service,
 		})

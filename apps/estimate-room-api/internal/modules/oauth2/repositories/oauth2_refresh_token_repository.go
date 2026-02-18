@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"database/sql"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
+	"github.com/uptrace/bun"
 )
 
 type Oauth2RefreshTokenRepository interface {
@@ -17,10 +17,10 @@ type Oauth2RefreshTokenRepository interface {
 }
 
 type oauth2RefreshTokenRepository struct {
-	db *pgxpool.Pool
+	db *bun.DB
 }
 
-func NewOauth2RefreshTokenRepository(db *pgxpool.Pool) *oauth2RefreshTokenRepository {
+func NewOauth2RefreshTokenRepository(db *bun.DB) *oauth2RefreshTokenRepository {
 	return &oauth2RefreshTokenRepository{db: db}
 }
 
@@ -36,7 +36,7 @@ func (r *oauth2RefreshTokenRepository) Create(ctx context.Context, model *oauth2
 		model.RefreshTokenID = uuid.NewString()
 	}
 
-	_, err := r.db.Exec(
+	_, err := r.db.ExecContext(
 		ctx,
 		query,
 		model.RefreshTokenID,
@@ -65,7 +65,7 @@ func (r *oauth2RefreshTokenRepository) FindByToken(ctx context.Context, token st
 	`
 
 	var model oauth2models.Oauth2RefreshTokenModel
-	row := r.db.QueryRow(ctx, query, token)
+	row := r.db.QueryRowContext(ctx, query, token)
 	err := row.Scan(
 		&model.RefreshTokenID,
 		&model.UserID,
@@ -79,7 +79,7 @@ func (r *oauth2RefreshTokenRepository) FindByToken(ctx context.Context, token st
 		&model.CreatedAt,
 	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrRefreshTokenNotFound
 		}
 		return nil, err
@@ -95,6 +95,6 @@ func (r *oauth2RefreshTokenRepository) Revoke(ctx context.Context, refreshTokenI
 		WHERE refresh_token_id = $1
 	`
 
-	_, err := r.db.Exec(ctx, query, refreshTokenID)
+	_, err := r.db.ExecContext(ctx, query, refreshTokenID)
 	return err
 }

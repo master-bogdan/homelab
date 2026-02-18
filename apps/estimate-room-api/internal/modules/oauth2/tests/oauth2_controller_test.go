@@ -11,15 +11,15 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
+	"github.com/uptrace/bun"
 )
 
-func setupTest(t *testing.T) (*chi.Mux, *pgxpool.Pool, string, string, string, string) {
+func setupTest(t *testing.T) (*chi.Mux, *bun.DB, string, string, string, string) {
 	t.Helper()
 
 	db := testutils.SetupTestDB(t)

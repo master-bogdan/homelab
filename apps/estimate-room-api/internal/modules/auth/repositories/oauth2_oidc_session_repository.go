@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"database/sql"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	authmodels "github.com/master-bogdan/estimate-room-api/internal/modules/auth/models"
+	"github.com/uptrace/bun"
 )
 
 type OidcSessionRepository interface {
@@ -16,10 +16,10 @@ type OidcSessionRepository interface {
 }
 
 type oauth2OidcSessionRepository struct {
-	db *pgxpool.Pool
+	db *bun.DB
 }
 
-func NewOauth2OidcSessionRepository(db *pgxpool.Pool) *oauth2OidcSessionRepository {
+func NewOauth2OidcSessionRepository(db *bun.DB) *oauth2OidcSessionRepository {
 	return &oauth2OidcSessionRepository{db: db}
 }
 
@@ -33,7 +33,7 @@ func (r *oauth2OidcSessionRepository) Create(model *authmodels.OidcSessionModel)
 		model.OidcSessionID = uuid.NewString()
 	}
 
-	_, err := r.db.Exec(
+	_, err := r.db.ExecContext(
 		context.Background(),
 		query,
 		model.OidcSessionID,
@@ -56,10 +56,10 @@ func (r *oauth2OidcSessionRepository) FindByID(sessionID string) (*authmodels.Oi
 	`
 
 	var model authmodels.OidcSessionModel
-	row := r.db.QueryRow(context.Background(), query, sessionID)
+	row := r.db.QueryRowContext(context.Background(), query, sessionID)
 	err := row.Scan(&model.OidcSessionID, &model.UserID, &model.ClientID, &model.Nonce, &model.CreatedAt)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrOidcSessionNotFound
 		}
 		return nil, err

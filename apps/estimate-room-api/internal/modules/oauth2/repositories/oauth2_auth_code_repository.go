@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"database/sql"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
+	"github.com/uptrace/bun"
 )
 
 type Oauth2AuthCodeRepository interface {
@@ -17,10 +17,10 @@ type Oauth2AuthCodeRepository interface {
 }
 
 type oauth2AuthCodeRepository struct {
-	db *pgxpool.Pool
+	db *bun.DB
 }
 
-func NewOauth2AuthCodeRepository(db *pgxpool.Pool) *oauth2AuthCodeRepository {
+func NewOauth2AuthCodeRepository(db *bun.DB) *oauth2AuthCodeRepository {
 	return &oauth2AuthCodeRepository{db: db}
 }
 
@@ -36,7 +36,7 @@ func (r *oauth2AuthCodeRepository) Create(model *oauth2models.Oauth2AuthCodeMode
 		model.AuthCodeID = uuid.NewString()
 	}
 
-	_, err := r.db.Exec(
+	_, err := r.db.ExecContext(
 		context.Background(),
 		query,
 		model.AuthCodeID,
@@ -63,7 +63,7 @@ func (r *oauth2AuthCodeRepository) FindByCode(code string) (*oauth2models.Oauth2
 	`
 
 	var model oauth2models.Oauth2AuthCodeModel
-	row := r.db.QueryRow(context.Background(), query, code)
+	row := r.db.QueryRowContext(context.Background(), query, code)
 	err := row.Scan(
 		&model.AuthCodeID,
 		&model.ClientID,
@@ -79,7 +79,7 @@ func (r *oauth2AuthCodeRepository) FindByCode(code string) (*oauth2models.Oauth2
 		&model.CreatedAt,
 	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrAuthCodeNotFound
 		}
 		return nil, err
@@ -95,6 +95,6 @@ func (r *oauth2AuthCodeRepository) MarkUsed(authCodeID string) error {
 		WHERE auth_code_id = $1
 	`
 
-	_, err := r.db.Exec(context.Background(), query, authCodeID)
+	_, err := r.db.ExecContext(context.Background(), query, authCodeID)
 	return err
 }

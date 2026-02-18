@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"database/sql"
 	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
+	"github.com/uptrace/bun"
 )
 
 type Oauth2ClientRepository interface {
@@ -14,10 +14,10 @@ type Oauth2ClientRepository interface {
 }
 
 type oauth2ClientRepository struct {
-	db *pgxpool.Pool
+	db *bun.DB
 }
 
-func NewOauth2ClientRepository(db *pgxpool.Pool) *oauth2ClientRepository {
+func NewOauth2ClientRepository(db *bun.DB) *oauth2ClientRepository {
 	return &oauth2ClientRepository{db: db}
 }
 
@@ -29,7 +29,7 @@ func (r *oauth2ClientRepository) FindByID(clientID string) (*oauth2models.Oauth2
 	`
 
 	var client oauth2models.Oauth2ClientModel
-	row := r.db.QueryRow(context.Background(), query, clientID)
+	row := r.db.QueryRowContext(context.Background(), query, clientID)
 	err := row.Scan(
 		&client.ClientID,
 		&client.ClientSecret,
@@ -42,7 +42,7 @@ func (r *oauth2ClientRepository) FindByID(clientID string) (*oauth2models.Oauth2
 		&client.CreatedAt,
 	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrClientNotFound
 		}
 		return nil, err

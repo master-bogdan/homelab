@@ -117,7 +117,7 @@ func main() {
 func gracefulShutdown(
 	srv *http.Server,
 	ws *wsserver.Server,
-	db interface{ Close() },
+	db interface{ Close() error },
 	redis interface{ Close() error },
 	redisPubSub interface{ Close() error },
 ) {
@@ -153,7 +153,10 @@ func gracefulShutdown(
 	}
 
 	logger.L().Info("Closing database connection...")
-	db.Close()
+	err = db.Close()
+	if err != nil {
+		logger.L().Error("Error closing database", "err", err)
+	}
 
 	logger.L().Info("Server gracefully stopped")
 }

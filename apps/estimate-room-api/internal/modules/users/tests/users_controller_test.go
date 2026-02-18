@@ -8,15 +8,15 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	usersdto "github.com/master-bogdan/estimate-room-api/internal/modules/users/dto"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
+	"github.com/uptrace/bun"
 )
 
-func setupUsersTest(t *testing.T) (*chi.Mux, *pgxpool.Pool) {
+func setupUsersTest(t *testing.T) (*chi.Mux, *bun.DB) {
 	t.Helper()
 
 	db := testutils.SetupTestDB(t)

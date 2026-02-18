@@ -3,10 +3,10 @@ package rooms
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
+	"github.com/uptrace/bun"
 )
 
 type RoomsModule struct {
@@ -17,7 +17,7 @@ type RoomsModule struct {
 
 type RoomsModuleDeps struct {
 	Router      chi.Router
-	DB          *pgxpool.Pool
+	DB          *bun.DB
 	WsService   *ws.Service
 	AuthService auth.AuthService
 }

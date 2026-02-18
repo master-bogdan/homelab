@@ -3,10 +3,10 @@ package oauth2
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	oauth2repositories "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/repositories"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
+	"github.com/uptrace/bun"
 )
 
 type Oauth2Module struct {
@@ -16,7 +16,7 @@ type Oauth2Module struct {
 
 type Oauth2ModuleDeps struct {
 	Router      chi.Router
-	DB          *pgxpool.Pool
+	DB          *bun.DB
 	TokenKey    string
 	Issuer      string
 	UserService UserService

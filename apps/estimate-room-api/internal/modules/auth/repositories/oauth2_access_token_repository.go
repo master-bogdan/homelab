@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
+	"database/sql"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	authmodels "github.com/master-bogdan/estimate-room-api/internal/modules/auth/models"
+	"github.com/uptrace/bun"
 )
 
 type AccessTokenRepository interface {
@@ -17,10 +17,10 @@ type AccessTokenRepository interface {
 }
 
 type oauth2AccessTokenRepository struct {
-	db *pgxpool.Pool
+	db *bun.DB
 }
 
-func NewOauth2AccessTokenRepository(db *pgxpool.Pool) *oauth2AccessTokenRepository {
+func NewOauth2AccessTokenRepository(db *bun.DB) *oauth2AccessTokenRepository {
 	return &oauth2AccessTokenRepository{db: db}
 }
 
@@ -36,7 +36,7 @@ func (r *oauth2AccessTokenRepository) Create(ctx context.Context, model *authmod
 		model.AccessTokenID = uuid.NewString()
 	}
 
-	_, err := r.db.Exec(
+	_, err := r.db.ExecContext(
 		ctx,
 		query,
 		model.AccessTokenID,
@@ -63,7 +63,7 @@ func (r *oauth2AccessTokenRepository) FindByToken(ctx context.Context, token str
 	`
 
 	var model authmodels.Oauth2AccessTokenModel
-	row := r.db.QueryRow(ctx, query, token)
+	row := r.db.QueryRowContext(ctx, query, token)
 	err := row.Scan(
 		&model.AccessTokenID,
 		&model.UserID,
@@ -79,7 +79,7 @@ func (r *oauth2AccessTokenRepository) FindByToken(ctx context.Context, token str
 		&model.CreatedAt,
 	)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrAccessTokenNotFound
 		}
 		return nil, err
@@ -95,6 +95,6 @@ func (r *oauth2AccessTokenRepository) Revoke(ctx context.Context, accessTokenID 
 		WHERE access_token_id = $1
 	`
 
-	_, err := r.db.Exec(ctx, query, accessTokenID)
+	_, err := r.db.ExecContext(ctx, query, accessTokenID)
 	return err
 }

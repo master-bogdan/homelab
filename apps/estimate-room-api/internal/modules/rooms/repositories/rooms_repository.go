@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
+	"github.com/uptrace/bun"
 )
 
 type RoomsRepository interface {
@@ -14,10 +14,10 @@ type RoomsRepository interface {
 }
 
 type roomsRepository struct {
-	db *pgxpool.Pool
+	db *bun.DB
 }
 
-func NewRoomsRepository(db *pgxpool.Pool) *roomsRepository {
+func NewRoomsRepository(db *bun.DB) *roomsRepository {
 	return &roomsRepository{db: db}
 }
 
@@ -34,7 +34,7 @@ func (r *roomsRepository) Create(model *roomsmodels.RoomsModel) (*roomsmodels.Ro
 	}
 
 	var roomID string
-	err := r.db.QueryRow(
+	err := r.db.QueryRowContext(
 		context.Background(),
 		query,
 		model.Code,
@@ -61,7 +61,7 @@ func (r *roomsRepository) FindByID(roomID string) (*roomsmodels.RoomsModel, erro
 
 	var room roomsmodels.RoomsModel
 	var deckID string
-	err := r.db.QueryRow(context.Background(), query, roomID).Scan(
+	err := r.db.QueryRowContext(context.Background(), query, roomID).Scan(
 		&room.RoomID,
 		&room.Code,
 		&room.Name,

@@ -3,27 +3,26 @@ package postgresql
 
 import (
 	"context"
+	"database/sql"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/pgdialect"
 )
 
-func Connect(databaseURL string) (*pgxpool.Pool, error) {
-	dbCfg, err := pgxpool.ParseConfig(databaseURL)
+func Connect(databaseURL string) (*bun.DB, error) {
+	sqldb, err := sql.Open("pgx", databaseURL)
 	if err != nil {
 		return nil, err
 	}
 
-	dbpool, err := pgxpool.NewWithConfig(context.Background(), dbCfg)
+	db := bun.NewDB(sqldb, pgdialect.New())
+
+	err = db.PingContext(context.Background())
 	if err != nil {
+		_ = db.Close()
 		return nil, err
 	}
 
-	err = dbpool.Ping(context.Background())
-	if err != nil {
-		dbpool.Close()
-		return nil, err
-	}
-
-	return dbpool, nil
+	return db, nil
 }

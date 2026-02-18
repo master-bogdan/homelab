@@ -5,8 +5,8 @@ import (
 	"time"
 
 	healthdto "github.com/master-bogdan/estimate-room-api/internal/modules/health/dto"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/uptrace/bun"
 )
 
 type HealthService interface {
@@ -15,13 +15,13 @@ type HealthService interface {
 }
 
 type healthService struct {
-	db      *pgxpool.Pool
+	db      *bun.DB
 	redis   *redis.Client
 	started time.Time
 }
 
 type HealthServiceDeps struct {
-	DB    *pgxpool.Pool
+	DB    *bun.DB
 	Redis *redis.Client
 }
 
@@ -51,7 +51,7 @@ func (s *healthService) CheckReadiness(ctx context.Context) (healthdto.Readiness
 	if s.db == nil {
 		status.DB = "down"
 		status.Status = "not OK"
-	} else if err := s.db.Ping(ctx); err != nil {
+	} else if err := s.db.PingContext(ctx); err != nil {
 		status.DB = "down"
 		status.Status = "not OK"
 	}

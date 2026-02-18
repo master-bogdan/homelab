@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
 	authrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/auth/repositories"
+	"github.com/uptrace/bun"
 )
 
 type AuthModule struct {
@@ -11,7 +11,7 @@ type AuthModule struct {
 
 type AuthModuleDeps struct {
 	TokenKey string
-	DB       *pgxpool.Pool
+	DB       *bun.DB
 }
 
 func NewAuthModule(deps AuthModuleDeps) *AuthModule {

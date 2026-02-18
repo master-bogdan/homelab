@@ -165,7 +165,7 @@ func TestAuthCodeExpires(t *testing.T) {
 		t.Fatalf("create code: %v", err)
 	}
 
-	_, err = db.Exec(context.Background(), `UPDATE oauth2_auth_codes SET expires_at = NOW() - interval '1 minute' WHERE code = $1`, code)
+	_, err = db.ExecContext(context.Background(), `UPDATE oauth2_auth_codes SET expires_at = NOW() - interval '1 minute' WHERE code = $1`, code)
 	if err != nil {
 		t.Fatalf("expire code: %v", err)
 	}

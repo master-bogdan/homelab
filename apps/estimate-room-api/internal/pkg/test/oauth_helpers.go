@@ -7,13 +7,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
+	"github.com/uptrace/bun"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 	TestIssuer   = "http://localhost:8000"
 )
 
-func SetupTestDB(t *testing.T) *pgxpool.Pool {
+func SetupTestDB(t *testing.T) *bun.DB {
 	t.Helper()
 
 	dbURL := os.Getenv("TEST_DATABASE_URL")
@@ -45,10 +45,10 @@ func SetupTestDB(t *testing.T) *pgxpool.Pool {
 	return db
 }
 
-func ResetOauthTables(t *testing.T, db *pgxpool.Pool) {
+func ResetOauthTables(t *testing.T, db *bun.DB) {
 	t.Helper()
 
-	_, err := db.Exec(context.Background(), `
+	_, err := db.ExecContext(context.Background(), `
 		TRUNCATE TABLE
 			oauth2_access_tokens,
 			oauth2_refresh_tokens,
@@ -63,7 +63,7 @@ func ResetOauthTables(t *testing.T, db *pgxpool.Pool) {
 	}
 }
 
-func NewOauth2Service(db *pgxpool.Pool) oauth2.Oauth2Service {
+func NewOauth2Service(db *bun.DB) oauth2.Oauth2Service {
 	authModule := auth.NewAuthModule(auth.AuthModuleDeps{
 		TokenKey: TestTokenKey,
 		DB:       db,
@@ -88,11 +88,11 @@ func NewOauth2Service(db *pgxpool.Pool) oauth2.Oauth2Service {
 	return oauth2Module.Service
 }
 
-func SeedClient(t *testing.T, db *pgxpool.Pool, redirectURI string, scopes []string) string {
+func SeedClient(t *testing.T, db *bun.DB, redirectURI string, scopes []string) string {
 	t.Helper()
 
 	clientID := uuid.NewString()
-	_, err := db.Exec(context.Background(), `
+	_, err := db.ExecContext(context.Background(), `
 		INSERT INTO oauth2_clients (
 			client_id, client_secret, redirect_uris, grant_types, response_types,
 			scopes, client_name, client_type, created_at
@@ -106,7 +106,7 @@ func SeedClient(t *testing.T, db *pgxpool.Pool, redirectURI string, scopes []str
 	return clientID
 }
 
-func SeedUser(t *testing.T, db *pgxpool.Pool, email, password string) string {
+func SeedUser(t *testing.T, db *bun.DB, email, password string) string {
 	t.Helper()
 
 	userID := uuid.NewString()
@@ -115,7 +115,7 @@ func SeedUser(t *testing.T, db *pgxpool.Pool, email, password string) string {
 		t.Fatalf("failed to hash password: %v", err)
 	}
 
-	_, err = db.Exec(context.Background(), `
+	_, err = db.ExecContext(context.Background(), `
 		INSERT INTO users (user_id, email, password_hash)
 		VALUES ($1, $2, $3)
 		ON CONFLICT DO NOTHING
@@ -127,11 +127,11 @@ func SeedUser(t *testing.T, db *pgxpool.Pool, email, password string) string {
 	return userID
 }
 
-func SeedSession(t *testing.T, db *pgxpool.Pool, userID, clientID, nonce string) string {
+func SeedSession(t *testing.T, db *bun.DB, userID, clientID, nonce string) string {
 	t.Helper()
 
 	sessionID := uuid.NewString()
-	_, err := db.Exec(context.Background(), `
+	_, err := db.ExecContext(context.Background(), `
 		INSERT INTO oauth2_oidc_sessions (oidc_session_id, user_id, client_id, nonce)
 		VALUES ($1, $2, $3, $4)
 	`, sessionID, userID, clientID, nonce)

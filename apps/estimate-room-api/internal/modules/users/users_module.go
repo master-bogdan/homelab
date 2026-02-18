@@ -3,9 +3,9 @@ package users
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
+	"github.com/uptrace/bun"
 )
 
 type UsersModule struct {
@@ -15,7 +15,7 @@ type UsersModule struct {
 
 type UsersModuleDeps struct {
 	Router      chi.Router
-	DB          *pgxpool.Pool
+	DB          *bun.DB
 	AuthService auth.AuthService
 }
 
