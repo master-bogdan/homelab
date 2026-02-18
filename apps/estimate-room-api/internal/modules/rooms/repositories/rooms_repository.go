@@ -22,64 +22,48 @@ func NewRoomsRepository(db *bun.DB) *roomsRepository {
 }
 
 func (r *roomsRepository) Create(model *roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error) {
-	const query = `
-		INSERT INTO rooms (code, name, admin_user_id, team_id, deck_id)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING room_id
-	`
-
-	var teamID *string
-	if model.TeamID != nil && strings.TrimSpace(*model.TeamID) != "" {
-		teamID = model.TeamID
+	if model.TeamID != nil && strings.TrimSpace(*model.TeamID) == "" {
+		model.TeamID = nil
 	}
 
-	var roomID string
-	err := r.db.QueryRowContext(
-		context.Background(),
-		query,
-		model.Code,
-		model.Name,
-		model.AdminUserID,
-		teamID,
-		string(model.DeckID),
-	).Scan(&roomID)
+	_, err := r.db.NewInsert().
+		Model(model).
+		Column("code", "name", "admin_user_id", "team_id", "deck_id").
+		Returning("*").
+		Exec(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	return r.FindByID(roomID)
+	return model, nil
 }
 
 func (r *roomsRepository) FindByID(roomID string) (*roomsmodels.RoomsModel, error) {
-	const query = `
-		SELECT room_id, code, name, admin_user_id, team_id, deck_id, status,
-			allow_guests, allow_spectators, round_timer_seconds, created_at,
-			last_activity_at, finished_at
-		FROM rooms
-		WHERE room_id = $1
-	`
-
-	var room roomsmodels.RoomsModel
-	var deckID string
-	err := r.db.QueryRowContext(context.Background(), query, roomID).Scan(
-		&room.RoomID,
-		&room.Code,
-		&room.Name,
-		&room.AdminUserID,
-		&room.TeamID,
-		&deckID,
-		&room.Status,
-		&room.AllowGuests,
-		&room.AllowSpectators,
-		&room.RoundTimerSeconds,
-		&room.CreatedAt,
-		&room.LastActivityAt,
-		&room.FinishedAt,
-	)
+	room := new(roomsmodels.RoomsModel)
+	err := r.db.NewSelect().
+		Model(room).
+		Where("r.room_id = ?", roomID).
+		Relation("Participants", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.
+				Where("rp.left_at IS NULL").
+				OrderExpr("rp.joined_at ASC").
+				Relation("User").
+				Relation("Votes", func(vq *bun.SelectQuery) *bun.SelectQuery {
+					return vq.OrderExpr("v.created_at ASC")
+				})
+		}).
+		Relation("Tasks", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.
+				OrderExpr("t.order_index ASC").
+				Relation("Votes", func(vq *bun.SelectQuery) *bun.SelectQuery {
+					return vq.OrderExpr("v.created_at ASC")
+				})
+		}).
+		Limit(1).
+		Scan(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	room.DeckID = roomsmodels.DeckID(deckID)
 
-	return &room, nil
+	return room, nil
 }
