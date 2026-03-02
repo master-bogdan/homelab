@@ -146,7 +146,6 @@ Table tasks {
   external_key        text
   status              task_status [not null, default: 'PENDING']
   final_estimate_value text
-  order_index         int         [not null, default: 0]
   created_at          timestamptz [not null, default: `now()`]
   updated_at          timestamptz [not null, default: `now()`]
 }

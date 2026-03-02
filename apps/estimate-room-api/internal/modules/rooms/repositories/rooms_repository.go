@@ -11,6 +11,12 @@ import (
 type RoomsRepository interface {
 	Create(model *roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
 	FindByID(roomID string) (*roomsmodels.RoomsModel, error)
+	RoomExists(roomID string) (bool, error)
+	CreateTask(model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error)
+	FindTasksByRoomID(roomID string) ([]*roomsmodels.RoomTaskModel, error)
+	FindTaskByID(roomID, taskID string) (*roomsmodels.RoomTaskModel, error)
+	UpdateTask(roomID string, model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error)
+	DeleteTask(roomID, taskID string) error
 }
 
 type roomsRepository struct {
@@ -54,7 +60,7 @@ func (r *roomsRepository) FindByID(roomID string) (*roomsmodels.RoomsModel, erro
 		}).
 		Relation("Tasks", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.
-				OrderExpr("t.order_index ASC").
+				OrderExpr("t.created_at ASC").
 				Relation("Votes", func(vq *bun.SelectQuery) *bun.SelectQuery {
 					return vq.OrderExpr("v.created_at ASC")
 				})

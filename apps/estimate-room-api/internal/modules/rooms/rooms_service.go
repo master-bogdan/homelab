@@ -14,6 +14,11 @@ import (
 type RoomsService interface {
 	CreateRoom(model roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
 	GetRoom(roomID string) (*roomsmodels.RoomsModel, error)
+	CreateTask(roomID string, input CreateTaskInput) (*roomsmodels.RoomTaskModel, error)
+	ListTasks(roomID string) ([]*roomsmodels.RoomTaskModel, error)
+	GetTask(roomID, taskID string) (*roomsmodels.RoomTaskModel, error)
+	UpdateTask(roomID, taskID string, input UpdateTaskInput) (*roomsmodels.RoomTaskModel, error)
+	DeleteTask(roomID, taskID string) error
 }
 
 type roomsService struct {

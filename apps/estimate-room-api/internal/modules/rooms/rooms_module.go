@@ -31,6 +31,13 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	deps.Router.Route("/rooms", func(r chi.Router) {
 		r.Post("/", ctrl.CreateRoom)
 		r.Get("/{id}", ctrl.GetRoom)
+		r.Route("/{id}/tasks", func(taskRouter chi.Router) {
+			taskRouter.Post("/", ctrl.CreateTask)
+			taskRouter.Get("/", ctrl.ListTasks)
+			taskRouter.Get("/{taskId}", ctrl.GetTask)
+			taskRouter.Patch("/{taskId}", ctrl.UpdateTask)
+			taskRouter.Delete("/{taskId}", ctrl.DeleteTask)
+		})
 	})
 
 	deps.WsService.Subscribe(EventRoomJoin, gw.OnEvent)

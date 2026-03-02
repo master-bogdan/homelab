@@ -18,6 +18,11 @@ import (
 type RoomsController interface {
 	CreateRoom(w http.ResponseWriter, r *http.Request)
 	GetRoom(w http.ResponseWriter, r *http.Request)
+	CreateTask(w http.ResponseWriter, r *http.Request)
+	ListTasks(w http.ResponseWriter, r *http.Request)
+	GetTask(w http.ResponseWriter, r *http.Request)
+	UpdateTask(w http.ResponseWriter, r *http.Request)
+	DeleteTask(w http.ResponseWriter, r *http.Request)
 }
 
 type roomsController struct {
@@ -37,39 +42,20 @@ func NewRoomsController(service RoomsService, authService oauth2.AuthService) Ro
 func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	userID, err := c.authService.CheckAuth(r)
 	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(
-			apperrors.ErrUnauthorized,
-			apperrors.HttpError{
-				Detail:   err.Error(),
-				Instance: r.URL.Path,
-			},
-		))
-
+		c.writeError(w, r, apperrors.ErrUnauthorized, err.Error(), err)
 		return
 	}
 
 	dto := roomsdto.CreateRoomDTO{}
 	err = json.NewDecoder(r.Body).Decode(&dto)
 	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(
-			apperrors.ErrBadRequest,
-			apperrors.HttpError{
-				Detail:   err.Error(),
-				Instance: r.URL.Path,
-			},
-		))
+		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
 	}
 
 	err = dto.Validate()
 	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(
-			apperrors.ErrBadRequest,
-			apperrors.HttpError{
-				Detail:   err.Error(),
-				Instance: r.URL.Path,
-			},
-		))
+		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
 	}
 
@@ -91,13 +77,7 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 
 	createdRoom, err := c.service.CreateRoom(room)
 	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(
-			apperrors.ErrBadRequest,
-			apperrors.HttpError{
-				Detail:   err.Error(),
-				Instance: r.URL.Path,
-			},
-		))
+		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
 	}
 
@@ -107,14 +87,7 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 func (c *roomsController) GetRoom(w http.ResponseWriter, r *http.Request) {
 	_, err := c.authService.CheckAuth(r)
 	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(
-			apperrors.ErrUnauthorized,
-			apperrors.HttpError{
-				Detail:   err.Error(),
-				Instance: r.URL.Path,
-			},
-		))
-
+		c.writeError(w, r, apperrors.ErrUnauthorized, err.Error(), err)
 		return
 	}
 
@@ -122,15 +95,32 @@ func (c *roomsController) GetRoom(w http.ResponseWriter, r *http.Request) {
 
 	room, err := c.service.GetRoom(roomID)
 	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(
-			apperrors.ErrBadRequest,
-			apperrors.HttpError{
-				Detail:   err.Error(),
-				Instance: r.URL.Path,
-			},
-		))
+		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
 	}
 
 	httputils.WriteResponse(w, room)
+}
+
+func (c *roomsController) writeError(w http.ResponseWriter, r *http.Request, errType error, detail string, cause error) {
+	logArgs := []any{
+		"path", r.URL.Path,
+		"type", errType.Error(),
+	}
+	if detail != "" {
+		logArgs = append(logArgs, "detail", detail)
+	}
+	if cause != nil {
+		logArgs = append(logArgs, "err", cause)
+	}
+
+	c.logger.Error("request failed", logArgs...)
+
+	httputils.WriteResponseError(w, apperrors.CreateHttpError(
+		errType,
+		apperrors.HttpError{
+			Detail:   detail,
+			Instance: r.URL.Path,
+		},
+	))
 }

@@ -16,7 +16,6 @@ type RoomTaskModel struct {
 	ExternalKey        *string   `bun:"external_key"`
 	Status             string    `bun:"status"`
 	FinalEstimateValue *string   `bun:"final_estimate_value"`
-	OrderIndex         int       `bun:"order_index"`
 	CreatedAt          time.Time `bun:"created_at"`
 	UpdatedAt          time.Time `bun:"updated_at"`
 
