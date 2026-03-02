@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	usersdto "github.com/master-bogdan/estimate-room-api/internal/modules/users/dto"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/httputils"
@@ -18,11 +18,11 @@ type UsersController interface {
 
 type usersController struct {
 	service     UsersService
-	authService auth.AuthService
+	authService oauth2.AuthService
 	logger      *slog.Logger
 }
 
-func NewUsersController(service UsersService, authService auth.AuthService) UsersController {
+func NewUsersController(service UsersService, authService oauth2.AuthService) UsersController {
 	return &usersController{
 		service:     service,
 		authService: authService,
@@ -44,7 +44,7 @@ func (c *usersController) GetMe(w http.ResponseWriter, r *http.Request) {
 	userID, err := c.authService.CheckAuth(r)
 	if err != nil {
 		switch {
-		case stdErrors.Is(err, auth.ErrMissingToken):
+		case stdErrors.Is(err, oauth2.ErrMissingToken):
 			httputils.WriteResponseError(w, apperrors.CreateHttpError(
 				apperrors.ErrUnauthorized,
 				apperrors.HttpError{

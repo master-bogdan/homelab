@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
@@ -64,15 +63,12 @@ func ResetOauthTables(t *testing.T, db *bun.DB) {
 }
 
 func NewOauth2Service(db *bun.DB) oauth2.Oauth2Service {
-	authModule := auth.NewAuthModule(auth.AuthModuleDeps{
-		TokenKey: TestTokenKey,
-		DB:       db,
-	})
+	authService := oauth2.NewAuthServiceFromDB(TestTokenKey, db)
 
 	usersModule := users.NewUsersModule(users.UsersModuleDeps{
 		Router:      chi.NewRouter(),
 		DB:          db,
-		AuthService: authModule.Service,
+		AuthService: authService,
 	})
 
 	oauth2Module := oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
@@ -81,7 +77,7 @@ func NewOauth2Service(db *bun.DB) oauth2.Oauth2Service {
 		TokenKey:    TestTokenKey,
 		Issuer:      TestIssuer,
 		UserService: usersModule.Service,
-		AuthService: authModule.Service,
+		AuthService: authService,
 		Github:      oauth2utils.GithubConfig{},
 	})
 

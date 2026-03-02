@@ -3,7 +3,6 @@ package oauth2
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	oauth2repositories "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/repositories"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/uptrace/bun"
@@ -12,6 +11,7 @@ import (
 type Oauth2Module struct {
 	Controller Oauth2Controller
 	Service    Oauth2Service
+	AuthService AuthService
 }
 
 type Oauth2ModuleDeps struct {
@@ -20,7 +20,7 @@ type Oauth2ModuleDeps struct {
 	TokenKey    string
 	Issuer      string
 	UserService UserService
-	AuthService auth.AuthService
+	AuthService AuthService
 	Github      oauth2utils.GithubConfig
 }
 
@@ -28,13 +28,20 @@ func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
 	clientRepo := oauth2repositories.NewOauth2ClientRepository(deps.DB)
 	authCodeRepo := oauth2repositories.NewOauth2AuthCodeRepository(deps.DB)
 	refreshTokenRepo := oauth2repositories.NewOauth2RefreshTokenRepository(deps.DB)
+	accessTokenRepo := oauth2repositories.NewOauth2AccessTokenRepository(deps.DB)
+	oidcSessionRepo := oauth2repositories.NewOauth2OidcSessionRepository(deps.DB)
+
+	authService := deps.AuthService
+	if authService == nil {
+		authService = NewAuthService(deps.TokenKey, accessTokenRepo, oidcSessionRepo)
+	}
 
 	svc := NewOauth2Service(
 		clientRepo,
 		authCodeRepo,
 		refreshTokenRepo,
 		deps.UserService,
-		deps.AuthService,
+		authService,
 		[]byte(deps.TokenKey),
 		deps.Issuer,
 	)
@@ -53,5 +60,6 @@ func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
 	return &Oauth2Module{
 		Controller: ctrl,
 		Service:    svc,
+		AuthService: authService,
 	}
 }

@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
-	authmodels "github.com/master-bogdan/estimate-room-api/internal/modules/auth/models"
 	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
 	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
 	oauth2repositories "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/repositories"
@@ -52,7 +50,7 @@ type oauth2Service struct {
 	authCodeRepo     oauth2repositories.Oauth2AuthCodeRepository
 	userService      UserService
 	refreshTokenRepo oauth2repositories.Oauth2RefreshTokenRepository
-	authService      auth.AuthService
+	authService      AuthService
 	tokenKey         []byte
 	issuer           string
 	logger           *slog.Logger
@@ -63,7 +61,7 @@ func NewOauth2Service(
 	authCodeRepo oauth2repositories.Oauth2AuthCodeRepository,
 	refreshTokenRepo oauth2repositories.Oauth2RefreshTokenRepository,
 	userService UserService,
-	authService auth.AuthService,
+	authService AuthService,
 	tokenKey []byte,
 	issuer string,
 ) Oauth2Service {
@@ -148,7 +146,7 @@ func (s *oauth2Service) CreateAuthCode(dto *oauth2dto.CreateOauthCodeDTO) (strin
 
 func (s *oauth2Service) CreateOidcSession(dto *oauth2dto.CreateOidcSessionDTO) (string, error) {
 	s.logger.Info("CreateOidcSession")
-	oidcSession := &authmodels.OidcSessionModel{
+	oidcSession := &oauth2models.OidcSessionModel{
 		UserID:   dto.UserID,
 		ClientID: dto.ClientID,
 		Nonce:    dto.Nonce,
@@ -320,7 +318,7 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 		return oauth2dto.TokenResponseDTO{}, err
 	}
 
-	accessTokenPayload := authmodels.Oauth2AccessTokenModel{
+	accessTokenPayload := oauth2models.Oauth2AccessTokenModel{
 		UserID:         userID,
 		ClientID:       clientID,
 		OidcSessionID:  oidcSessionID,

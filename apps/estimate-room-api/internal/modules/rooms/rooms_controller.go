@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	roomsdto "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/dto"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
@@ -22,11 +22,11 @@ type RoomsController interface {
 
 type roomsController struct {
 	service     RoomsService
-	authService auth.AuthService
+	authService oauth2.AuthService
 	logger      *slog.Logger
 }
 
-func NewRoomsController(service RoomsService, authService auth.AuthService) RoomsController {
+func NewRoomsController(service RoomsService, authService oauth2.AuthService) RoomsController {
 	return &roomsController{
 		service:     service,
 		authService: authService,

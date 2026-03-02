@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"github.com/google/uuid"
 	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/uptrace/bun"
 )
 
@@ -80,7 +81,7 @@ func (r *oauth2RefreshTokenRepository) FindByToken(ctx context.Context, token st
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrRefreshTokenNotFound
+			return nil, apperrors.ErrRefreshTokenNotFound
 		}
 		return nil, err
 	}

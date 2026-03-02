@@ -3,7 +3,7 @@ package users
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
 	"github.com/uptrace/bun"
 )
@@ -16,7 +16,7 @@ type UsersModule struct {
 type UsersModuleDeps struct {
 	Router      chi.Router
 	DB          *bun.DB
-	AuthService auth.AuthService
+	AuthService oauth2.AuthService
 }
 
 func NewUsersModule(deps UsersModuleDeps) *UsersModule {

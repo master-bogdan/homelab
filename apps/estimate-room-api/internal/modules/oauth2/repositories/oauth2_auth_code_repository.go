@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"github.com/google/uuid"
 	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/uptrace/bun"
 )
 
@@ -80,7 +81,7 @@ func (r *oauth2AuthCodeRepository) FindByCode(code string) (*oauth2models.Oauth2
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrAuthCodeNotFound
+			return nil, apperrors.ErrAuthCodeNotFound
 		}
 		return nil, err
 	}

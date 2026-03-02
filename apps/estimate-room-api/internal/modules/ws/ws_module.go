@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/httputils"
 )
@@ -18,7 +18,7 @@ type WsModule struct {
 
 type WsModuleDeps struct {
 	Router      chi.Router
-	AuthService auth.AuthService
+	AuthService oauth2.AuthService
 	Server      PubSub
 }
 

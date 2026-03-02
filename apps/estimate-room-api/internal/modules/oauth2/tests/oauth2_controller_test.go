@@ -11,8 +11,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
+		"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
@@ -26,16 +25,13 @@ func setupTest(t *testing.T) (*chi.Mux, *bun.DB, string, string, string, string)
 	testutils.ResetOauthTables(t, db)
 
 	router := chi.NewRouter()
-	authModule := auth.NewAuthModule(auth.AuthModuleDeps{
-		TokenKey: testutils.TestTokenKey,
-		DB:       db,
-	})
+	authService := oauth2.NewAuthServiceFromDB(testutils.TestTokenKey, db)
 
 	router.Route("/api/v1", func(r chi.Router) {
 		usersModule := users.NewUsersModule(users.UsersModuleDeps{
 			Router:      r,
 			DB:          db,
-			AuthService: authModule.Service,
+			AuthService: authService,
 		})
 
 		oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
@@ -44,7 +40,7 @@ func setupTest(t *testing.T) (*chi.Mux, *bun.DB, string, string, string, string)
 			TokenKey:    testutils.TestTokenKey,
 			Issuer:      testutils.TestIssuer,
 			UserService: usersModule.Service,
-			AuthService: authModule.Service,
+			AuthService: authService,
 			Github:      oauth2utils.GithubConfig{},
 		})
 	})

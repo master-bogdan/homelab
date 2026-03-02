@@ -11,12 +11,12 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
+	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 	"github.com/redis/go-redis/v9"
@@ -49,17 +49,6 @@ func (deps *AppDeps) SetupApp() {
 	githubScopes := strings.Fields(deps.Cfg.Github.Scopes)
 
 	deps.Router.Route("/api/v1", func(r chi.Router) {
-		authModule := auth.NewAuthModule(auth.AuthModuleDeps{
-			TokenKey: deps.Cfg.Server.PasetoSymmetricKey,
-			DB:       deps.DB,
-		})
-
-		wsModule := ws.NewWsModule(ws.WsModuleDeps{
-			Router:      r,
-			AuthService: authModule.Service,
-			Server:      deps.WsServer,
-		})
-
 		health.NewHealthModule(health.HealthModuleDeps{
 			Router:             r,
 			DB:                 deps.DB,
@@ -67,26 +56,15 @@ func (deps *AppDeps) SetupApp() {
 			IsGracefulShutdown: deps.IsGracefulShutdown,
 		})
 
-		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
-			Router:      r,
-			DB:          deps.DB,
-			WsService:   wsModule.Service,
-			AuthService: authModule.Service,
-		})
+		userRepo := usersrepositories.NewUserRepository(deps.DB)
+		userService := users.NewUsersService(userRepo)
 
-		usersModule := users.NewUsersModule(users.UsersModuleDeps{
-			Router:      r,
-			DB:          deps.DB,
-			AuthService: authModule.Service,
-		})
-
-		oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
+		oauth2Module := oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
 			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
 			Issuer:      deps.Cfg.Server.Issuer,
-			UserService: usersModule.Service,
-			AuthService: authModule.Service,
+			UserService: userService,
 			Github: oauth2utils.GithubConfig{
 				ClientID:     deps.Cfg.Github.ClientID,
 				ClientSecret: deps.Cfg.Github.ClientSecret,
@@ -94,6 +72,25 @@ func (deps *AppDeps) SetupApp() {
 				StateSecret:  deps.Cfg.Github.StateSecret,
 				Scopes:       githubScopes,
 			},
+		})
+
+		wsModule := ws.NewWsModule(ws.WsModuleDeps{
+			Router:      r,
+			AuthService: oauth2Module.AuthService,
+			Server:      deps.WsServer,
+		})
+
+		users.NewUsersModule(users.UsersModuleDeps{
+			Router:      r,
+			DB:          deps.DB,
+			AuthService: oauth2Module.AuthService,
+		})
+
+		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
+			Router:      r,
+			DB:          deps.DB,
+			WsService:   wsModule.Service,
+			AuthService: oauth2Module.AuthService,
 		})
 	})
 }

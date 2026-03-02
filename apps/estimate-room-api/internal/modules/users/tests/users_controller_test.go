@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	usersdto "github.com/master-bogdan/estimate-room-api/internal/modules/users/dto"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
@@ -24,16 +24,13 @@ func setupUsersTest(t *testing.T) (*chi.Mux, *bun.DB) {
 
 	router := chi.NewRouter()
 
-	authModule := auth.NewAuthModule(auth.AuthModuleDeps{
-		TokenKey: testutils.TestTokenKey,
-		DB:       db,
-	})
+	authService := oauth2.NewAuthServiceFromDB(testutils.TestTokenKey, db)
 
 	router.Route("/api/v1", func(r chi.Router) {
 		users.NewUsersModule(users.UsersModuleDeps{
 			Router:      r,
 			DB:          db,
-			AuthService: authModule.Service,
+			AuthService: authService,
 		})
 	})
 

@@ -6,6 +6,7 @@ import (
 
 	"database/sql"
 	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/uptrace/bun"
 )
 
@@ -43,7 +44,7 @@ func (r *oauth2ClientRepository) FindByID(clientID string) (*oauth2models.Oauth2
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrClientNotFound
+			return nil, apperrors.ErrClientNotFound
 		}
 		return nil, err
 	}

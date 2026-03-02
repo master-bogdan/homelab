@@ -3,7 +3,7 @@ package rooms
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	"github.com/uptrace/bun"
@@ -19,7 +19,7 @@ type RoomsModuleDeps struct {
 	Router      chi.Router
 	DB          *bun.DB
 	WsService   *ws.Service
-	AuthService auth.AuthService
+	AuthService oauth2.AuthService
 }
 
 func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
