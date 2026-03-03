@@ -31,6 +31,7 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	deps.Router.Route("/rooms", func(r chi.Router) {
 		r.Post("/", ctrl.CreateRoom)
 		r.Get("/{id}", ctrl.GetRoom)
+		r.Patch("/{id}", ctrl.UpdateRoom)
 		r.Route("/{id}/tasks", func(taskRouter chi.Router) {
 			taskRouter.Post("/", ctrl.CreateTask)
 			taskRouter.Get("/", ctrl.ListTasks)

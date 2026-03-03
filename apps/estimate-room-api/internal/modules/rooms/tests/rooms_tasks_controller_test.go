@@ -76,9 +76,15 @@ func seedRoom(t *testing.T, db *bun.DB, adminUserID string) string {
 func createAccessToken(t *testing.T, db *bun.DB) (string, string) {
 	t.Helper()
 
+	return createAccessTokenForEmail(t, db, uuid.NewString()+"@example.com")
+}
+
+func createAccessTokenForEmail(t *testing.T, db *bun.DB, email string) (string, string) {
+	t.Helper()
+
 	redirectURI := "http://localhost:4081"
 	clientID := testutils.SeedClient(t, db, redirectURI, []string{"user"})
-	userID := testutils.SeedUser(t, db, "task-owner@example.com", "password123")
+	userID := testutils.SeedUser(t, db, email, "password123")
 	sessionID := testutils.SeedSession(t, db, userID, clientID, "nonce-rooms")
 
 	svc := testutils.NewOauth2Service(db)

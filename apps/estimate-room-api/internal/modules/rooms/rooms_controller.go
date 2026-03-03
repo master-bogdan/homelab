@@ -2,6 +2,7 @@ package rooms
 
 import (
 	"encoding/json"
+	stdErrors "errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -18,6 +19,7 @@ import (
 type RoomsController interface {
 	CreateRoom(w http.ResponseWriter, r *http.Request)
 	GetRoom(w http.ResponseWriter, r *http.Request)
+	UpdateRoom(w http.ResponseWriter, r *http.Request)
 	CreateTask(w http.ResponseWriter, r *http.Request)
 	ListTasks(w http.ResponseWriter, r *http.Request)
 	GetTask(w http.ResponseWriter, r *http.Request)
@@ -95,8 +97,47 @@ func (c *roomsController) GetRoom(w http.ResponseWriter, r *http.Request) {
 
 	room, err := c.service.GetRoom(roomID)
 	if err != nil {
+		c.writeRoomError(w, r, err)
+		return
+	}
+
+	httputils.WriteResponse(w, room)
+}
+
+func (c *roomsController) UpdateRoom(w http.ResponseWriter, r *http.Request) {
+	userID, err := c.authService.CheckAuth(r)
+	if err != nil {
+		c.writeError(w, r, apperrors.ErrUnauthorized, err.Error(), err)
+		return
+	}
+
+	roomID := chi.URLParam(r, "id")
+
+	dto := roomsdto.UpdateRoomDTO{}
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
+	}
+
+	if err := dto.Validate(); err != nil {
+		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
+		return
+	}
+
+	room, err := c.service.UpdateRoom(roomID, userID, UpdateRoomInput{
+		Name:              dto.Name,
+		Status:            dto.Status,
+		AllowGuests:       dto.AllowGuests,
+		AllowSpectators:   dto.AllowSpectators,
+		RoundTimerSeconds: dto.RoundTimerSeconds,
+	})
+	if err != nil {
+		c.writeRoomError(w, r, err)
+		return
+	}
+
+	if dto.Status != nil && *dto.Status == "FINISHED" {
+		// TODO: emit websocket event when room is finished.
 	}
 
 	httputils.WriteResponse(w, room)
@@ -123,4 +164,15 @@ func (c *roomsController) writeError(w http.ResponseWriter, r *http.Request, err
 			Instance: r.URL.Path,
 		},
 	))
+}
+
+func (c *roomsController) writeRoomError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case stdErrors.Is(err, apperrors.ErrNotFound):
+		c.writeError(w, r, apperrors.ErrNotFound, err.Error(), err)
+	case stdErrors.Is(err, apperrors.ErrForbidden):
+		c.writeError(w, r, apperrors.ErrForbidden, err.Error(), err)
+	default:
+		c.writeError(w, r, apperrors.ErrInternal, "", err)
+	}
 }

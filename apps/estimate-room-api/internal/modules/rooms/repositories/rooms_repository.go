@@ -2,15 +2,19 @@ package roomsrepositories
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"strings"
 
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/uptrace/bun"
 )
 
 type RoomsRepository interface {
 	Create(model *roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
 	FindByID(roomID string) (*roomsmodels.RoomsModel, error)
+	Update(roomID string, input UpdateRoomFields) (*roomsmodels.RoomsModel, error)
 	RoomExists(roomID string) (bool, error)
 	CreateTask(model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error)
 	FindTasksByRoomID(roomID string) ([]*roomsmodels.RoomTaskModel, error)
@@ -21,6 +25,14 @@ type RoomsRepository interface {
 
 type roomsRepository struct {
 	db *bun.DB
+}
+
+type UpdateRoomFields struct {
+	Name              *string
+	Status            *string
+	AllowGuests       *bool
+	AllowSpectators   *bool
+	RoundTimerSeconds *int
 }
 
 func NewRoomsRepository(db *bun.DB) *roomsRepository {
@@ -68,8 +80,58 @@ func (r *roomsRepository) FindByID(roomID string) (*roomsmodels.RoomsModel, erro
 		Limit(1).
 		Scan(context.Background())
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, apperrors.ErrNotFound
+		}
 		return nil, err
 	}
 
 	return room, nil
+}
+
+func (r *roomsRepository) Update(roomID string, input UpdateRoomFields) (*roomsmodels.RoomsModel, error) {
+	query := r.db.NewUpdate().
+		Model((*roomsmodels.RoomsModel)(nil)).
+		Set("last_activity_at = NOW()").
+		Where("room_id = ?", roomID)
+
+	if input.Name != nil {
+		query = query.Set("name = ?", *input.Name)
+	}
+
+	if input.Status != nil {
+		query = query.Set("status = ?", *input.Status)
+		if *input.Status == "FINISHED" {
+			query = query.Set("finished_at = COALESCE(finished_at, NOW())")
+		} else {
+			query = query.Set("finished_at = NULL")
+		}
+	}
+
+	if input.AllowGuests != nil {
+		query = query.Set("allow_guests = ?", *input.AllowGuests)
+	}
+
+	if input.AllowSpectators != nil {
+		query = query.Set("allow_spectators = ?", *input.AllowSpectators)
+	}
+
+	if input.RoundTimerSeconds != nil {
+		query = query.Set("round_timer_seconds = ?", *input.RoundTimerSeconds)
+	}
+
+	result, err := query.Exec(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if rowsAffected == 0 {
+		return nil, apperrors.ErrNotFound
+	}
+
+	return r.FindByID(roomID)
 }
