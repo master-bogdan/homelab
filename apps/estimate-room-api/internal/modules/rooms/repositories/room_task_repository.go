@@ -7,16 +7,26 @@ import (
 
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
+	"github.com/uptrace/bun"
 )
 
-func (r *roomsRepository) RoomExists(roomID string) (bool, error) {
-	return r.db.NewSelect().
-		Model((*roomsmodels.RoomsModel)(nil)).
-		Where("r.room_id = ?", roomID).
-		Exists(context.Background())
+type RoomTaskRepository interface {
+	Create(model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error)
+	FindByRoomID(roomID string) ([]*roomsmodels.RoomTaskModel, error)
+	FindByID(roomID, taskID string) (*roomsmodels.RoomTaskModel, error)
+	Update(roomID string, model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error)
+	Delete(roomID, taskID string) error
 }
 
-func (r *roomsRepository) CreateTask(model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error) {
+type roomTaskRepository struct {
+	db *bun.DB
+}
+
+func NewRoomTaskRepository(db *bun.DB) RoomTaskRepository {
+	return &roomTaskRepository{db: db}
+}
+
+func (r *roomTaskRepository) Create(model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error) {
 	_, err := r.db.NewInsert().
 		Model(model).
 		Column("task_id", "room_id", "title", "description", "external_key", "status", "final_estimate_value").
@@ -29,7 +39,7 @@ func (r *roomsRepository) CreateTask(model *roomsmodels.RoomTaskModel) (*roomsmo
 	return model, nil
 }
 
-func (r *roomsRepository) FindTasksByRoomID(roomID string) ([]*roomsmodels.RoomTaskModel, error) {
+func (r *roomTaskRepository) FindByRoomID(roomID string) ([]*roomsmodels.RoomTaskModel, error) {
 	tasks := make([]*roomsmodels.RoomTaskModel, 0)
 	err := r.db.NewSelect().
 		Model(&tasks).
@@ -43,7 +53,7 @@ func (r *roomsRepository) FindTasksByRoomID(roomID string) ([]*roomsmodels.RoomT
 	return tasks, nil
 }
 
-func (r *roomsRepository) FindTaskByID(roomID, taskID string) (*roomsmodels.RoomTaskModel, error) {
+func (r *roomTaskRepository) FindByID(roomID, taskID string) (*roomsmodels.RoomTaskModel, error) {
 	task := new(roomsmodels.RoomTaskModel)
 	err := r.db.NewSelect().
 		Model(task).
@@ -61,7 +71,7 @@ func (r *roomsRepository) FindTaskByID(roomID, taskID string) (*roomsmodels.Room
 	return task, nil
 }
 
-func (r *roomsRepository) UpdateTask(roomID string, model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error) {
+func (r *roomTaskRepository) Update(roomID string, model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error) {
 	result, err := r.db.NewUpdate().
 		Model(model).
 		Column("title", "description", "external_key", "status", "final_estimate_value").
@@ -81,10 +91,10 @@ func (r *roomsRepository) UpdateTask(roomID string, model *roomsmodels.RoomTaskM
 		return nil, apperrors.ErrNotFound
 	}
 
-	return r.FindTaskByID(roomID, model.TaskID)
+	return r.FindByID(roomID, model.TaskID)
 }
 
-func (r *roomsRepository) DeleteTask(roomID, taskID string) error {
+func (r *roomTaskRepository) Delete(roomID, taskID string) error {
 	result, err := r.db.NewDelete().
 		Model((*roomsmodels.RoomTaskModel)(nil)).
 		Where("task_id = ?", taskID).

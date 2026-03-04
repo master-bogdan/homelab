@@ -13,18 +13,6 @@ Enum team_member_role {
   MEMBER
 }
 
-Enum invitation_type {
-  TEAM
-  ROOM
-}
-
-Enum invitation_status {
-  PENDING
-  ACCEPTED
-  DECLINED
-  EXPIRED
-}
-
 Enum deck_type {
   FIBONACCI
   TSHIRT
@@ -39,8 +27,8 @@ Enum room_status {
 
 Enum room_participant_role {
   ADMIN
-  VOTER
-  SPECTATOR
+  MEMBER
+  GUEST
 }
 
 Enum task_status {
@@ -91,20 +79,6 @@ Table team_members {
   }
 }
 
-Table invitations {
-  invitation_id                 text              [pk]
-  type              invitation_type   [not null]
-  email             text              [not null]
-  to_user_id        text              [ref: > users.user_id]
-  team_id           text              [ref: > teams.team_id]
-  room_id           text              [ref: > rooms.room_id]
-  token             text              [not null, unique]
-  status            invitation_status [not null, default: 'PENDING']
-  expires_at        timestamptz       [not null]
-  created_by_user_id text             [not null, ref: > users.user_id]
-  created_at        timestamptz       [not null, default: `now()`]
-}
-
 Table decks {
   deck_id     deck_type [pk]
   name   text      [not null]
@@ -120,9 +94,6 @@ Table rooms {
   team_id            text        [ref: > teams.team_id]
   deck_id            deck_type   [not null, default: 'FIBONACCI', ref: > decks.deck_id]
   status             room_status [not null, default: 'ACTIVE']
-  allow_guests       boolean     [not null, default: false]
-  allow_spectators   boolean     [not null, default: false]
-  round_timer_seconds int        [not null, default: 120]
   created_at         timestamptz [not null, default: `now()`]
   last_activity_at   timestamptz [not null, default: `now()`]
   finished_at        timestamptz
@@ -133,7 +104,7 @@ Table room_participants {
   room_id    text                 [not null, ref: > rooms.room_id]
   user_id    text                 [ref: > users.user_id, note: 'nullable for guests']
   guest_name text
-  role       room_participant_role [not null, default: 'VOTER']
+  role       room_participant_role [not null, default: 'MEMBER']
   joined_at  timestamptz          [not null, default: `now()`]
   left_at    timestamptz
 }

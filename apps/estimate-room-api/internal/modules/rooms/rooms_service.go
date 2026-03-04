@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
 	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
@@ -16,23 +17,24 @@ import (
 type RoomsService interface {
 	CreateRoom(model roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
 	GetRoom(roomID string) (*roomsmodels.RoomsModel, error)
+	ValidateUserRoomAccess(roomID, userID string) error
 	UpdateRoom(roomID, userID string, input UpdateRoomInput) (*roomsmodels.RoomsModel, error)
-	CreateTask(roomID string, input CreateTaskInput) (*roomsmodels.RoomTaskModel, error)
-	ListTasks(roomID string) ([]*roomsmodels.RoomTaskModel, error)
-	GetTask(roomID, taskID string) (*roomsmodels.RoomTaskModel, error)
-	UpdateTask(roomID, taskID string, input UpdateTaskInput) (*roomsmodels.RoomTaskModel, error)
-	DeleteTask(roomID, taskID string) error
 }
 
 type roomsService struct {
-	roomsRepo roomsrepositories.RoomsRepository
-	logger    *slog.Logger
+	roomsRepo       roomsrepositories.RoomsRepository
+	participantRepo roomsrepositories.RoomParticipantRepository
+	logger          *slog.Logger
 }
 
-func NewRoomsService(roomsRepo roomsrepositories.RoomsRepository) RoomsService {
+func NewRoomsService(
+	roomsRepo roomsrepositories.RoomsRepository,
+	participantRepo roomsrepositories.RoomParticipantRepository,
+) RoomsService {
 	return &roomsService{
-		roomsRepo: roomsRepo,
-		logger:    logger.L().With(slog.String("service", "rooms")),
+		roomsRepo:       roomsRepo,
+		participantRepo: participantRepo,
+		logger:          logger.L().With(slog.String("service", "rooms")),
 	}
 }
 
@@ -49,29 +51,53 @@ func (s *roomsService) CreateRoom(model roomsmodels.RoomsModel) (*roomsmodels.Ro
 
 	model.Code = code
 
-	return s.roomsRepo.Create(&model)
+	room, err := s.roomsRepo.Create(&model)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = s.participantRepo.Create(&roomsmodels.RoomParticipantModel{
+		RoomParticipantID: uuid.NewString(),
+		RoomID:            room.RoomID,
+		UserID:            &room.AdminUserID,
+		Role:              roomsmodels.RoomParticipantRoleAdmin,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return room, nil
 }
 
 func (s *roomsService) GetRoom(roomID string) (*roomsmodels.RoomsModel, error) {
 	return s.roomsRepo.FindByID(roomID)
 }
 
+func (s *roomsService) ValidateUserRoomAccess(roomID, userID string) error {
+	participant, err := s.participantRepo.FindActiveByUserID(roomID, userID)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return apperrors.ErrForbidden
+		}
+		return err
+	}
+
+	if !participant.Role.IsValid() {
+		return apperrors.ErrForbidden
+	}
+
+	return nil
+}
+
 type UpdateRoomInput struct {
-	Name              *string
-	Status            *string
-	AllowGuests       *bool
-	AllowSpectators   *bool
-	RoundTimerSeconds *int
+	Name   *string
+	Status *string
 }
 
 func (s *roomsService) UpdateRoom(roomID, userID string, input UpdateRoomInput) (*roomsmodels.RoomsModel, error) {
-	room, err := s.roomsRepo.FindByID(roomID)
+	room, err := s.ensureRoomAdmin(roomID, userID)
 	if err != nil {
 		return nil, err
-	}
-
-	if room.AdminUserID != userID {
-		return nil, apperrors.ErrForbidden
 	}
 
 	if input.Name != nil {
@@ -87,11 +113,8 @@ func (s *roomsService) UpdateRoom(roomID, userID string, input UpdateRoomInput) 
 	}
 
 	return s.roomsRepo.Update(roomID, roomsrepositories.UpdateRoomFields{
-		Name:              input.Name,
-		Status:            input.Status,
-		AllowGuests:       input.AllowGuests,
-		AllowSpectators:   input.AllowSpectators,
-		RoundTimerSeconds: input.RoundTimerSeconds,
+		Name:   input.Name,
+		Status: input.Status,
 	})
 }
 
@@ -102,15 +125,30 @@ func roomPatchIsNoop(room *roomsmodels.RoomsModel, input UpdateRoomInput) bool {
 	if input.Status != nil && room.Status != *input.Status {
 		return false
 	}
-	if input.AllowGuests != nil && room.AllowGuests != *input.AllowGuests {
-		return false
-	}
-	if input.AllowSpectators != nil && room.AllowSpectators != *input.AllowSpectators {
-		return false
-	}
-	if input.RoundTimerSeconds != nil && room.RoundTimerSeconds != *input.RoundTimerSeconds {
-		return false
+	return true
+}
+
+func (s *roomsService) ensureRoomAdmin(roomID, userID string) (*roomsmodels.RoomsModel, error) {
+	room, err := s.roomsRepo.FindByID(roomID)
+	if err != nil {
+		return nil, err
 	}
 
-	return true
+	participant, err := s.participantRepo.FindActiveByUserID(roomID, userID)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil, apperrors.ErrForbidden
+		}
+		return nil, err
+	}
+
+	if participant.Role != roomsmodels.RoomParticipantRoleAdmin {
+		return nil, apperrors.ErrForbidden
+	}
+
+	if room.AdminUserID != userID {
+		return nil, apperrors.ErrForbidden
+	}
+
+	return room, nil
 }

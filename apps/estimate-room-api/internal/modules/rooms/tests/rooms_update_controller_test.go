@@ -18,7 +18,7 @@ func TestUpdateRoom_ChangesFieldsForCreator(t *testing.T) {
 	accessToken, userID := createAccessToken(t, db)
 	roomID := seedRoom(t, db, userID)
 
-	req := httptest.NewRequest(http.MethodPatch, "/api/v1/rooms/"+roomID, bytes.NewReader([]byte(`{"name":"Renamed room","allowGuests":true,"allowSpectators":true,"roundTimerSeconds":300}`)))
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/rooms/"+roomID, bytes.NewReader([]byte(`{"name":"Renamed room"}`)))
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	rr := httptest.NewRecorder()
@@ -35,15 +35,6 @@ func TestUpdateRoom_ChangesFieldsForCreator(t *testing.T) {
 
 	if room.Name != "Renamed room" {
 		t.Fatalf("expected updated name, got %s", room.Name)
-	}
-	if !room.AllowGuests {
-		t.Fatal("expected allowGuests to be true")
-	}
-	if !room.AllowSpectators {
-		t.Fatal("expected allowSpectators to be true")
-	}
-	if room.RoundTimerSeconds != 300 {
-		t.Fatalf("expected roundTimerSeconds 300, got %d", room.RoundTimerSeconds)
 	}
 }
 

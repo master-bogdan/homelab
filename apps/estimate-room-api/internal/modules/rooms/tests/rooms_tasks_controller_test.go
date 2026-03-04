@@ -52,6 +52,7 @@ func setupRoomsTasksTest(t *testing.T) (*chi.Mux, *bun.DB) {
 			DB:          db,
 			WsService:   wsService,
 			AuthService: authService,
+			TokenKey:    testutils.TestTokenKey,
 		})
 	})
 
@@ -68,6 +69,14 @@ func seedRoom(t *testing.T, db *bun.DB, adminUserID string) string {
 	`, roomID, "code-"+roomID[:8], "Test Room", adminUserID)
 	if err != nil {
 		t.Fatalf("failed to insert room: %v", err)
+	}
+
+	_, err = db.ExecContext(context.Background(), `
+		INSERT INTO room_participants (room_participants_id, room_id, user_id, role)
+		VALUES ($1, $2, $3, 'ADMIN')
+	`, uuid.NewString(), roomID, adminUserID)
+	if err != nil {
+		t.Fatalf("failed to insert admin participant: %v", err)
 	}
 
 	return roomID
@@ -94,6 +103,37 @@ func createAccessTokenForEmail(t *testing.T, db *bun.DB, email string) (string, 
 	}
 
 	return tokens.AccessToken, userID
+}
+
+func createRoomViaAPI(t *testing.T, router *chi.Mux, accessToken string) (string, string) {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/", bytes.NewReader([]byte(`{"name":"Invite Room"}`)))
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK when creating room, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var payload struct {
+		Room        roomsmodels.RoomsModel `json:"room"`
+		InviteToken string                 `json:"inviteToken"`
+	}
+	if err := json.NewDecoder(rr.Body).Decode(&payload); err != nil {
+		t.Fatalf("failed to decode create room response: %v", err)
+	}
+
+	if payload.Room.RoomID == "" {
+		t.Fatal("expected room id in create room response")
+	}
+	if payload.InviteToken == "" {
+		t.Fatal("expected invite token in response")
+	}
+
+	return payload.Room.RoomID, payload.InviteToken
 }
 
 func TestTasksCRUD(t *testing.T) {
@@ -208,5 +248,110 @@ func TestTasksCRUD(t *testing.T) {
 	}
 	if httpErr.Status != http.StatusNotFound {
 		t.Fatalf("expected error status 404, got %d", httpErr.Status)
+	}
+}
+
+func TestTasksCRUD_RequiresRoomAdmin(t *testing.T) {
+	router, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	_, ownerUserID := createAccessToken(t, db)
+	roomID := seedRoom(t, db, ownerUserID)
+
+	memberToken, _ := createAccessToken(t, db)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+roomID+"/tasks/", bytes.NewReader([]byte(`{"title":"Initial task"}`)))
+	req.Header.Set("Authorization", "Bearer "+memberToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden for non-admin, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestInviteFlow_AuthenticatedUserJoinsAsMember(t *testing.T) {
+	router, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	adminToken, _ := createAccessToken(t, db)
+	roomID, inviteToken := createRoomViaAPI(t, router, adminToken)
+
+	memberToken, memberUserID := createAccessToken(t, db)
+	joinReq := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+roomID+"/invites/"+inviteToken, nil)
+	joinReq.Header.Set("Authorization", "Bearer "+memberToken)
+
+	joinRR := httptest.NewRecorder()
+	router.ServeHTTP(joinRR, joinReq)
+
+	if joinRR.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on member invite join, got %d: %s", joinRR.Code, joinRR.Body.String())
+	}
+
+	var joined struct {
+		Participant roomsmodels.RoomParticipantModel `json:"participant"`
+	}
+	if err := json.NewDecoder(joinRR.Body).Decode(&joined); err != nil {
+		t.Fatalf("failed to decode invite join response: %v", err)
+	}
+	if joined.Participant.UserID == nil || *joined.Participant.UserID != memberUserID {
+		t.Fatalf("expected participant user id %s, got %#v", memberUserID, joined.Participant.UserID)
+	}
+	if joined.Participant.Role != roomsmodels.RoomParticipantRoleMember {
+		t.Fatalf("expected MEMBER role, got %s", joined.Participant.Role)
+	}
+
+	getRoomReq := httptest.NewRequest(http.MethodGet, "/api/v1/rooms/"+roomID, nil)
+	getRoomReq.Header.Set("Authorization", "Bearer "+memberToken)
+	getRoomRR := httptest.NewRecorder()
+	router.ServeHTTP(getRoomRR, getRoomReq)
+
+	if getRoomRR.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK when joined member reads room, got %d: %s", getRoomRR.Code, getRoomRR.Body.String())
+	}
+}
+
+func TestInviteFlow_GuestJoinsAndCanReadRoom(t *testing.T) {
+	router, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	adminToken, _ := createAccessToken(t, db)
+	roomID, inviteToken := createRoomViaAPI(t, router, adminToken)
+
+	joinReq := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+roomID+"/invites/"+inviteToken, bytes.NewReader([]byte(`{"guestName":"Guest One"}`)))
+	joinRR := httptest.NewRecorder()
+	router.ServeHTTP(joinRR, joinReq)
+
+	if joinRR.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on guest join, got %d: %s", joinRR.Code, joinRR.Body.String())
+	}
+
+	var joined struct {
+		Participant roomsmodels.RoomParticipantModel `json:"participant"`
+	}
+	if err := json.NewDecoder(joinRR.Body).Decode(&joined); err != nil {
+		t.Fatalf("failed to decode guest join response: %v", err)
+	}
+
+	if joined.Participant.GuestName == nil || *joined.Participant.GuestName != "Guest One" {
+		t.Fatalf("expected guest name to be set, got %#v", joined.Participant.GuestName)
+	}
+	if joined.Participant.Role != roomsmodels.RoomParticipantRoleGuest {
+		t.Fatalf("expected GUEST role, got %s", joined.Participant.Role)
+	}
+
+	cookies := joinRR.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("expected guest join to set a cookie")
+	}
+
+	getRoomReq := httptest.NewRequest(http.MethodGet, "/api/v1/rooms/"+roomID, nil)
+	getRoomReq.AddCookie(cookies[0])
+	getRoomRR := httptest.NewRecorder()
+	router.ServeHTTP(getRoomRR, getRoomReq)
+
+	if getRoomRR.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK when guest reads room, got %d: %s", getRoomRR.Code, getRoomRR.Body.String())
 	}
 }

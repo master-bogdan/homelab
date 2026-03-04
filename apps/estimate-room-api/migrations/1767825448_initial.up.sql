@@ -10,18 +10,6 @@ CREATE TYPE "team_member_role" AS ENUM (
   'MEMBER'
 );
 
-CREATE TYPE "invitation_type" AS ENUM (
-  'TEAM',
-  'ROOM'
-);
-
-CREATE TYPE "invitation_status" AS ENUM (
-  'PENDING',
-  'ACCEPTED',
-  'DECLINED',
-  'EXPIRED'
-);
-
 CREATE TYPE "deck_type" AS ENUM (
   'FIBONACCI',
   'TSHIRT',
@@ -36,8 +24,8 @@ CREATE TYPE "room_status" AS ENUM (
 
 CREATE TYPE "room_participant_role" AS ENUM (
   'ADMIN',
-  'VOTER',
-  'SPECTATOR'
+  'MEMBER',
+  'GUEST'
 );
 
 CREATE TYPE "task_status" AS ENUM (
@@ -84,20 +72,6 @@ CREATE TABLE "team_members" (
   PRIMARY KEY ("team_id", "user_id")
 );
 
-CREATE TABLE "invitations" (
-  "invitation_id" text PRIMARY KEY,
-  "type" invitation_type NOT NULL,
-  "email" text NOT NULL,
-  "to_user_id" text,
-  "team_id" text,
-  "room_id" text,
-  "token" text UNIQUE NOT NULL,
-  "status" invitation_status NOT NULL DEFAULT 'PENDING',
-  "expires_at" timestamptz NOT NULL,
-  "created_by_user_id" text NOT NULL,
-  "created_at" timestamptz NOT NULL DEFAULT (now())
-);
-
 CREATE TABLE "decks" (
   "deck_id" deck_type PRIMARY KEY,
   "name" text NOT NULL,
@@ -113,9 +87,6 @@ CREATE TABLE "rooms" (
   "team_id" text,
   "deck_id" deck_type NOT NULL DEFAULT 'FIBONACCI',
   "status" room_status NOT NULL DEFAULT 'ACTIVE',
-  "allow_guests" boolean NOT NULL DEFAULT false,
-  "allow_spectators" boolean NOT NULL DEFAULT false,
-  "round_timer_seconds" int NOT NULL DEFAULT 120,
   "created_at" timestamptz NOT NULL DEFAULT (now()),
   "last_activity_at" timestamptz NOT NULL DEFAULT (now()),
   "finished_at" timestamptz
@@ -126,7 +97,7 @@ CREATE TABLE "room_participants" (
   "room_id" text NOT NULL,
   "user_id" text,
   "guest_name" text,
-  "role" room_participant_role NOT NULL DEFAULT 'VOTER',
+  "role" room_participant_role NOT NULL DEFAULT 'MEMBER',
   "joined_at" timestamptz NOT NULL DEFAULT (now()),
   "left_at" timestamptz
 );
@@ -275,14 +246,6 @@ ALTER TABLE "teams" ADD FOREIGN KEY ("owner_user_id") REFERENCES "users" ("user_
 ALTER TABLE "team_members" ADD FOREIGN KEY ("team_id") REFERENCES "teams" ("team_id");
 
 ALTER TABLE "team_members" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
-
-ALTER TABLE "invitations" ADD FOREIGN KEY ("to_user_id") REFERENCES "users" ("user_id");
-
-ALTER TABLE "invitations" ADD FOREIGN KEY ("team_id") REFERENCES "teams" ("team_id");
-
-ALTER TABLE "invitations" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("room_id");
-
-ALTER TABLE "invitations" ADD FOREIGN KEY ("created_by_user_id") REFERENCES "users" ("user_id");
 
 ALTER TABLE "rooms" ADD FOREIGN KEY ("admin_user_id") REFERENCES "users" ("user_id");
 

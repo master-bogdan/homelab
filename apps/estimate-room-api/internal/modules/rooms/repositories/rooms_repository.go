@@ -15,12 +15,6 @@ type RoomsRepository interface {
 	Create(model *roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
 	FindByID(roomID string) (*roomsmodels.RoomsModel, error)
 	Update(roomID string, input UpdateRoomFields) (*roomsmodels.RoomsModel, error)
-	RoomExists(roomID string) (bool, error)
-	CreateTask(model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error)
-	FindTasksByRoomID(roomID string) ([]*roomsmodels.RoomTaskModel, error)
-	FindTaskByID(roomID, taskID string) (*roomsmodels.RoomTaskModel, error)
-	UpdateTask(roomID string, model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error)
-	DeleteTask(roomID, taskID string) error
 }
 
 type roomsRepository struct {
@@ -28,11 +22,8 @@ type roomsRepository struct {
 }
 
 type UpdateRoomFields struct {
-	Name              *string
-	Status            *string
-	AllowGuests       *bool
-	AllowSpectators   *bool
-	RoundTimerSeconds *int
+	Name   *string
+	Status *string
 }
 
 func NewRoomsRepository(db *bun.DB) *roomsRepository {
@@ -106,18 +97,6 @@ func (r *roomsRepository) Update(roomID string, input UpdateRoomFields) (*roomsm
 		} else {
 			query = query.Set("finished_at = NULL")
 		}
-	}
-
-	if input.AllowGuests != nil {
-		query = query.Set("allow_guests = ?", *input.AllowGuests)
-	}
-
-	if input.AllowSpectators != nil {
-		query = query.Set("allow_spectators = ?", *input.AllowSpectators)
-	}
-
-	if input.RoundTimerSeconds != nil {
-		query = query.Set("round_timer_seconds = ?", *input.RoundTimerSeconds)
 	}
 
 	result, err := query.Exec(context.Background())

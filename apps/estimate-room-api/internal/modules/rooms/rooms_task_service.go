@@ -1,12 +1,31 @@
 package rooms
 
 import (
+	"errors"
+	"log/slog"
 	"strings"
 
 	"github.com/google/uuid"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
+	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 )
+
+type RoomsTaskService interface {
+	CreateTask(roomID, userID string, input CreateTaskInput) (*roomsmodels.RoomTaskModel, error)
+	ListTasks(roomID, userID string) ([]*roomsmodels.RoomTaskModel, error)
+	GetTask(roomID, taskID, userID string) (*roomsmodels.RoomTaskModel, error)
+	UpdateTask(roomID, taskID, userID string, input UpdateTaskInput) (*roomsmodels.RoomTaskModel, error)
+	DeleteTask(roomID, taskID, userID string) error
+}
+
+type roomsTaskService struct {
+	roomsRepo       roomsrepositories.RoomsRepository
+	taskRepo        roomsrepositories.RoomTaskRepository
+	participantRepo roomsrepositories.RoomParticipantRepository
+	logger          *slog.Logger
+}
 
 type CreateTaskInput struct {
 	Title       string
@@ -22,8 +41,21 @@ type UpdateTaskInput struct {
 	FinalEstimateValue *string
 }
 
-func (s *roomsService) CreateTask(roomID string, input CreateTaskInput) (*roomsmodels.RoomTaskModel, error) {
-	if err := s.ensureRoomExists(roomID); err != nil {
+func NewRoomsTaskService(
+	roomsRepo roomsrepositories.RoomsRepository,
+	taskRepo roomsrepositories.RoomTaskRepository,
+	participantRepo roomsrepositories.RoomParticipantRepository,
+) RoomsTaskService {
+	return &roomsTaskService{
+		roomsRepo:       roomsRepo,
+		taskRepo:        taskRepo,
+		participantRepo: participantRepo,
+		logger:          logger.L().With(slog.String("service", "rooms-tasks")),
+	}
+}
+
+func (s *roomsTaskService) CreateTask(roomID, userID string, input CreateTaskInput) (*roomsmodels.RoomTaskModel, error) {
+	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
 		return nil, err
 	}
 
@@ -51,23 +83,31 @@ func (s *roomsService) CreateTask(roomID string, input CreateTaskInput) (*roomsm
 		Status:      "PENDING",
 	}
 
-	return s.roomsRepo.CreateTask(task)
+	return s.taskRepo.Create(task)
 }
 
-func (s *roomsService) ListTasks(roomID string) ([]*roomsmodels.RoomTaskModel, error) {
-	if err := s.ensureRoomExists(roomID); err != nil {
+func (s *roomsTaskService) ListTasks(roomID, userID string) ([]*roomsmodels.RoomTaskModel, error) {
+	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
 		return nil, err
 	}
 
-	return s.roomsRepo.FindTasksByRoomID(roomID)
+	return s.taskRepo.FindByRoomID(roomID)
 }
 
-func (s *roomsService) GetTask(roomID, taskID string) (*roomsmodels.RoomTaskModel, error) {
-	return s.roomsRepo.FindTaskByID(roomID, taskID)
+func (s *roomsTaskService) GetTask(roomID, taskID, userID string) (*roomsmodels.RoomTaskModel, error) {
+	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
+		return nil, err
+	}
+
+	return s.taskRepo.FindByID(roomID, taskID)
 }
 
-func (s *roomsService) UpdateTask(roomID, taskID string, input UpdateTaskInput) (*roomsmodels.RoomTaskModel, error) {
-	task, err := s.roomsRepo.FindTaskByID(roomID, taskID)
+func (s *roomsTaskService) UpdateTask(roomID, taskID, userID string, input UpdateTaskInput) (*roomsmodels.RoomTaskModel, error) {
+	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
+		return nil, err
+	}
+
+	task, err := s.taskRepo.FindByID(roomID, taskID)
 	if err != nil {
 		return nil, err
 	}
@@ -108,21 +148,38 @@ func (s *roomsService) UpdateTask(roomID, taskID string, input UpdateTaskInput) 
 		}
 	}
 
-	return s.roomsRepo.UpdateTask(roomID, task)
+	return s.taskRepo.Update(roomID, task)
 }
 
-func (s *roomsService) DeleteTask(roomID, taskID string) error {
-	return s.roomsRepo.DeleteTask(roomID, taskID)
-}
-
-func (s *roomsService) ensureRoomExists(roomID string) error {
-	exists, err := s.roomsRepo.RoomExists(roomID)
-	if err != nil {
+func (s *roomsTaskService) DeleteTask(roomID, taskID, userID string) error {
+	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
 		return err
 	}
-	if !exists {
-		return apperrors.ErrNotFound
+
+	return s.taskRepo.Delete(roomID, taskID)
+}
+
+func (s *roomsTaskService) ensureRoomAdmin(roomID, userID string) (*roomsmodels.RoomsModel, error) {
+	room, err := s.roomsRepo.FindByID(roomID)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	participant, err := s.participantRepo.FindActiveByUserID(roomID, userID)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil, apperrors.ErrForbidden
+		}
+		return nil, err
+	}
+
+	if participant.Role != roomsmodels.RoomParticipantRoleAdmin {
+		return nil, apperrors.ErrForbidden
+	}
+
+	if room.AdminUserID != userID {
+		return nil, apperrors.ErrForbidden
+	}
+
+	return room, nil
 }

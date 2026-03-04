@@ -91,6 +91,7 @@ func (deps *AppDeps) SetupApp() {
 			DB:          deps.DB,
 			WsService:   wsModule.Service,
 			AuthService: oauth2Module.AuthService,
+			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
 		})
 	})
 }

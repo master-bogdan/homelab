@@ -10,9 +10,11 @@ import (
 )
 
 type RoomsModule struct {
-	Controller RoomsController
-	Gateway    *roomsGateway
-	Service    RoomsService
+	Controller    RoomsController
+	Gateway       *roomsGateway
+	Service       RoomsService
+	TaskService   RoomsTaskService
+	InviteService RoomsInviteService
 }
 
 type RoomsModuleDeps struct {
@@ -20,17 +22,23 @@ type RoomsModuleDeps struct {
 	DB          *bun.DB
 	WsService   *ws.Service
 	AuthService oauth2.AuthService
+	TokenKey    string
 }
 
 func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	roomsRepo := roomsrepositories.NewRoomsRepository(deps.DB)
-	svc := NewRoomsService(roomsRepo)
-	ctrl := NewRoomsController(svc, deps.AuthService)
+	taskRepo := roomsrepositories.NewRoomTaskRepository(deps.DB)
+	participantRepo := roomsrepositories.NewRoomParticipantRepository(deps.DB)
+	svc := NewRoomsService(roomsRepo, participantRepo)
+	taskSvc := NewRoomsTaskService(roomsRepo, taskRepo, participantRepo)
+	inviteSvc := NewRoomsInviteService(roomsRepo, participantRepo, deps.TokenKey)
+	ctrl := NewRoomsController(svc, taskSvc, inviteSvc, deps.AuthService)
 	gw := NewRoomsGateway(deps.WsService)
 
 	deps.Router.Route("/rooms", func(r chi.Router) {
 		r.Post("/", ctrl.CreateRoom)
 		r.Get("/{id}", ctrl.GetRoom)
+		r.Post("/{id}/invites/{token}", ctrl.JoinInvite)
 		r.Patch("/{id}", ctrl.UpdateRoom)
 		r.Route("/{id}/tasks", func(taskRouter chi.Router) {
 			taskRouter.Post("/", ctrl.CreateTask)
@@ -46,7 +54,10 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	deps.WsService.Subscribe(EventRoomMessage, gw.OnEvent)
 
 	return &RoomsModule{
-		Controller: ctrl,
-		Gateway:    gw,
+		Controller:    ctrl,
+		Gateway:       gw,
+		Service:       svc,
+		TaskService:   taskSvc,
+		InviteService: inviteSvc,
 	}
 }
