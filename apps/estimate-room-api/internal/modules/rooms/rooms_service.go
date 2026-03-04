@@ -39,11 +39,23 @@ func NewRoomsService(
 }
 
 func (s *roomsService) CreateRoom(model roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error) {
-	if model.DeckID == "" {
-		model.DeckID = roomsmodels.DeckIDFibonacci
+	if model.Deck.IsZero() {
+		model.Deck = roomsmodels.DefaultRoomDeck()
 	}
-	if !model.DeckID.IsValid() {
-		return nil, errors.New("invalid deck id")
+
+	model.Deck.Name = strings.TrimSpace(model.Deck.Name)
+	model.Deck.Kind = strings.TrimSpace(model.Deck.Kind)
+	values := make([]string, 0, len(model.Deck.Values))
+	for _, value := range model.Deck.Values {
+		trimmedValue := strings.TrimSpace(value)
+		if trimmedValue != "" {
+			values = append(values, trimmedValue)
+		}
+	}
+	model.Deck.Values = values
+
+	if !model.Deck.IsValid() {
+		return nil, errors.New("invalid deck")
 	}
 
 	timestamp := time.Now().String()

@@ -64,8 +64,8 @@ func seedRoom(t *testing.T, db *bun.DB, adminUserID string) string {
 
 	roomID := uuid.NewString()
 	_, err := db.ExecContext(context.Background(), `
-		INSERT INTO rooms (room_id, code, name, admin_user_id, deck_id)
-		VALUES ($1, $2, $3, $4, 'FIBONACCI')
+		INSERT INTO rooms (room_id, code, name, admin_user_id, deck)
+		VALUES ($1, $2, $3, $4, '{"name":"Fibonacci","kind":"FIBONACCI","values":["0","1","2","3","5","8"]}'::jsonb)
 	`, roomID, "code-"+roomID[:8], "Test Room", adminUserID)
 	if err != nil {
 		t.Fatalf("failed to insert room: %v", err)

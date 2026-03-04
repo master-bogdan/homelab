@@ -72,19 +72,24 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(dto.DeckID) == "" {
-		dto.DeckID = string(roomsmodels.DeckIDFibonacci)
-	}
-
 	var teamID *string
 	if trimmedTeamID := strings.TrimSpace(dto.TeamID); trimmedTeamID != "" {
 		teamID = &trimmedTeamID
 	}
 
+	deck := roomsmodels.RoomDeck{}
+	if dto.Deck != nil {
+		deck = roomsmodels.RoomDeck{
+			Name:   dto.Deck.Name,
+			Kind:   dto.Deck.Kind,
+			Values: dto.Deck.Values,
+		}
+	}
+
 	room := roomsmodels.RoomsModel{
 		Name:        dto.Name,
 		TeamID:      teamID,
-		DeckID:      roomsmodels.DeckID(dto.DeckID),
+		Deck:        deck,
 		AdminUserID: userID,
 	}
 

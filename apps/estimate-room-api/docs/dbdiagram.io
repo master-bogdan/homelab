@@ -13,12 +13,6 @@ Enum team_member_role {
   MEMBER
 }
 
-Enum deck_type {
-  FIBONACCI
-  TSHIRT
-  CUSTOM
-}
-
 Enum room_status {
   ACTIVE
   FINISHED
@@ -57,7 +51,7 @@ Table user_settings {
   theme                text
   timezone             text
   locale               text
-  default_deck_id      deck_type  [ref: > decks.deck_id]
+  default_deck_id      text [ref: > decks.deck_id]
   default_room_options jsonb
 }
 
@@ -80,10 +74,11 @@ Table team_members {
 }
 
 Table decks {
-  deck_id     deck_type [pk]
-  name   text      [not null]
-  type   deck_type [not null]
-  values jsonb     [not null, note: 'JSONB array of strings']
+  deck_id    text        [pk]
+  name       text        [not null]
+  kind       text        [not null]
+  values     jsonb       [not null, note: 'JSONB array of strings']
+  created_at timestamptz [not null, default: `now()`]
 }
 
 Table rooms {
@@ -92,7 +87,7 @@ Table rooms {
   name               text        [not null]
   admin_user_id      text        [not null, ref: > users.user_id]
   team_id            text        [ref: > teams.team_id]
-  deck_id            deck_type   [not null, default: 'FIBONACCI', ref: > decks.deck_id]
+  deck               jsonb       [not null, note: 'Object with name, kind, values[]']
   status             room_status [not null, default: 'ACTIVE']
   created_at         timestamptz [not null, default: `now()`]
   last_activity_at   timestamptz [not null, default: `now()`]

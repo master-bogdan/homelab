@@ -37,7 +37,7 @@ func (r *roomsRepository) Create(model *roomsmodels.RoomsModel) (*roomsmodels.Ro
 
 	_, err := r.db.NewInsert().
 		Model(model).
-		Column("code", "name", "admin_user_id", "team_id", "deck_id").
+		Column("code", "name", "admin_user_id", "team_id", "deck").
 		Returning("*").
 		Exec(context.Background())
 	if err != nil {

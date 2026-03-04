@@ -14,7 +14,7 @@ type RoomsModel struct {
 	Name           string     `bun:"name"`
 	AdminUserID    string     `bun:"admin_user_id"`
 	TeamID         *string    `bun:"team_id"`
-	DeckID         DeckID     `bun:"deck_id"`
+	Deck           RoomDeck   `bun:"deck,type:jsonb"`
 	Status         string     `bun:"status"`
 	CreatedAt      time.Time  `bun:"created_at"`
 	LastActivityAt time.Time  `bun:"last_activity_at"`

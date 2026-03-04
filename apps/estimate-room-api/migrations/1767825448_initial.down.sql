@@ -21,7 +21,6 @@ DROP TABLE IF EXISTS users;
 DROP TYPE IF EXISTS task_status;
 DROP TYPE IF EXISTS room_participant_role;
 DROP TYPE IF EXISTS room_status;
-DROP TYPE IF EXISTS deck_type;
 DROP TYPE IF EXISTS team_member_role;
 DROP TYPE IF EXISTS pkce_challenge_method;
 

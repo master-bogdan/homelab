@@ -10,12 +10,6 @@ CREATE TYPE "team_member_role" AS ENUM (
   'MEMBER'
 );
 
-CREATE TYPE "deck_type" AS ENUM (
-  'FIBONACCI',
-  'TSHIRT',
-  'CUSTOM'
-);
-
 CREATE TYPE "room_status" AS ENUM (
   'ACTIVE',
   'FINISHED',
@@ -53,7 +47,7 @@ CREATE TABLE "user_settings" (
   "theme" text,
   "timezone" text,
   "locale" text,
-  "default_deck_id" deck_type,
+  "default_deck_id" text,
   "default_room_options" jsonb
 );
 
@@ -73,10 +67,11 @@ CREATE TABLE "team_members" (
 );
 
 CREATE TABLE "decks" (
-  "deck_id" deck_type PRIMARY KEY,
+  "deck_id" text PRIMARY KEY,
   "name" text NOT NULL,
-  "type" deck_type NOT NULL,
-  "values" jsonb NOT NULL
+  "kind" text NOT NULL,
+  "values" jsonb NOT NULL,
+  "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
 CREATE TABLE "rooms" (
@@ -85,7 +80,7 @@ CREATE TABLE "rooms" (
   "name" text NOT NULL,
   "admin_user_id" text NOT NULL,
   "team_id" text,
-  "deck_id" deck_type NOT NULL DEFAULT 'FIBONACCI',
+  "deck" jsonb NOT NULL,
   "status" room_status NOT NULL DEFAULT 'ACTIVE',
   "created_at" timestamptz NOT NULL DEFAULT (now()),
   "last_activity_at" timestamptz NOT NULL DEFAULT (now()),
@@ -217,6 +212,21 @@ CREATE TABLE "oauth2_access_tokens" (
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
+INSERT INTO "decks" ("deck_id", "name", "kind", "values")
+VALUES
+  (
+    'FIBONACCI',
+    'Fibonacci',
+    'FIBONACCI',
+    '["0","1","2","3","5","8","13","21","34","55","?"]'::jsonb
+  ),
+  (
+    'TSHIRT',
+    'T-Shirt',
+    'TSHIRT',
+    '["XS","S","M","L","XL","XXL","?"]'::jsonb
+  );
+
 CREATE UNIQUE INDEX ON "votes" ("task_id", "participant_id", "round_number");
 
 CREATE INDEX "idx_oauth2_auth_codes_code" ON "oauth2_auth_codes" ("code");
@@ -224,8 +234,6 @@ CREATE INDEX "idx_oauth2_auth_codes_code" ON "oauth2_auth_codes" ("code");
 CREATE INDEX "idx_oauth2_refresh_tokens_token" ON "oauth2_refresh_tokens" ("token");
 
 CREATE INDEX "idx_oauth2_access_tokens_token" ON "oauth2_access_tokens" ("token");
-
-COMMENT ON COLUMN "decks"."values" IS 'JSONB array of strings';
 
 COMMENT ON COLUMN "rooms"."code" IS 'short unique string used in URLs';
 
@@ -250,8 +258,6 @@ ALTER TABLE "team_members" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user
 ALTER TABLE "rooms" ADD FOREIGN KEY ("admin_user_id") REFERENCES "users" ("user_id");
 
 ALTER TABLE "rooms" ADD FOREIGN KEY ("team_id") REFERENCES "teams" ("team_id");
-
-ALTER TABLE "rooms" ADD FOREIGN KEY ("deck_id") REFERENCES "decks" ("deck_id");
 
 ALTER TABLE "room_participants" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("room_id");
 
