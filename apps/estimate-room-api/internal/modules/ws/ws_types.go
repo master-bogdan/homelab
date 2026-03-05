@@ -1,10 +1,20 @@
 package ws
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
+
+const (
+	EventTypeHello = "HELLO"
+)
 
 type Event struct {
-	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload"`
+	Type      string          `json:"type"`
+	Payload   json.RawMessage `json:"payload"`
+	RoomID    string          `json:"roomId,omitempty"`
+	UserID    string          `json:"userId,omitempty"`
+	Timestamp time.Time       `json:"timestamp"`
 }
 
 type ClientInfo struct {

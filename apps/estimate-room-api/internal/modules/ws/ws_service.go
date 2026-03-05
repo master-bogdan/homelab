@@ -154,6 +154,7 @@ func (s *Service) readHandler(client *Client) {
 			s.logError(clientInfo(client), err)
 			continue
 		}
+		s.normalizeIncomingEvent(client, &event)
 		if strings.TrimSpace(event.Type) == "" {
 			s.logError(clientInfo(client), errors.New("missing event type"))
 			continue
@@ -212,6 +213,19 @@ func (s *Service) Broadcast(message any) error {
 	if s.server == nil {
 		return errors.New("ws server is not initialized")
 	}
+
+	switch v := message.(type) {
+	case Event:
+		s.normalizeOutgoingEvent(&v)
+		return s.server.Publish(s.channel, v)
+	case *Event:
+		if v == nil {
+			return errors.New("ws event is nil")
+		}
+		s.normalizeOutgoingEvent(v)
+		return s.server.Publish(s.channel, v)
+	}
+
 	return s.server.Publish(s.channel, message)
 }
 
@@ -253,15 +267,16 @@ func (s *Service) logError(info ClientInfo, err error) {
 func (s *Service) sendHello(client *Client) {
 	payload, err := json.Marshal(map[string]string{
 		"connId": client.ConnID,
-		"userId": client.UserID,
 	})
 	if err != nil {
 		return
 	}
 
 	event := Event{
-		Type:    "HELLO",
-		Payload: payload,
+		Type:      EventTypeHello,
+		Payload:   payload,
+		UserID:    client.UserID,
+		Timestamp: time.Now().UTC(),
 	}
 	data, err := json.Marshal(event)
 	if err != nil {
@@ -272,5 +287,35 @@ func (s *Service) sendHello(client *Client) {
 	case client.Send <- data:
 	default:
 		s.unregister <- client
+	}
+}
+
+func (s *Service) normalizeIncomingEvent(client *Client, event *Event) {
+	if event == nil || client == nil {
+		return
+	}
+
+	event.Type = strings.TrimSpace(event.Type)
+	event.RoomID = strings.TrimSpace(event.RoomID)
+	event.UserID = client.UserID
+	if event.Timestamp.IsZero() {
+		event.Timestamp = time.Now().UTC()
+	} else {
+		event.Timestamp = event.Timestamp.UTC()
+	}
+}
+
+func (s *Service) normalizeOutgoingEvent(event *Event) {
+	if event == nil {
+		return
+	}
+
+	event.Type = strings.TrimSpace(event.Type)
+	event.RoomID = strings.TrimSpace(event.RoomID)
+	event.UserID = strings.TrimSpace(event.UserID)
+	if event.Timestamp.IsZero() {
+		event.Timestamp = time.Now().UTC()
+	} else {
+		event.Timestamp = event.Timestamp.UTC()
 	}
 }

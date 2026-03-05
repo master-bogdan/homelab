@@ -49,9 +49,11 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 		})
 	})
 
-	deps.WsService.Subscribe(EventRoomJoin, gw.OnEvent)
-	deps.WsService.Subscribe(EventRoomLeave, gw.OnEvent)
-	deps.WsService.Subscribe(EventRoomMessage, gw.OnEvent)
+	deps.WsService.Subscribe(RoomsJoin, gw.handleRoomJoin)
+	deps.WsService.Subscribe(RoomsTaskSetCurrent, gw.handleTaskSetCurrent)
+	deps.WsService.Subscribe(RoomsVoteCast, gw.handleVoteCast)
+	deps.WsService.Subscribe(RoomsVoteReveal, gw.handleVoteReveal)
+	deps.WsService.Subscribe(RoomsRoundNext, gw.handleRoundNext)
 
 	return &RoomsModule{
 		Controller:    ctrl,

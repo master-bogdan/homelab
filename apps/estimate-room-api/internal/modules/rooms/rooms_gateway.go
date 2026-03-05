@@ -2,7 +2,7 @@ package rooms
 
 import (
 	"encoding/json"
-	"errors"
+	"strings"
 
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
@@ -21,40 +21,48 @@ func NewRoomsGateway(
 }
 
 const (
-	EventRoomJoin    = "ROOM_JOIN"
-	EventRoomLeave   = "ROOM_LEAVE"
-	EventRoomMessage = "ROOM_MESSAGE"
+	RoomsJoin           = "ROOMS_JOIN"
+	RoomsTaskSetCurrent = "ROOMS_TASK_SET_CURRENT"
+	RoomsVoteCast       = "ROOMS_VOTE_CAST"
+	RoomsVoteReveal     = "ROOMS_VOTE_REVEAL"
+	RoomsRoundNext      = "ROOMS_ROUND_NEXT"
 )
 
-func (g *roomsGateway) OnEvent(client ws.ClientInfo, event ws.Event) {
-	logger.L().Info("Event received", "type", event.Type, "user_id", client.UserID, "conn_id", client.ConnID)
-
-	var payload map[string]any
-	if len(event.Payload) > 0 {
-		if err := json.Unmarshal(event.Payload, &payload); err != nil {
-			logger.L().Error("Invalid event payload", "err", err)
-			return
-		}
-	}
+type roomJoinPayload struct {
+	RoomID string `json:"roomId"`
 }
 
-func (g *roomsGateway) SendToRoom(channelID string, data any) error {
-	if channelID == "" {
-		return errors.New("channelID is required")
+func (g *roomsGateway) handleRoomJoin(client ws.ClientInfo, event ws.Event) {
+	roomID := strings.TrimSpace(event.RoomID)
+	if roomID == "" && len(event.Payload) > 0 {
+		payload := roomJoinPayload{}
+		if err := json.Unmarshal(event.Payload, &payload); err != nil {
+			logger.L().Error("room join payload parse failed", "err", err, "user_id", client.UserID, "conn_id", client.ConnID)
+			return
+		}
+		roomID = strings.TrimSpace(payload.RoomID)
 	}
 
-	payload, err := json.Marshal(map[string]any{
-		"roomId": channelID,
-		"data":   data,
-	})
-	if err != nil {
-		return err
+	if roomID == "" {
+		logger.L().Warn("room join ignored: missing room id", "user_id", client.UserID, "conn_id", client.ConnID)
+		return
 	}
 
-	event := ws.Event{
-		Type:    EventRoomMessage,
-		Payload: payload,
-	}
+	logger.L().Info("room join received", "room_id", roomID, "user_id", client.UserID, "conn_id", client.ConnID)
+}
 
-	return g.wsService.Broadcast(event)
+func (g *roomsGateway) handleTaskSetCurrent(client ws.ClientInfo, event ws.Event) {
+	logger.L().Info("task set current received", "room_id", event.RoomID, "user_id", client.UserID, "conn_id", client.ConnID)
+}
+
+func (g *roomsGateway) handleVoteCast(client ws.ClientInfo, event ws.Event) {
+	logger.L().Info("vote cast received", "room_id", event.RoomID, "user_id", client.UserID, "conn_id", client.ConnID)
+}
+
+func (g *roomsGateway) handleVoteReveal(client ws.ClientInfo, event ws.Event) {
+	logger.L().Info("vote reveal received", "room_id", event.RoomID, "user_id", client.UserID, "conn_id", client.ConnID)
+}
+
+func (g *roomsGateway) handleRoundNext(client ws.ClientInfo, event ws.Event) {
+	logger.L().Info("round next received", "room_id", event.RoomID, "user_id", client.UserID, "conn_id", client.ConnID)
 }
