@@ -2,15 +2,21 @@
 package ws
 
 import (
+	"errors"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/httputils"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 )
 
 const defaultChannel = "app"
+const wsAccessTokenQueryParam = "token"
+const wsGuestAccessCookieName = "room_guest_token"
 
 type WsModule struct {
 	Service *Service
@@ -19,14 +25,16 @@ type WsModule struct {
 type WsModuleDeps struct {
 	Router      chi.Router
 	AuthService oauth2.AuthService
+	TokenKey    string
 	Server      PubSub
 }
 
 func NewWsModule(deps WsModuleDeps) *WsModule {
 	service := NewService(deps.Server, defaultChannel)
+	tokenKey := []byte(deps.TokenKey)
 
 	deps.Router.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
-		userID, err := deps.AuthService.CheckAuth(r)
+		identity, err := resolveIdentity(r, deps.AuthService, tokenKey)
 		if err != nil {
 			httputils.WriteResponseError(w, apperrors.CreateHttpError(
 				apperrors.ErrUnauthorized,
@@ -34,10 +42,85 @@ func NewWsModule(deps WsModuleDeps) *WsModule {
 			))
 			return
 		}
-		service.Connect(w, r, userID)
+		service.Connect(w, r, identity)
 	})
 
 	return &WsModule{
 		Service: service,
 	}
+}
+
+type guestTokenClaims struct {
+	ParticipantID string    `json:"participantId"`
+	Role          string    `json:"role"`
+	ExpiresAt     time.Time `json:"expiresAt"`
+}
+
+func resolveIdentity(r *http.Request, authService oauth2.AuthService, tokenKey []byte) (ConnectIdentity, error) {
+	authRequest := requestWithQueryAccessToken(r)
+
+	userID, authErr := authService.CheckAuth(authRequest)
+	if authErr == nil && strings.TrimSpace(userID) != "" {
+		return ConnectIdentity{
+			Type:   IdentityTypeUser,
+			UserID: userID,
+		}, nil
+	}
+
+	guestToken := readGuestTokenFromCookie(r)
+	if guestToken == "" {
+		if authErr != nil {
+			return ConnectIdentity{}, authErr
+		}
+		return ConnectIdentity{}, errors.New("missing auth credentials")
+	}
+
+	claims, err := utils.ParseToken[guestTokenClaims](tokenKey, guestToken)
+	if err != nil {
+		return ConnectIdentity{}, err
+	}
+	if !claims.ExpiresAt.IsZero() && claims.ExpiresAt.Before(time.Now()) {
+		return ConnectIdentity{}, errors.New("guest token expired")
+	}
+	if strings.TrimSpace(claims.Role) != "" && !strings.EqualFold(claims.Role, string(IdentityTypeGuest)) && !strings.EqualFold(claims.Role, "GUEST") {
+		return ConnectIdentity{}, errors.New("invalid guest role")
+	}
+	participantID := strings.TrimSpace(claims.ParticipantID)
+	if participantID == "" {
+		return ConnectIdentity{}, errors.New("invalid guest participant id")
+	}
+
+	return ConnectIdentity{
+		Type:          IdentityTypeGuest,
+		ParticipantID: participantID,
+	}, nil
+}
+
+func requestWithQueryAccessToken(r *http.Request) *http.Request {
+	if r == nil {
+		return nil
+	}
+
+	queryToken := strings.TrimSpace(r.URL.Query().Get(wsAccessTokenQueryParam))
+	if queryToken == "" {
+		return r
+	}
+
+	cloned := r.Clone(r.Context())
+	cloned.Header = cloned.Header.Clone()
+	cloned.Header.Set("Authorization", "Bearer "+queryToken)
+	return cloned
+}
+
+func readGuestTokenFromCookie(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+
+	cookie, err := r.Cookie(wsGuestAccessCookieName)
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(cookie.Value)
 }

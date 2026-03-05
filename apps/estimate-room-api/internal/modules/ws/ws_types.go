@@ -9,6 +9,13 @@ const (
 	EventTypeHello = "HELLO"
 )
 
+type IdentityType string
+
+const (
+	IdentityTypeUser  IdentityType = "USER"
+	IdentityTypeGuest IdentityType = "GUEST"
+)
+
 type Event struct {
 	Type      string          `json:"type"`
 	Payload   json.RawMessage `json:"payload"`
@@ -17,9 +24,18 @@ type Event struct {
 	Timestamp time.Time       `json:"timestamp"`
 }
 
+type ConnectIdentity struct {
+	Type          IdentityType
+	UserID        string
+	ParticipantID string
+}
+
 type ClientInfo struct {
-	UserID string
-	ConnID string
+	ConnID        string
+	IdentityType  IdentityType
+	IdentityID    string
+	UserID        string
+	ParticipantID string
 }
 
 type EventHandler func(ClientInfo, Event)

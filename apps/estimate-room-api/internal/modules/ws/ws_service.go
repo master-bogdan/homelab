@@ -20,32 +20,35 @@ const (
 )
 
 type Client struct {
-	Conn   *websocket.Conn
-	UserID string
-	ConnID string
-	Send   chan []byte
+	Conn          *websocket.Conn
+	ConnID        string
+	IdentityType  IdentityType
+	IdentityID    string
+	UserID        string
+	ParticipantID string
+	Send          chan []byte
 }
 
 type Service struct {
-	clients       map[*Client]bool
-	userClients   map[string]map[*Client]bool
-	register      chan *Client
-	unregister    chan *Client
-	mu            sync.RWMutex
-	server        PubSub
-	channel       string
-	subscriptions map[string][]EventHandler
+	clients         map[*Client]bool
+	identityClients map[string]map[*Client]bool
+	register        chan *Client
+	unregister      chan *Client
+	mu              sync.RWMutex
+	server          PubSub
+	channel         string
+	subscriptions   map[string][]EventHandler
 }
 
 func NewService(server PubSub, channel string) *Service {
 	s := &Service{
-		clients:       make(map[*Client]bool),
-		userClients:   make(map[string]map[*Client]bool),
-		register:      make(chan *Client),
-		unregister:    make(chan *Client),
-		server:        server,
-		channel:       channel,
-		subscriptions: make(map[string][]EventHandler),
+		clients:         make(map[*Client]bool),
+		identityClients: make(map[string]map[*Client]bool),
+		register:        make(chan *Client),
+		unregister:      make(chan *Client),
+		server:          server,
+		channel:         channel,
+		subscriptions:   make(map[string][]EventHandler),
 	}
 
 	go s.run()
@@ -60,9 +63,15 @@ func NewService(server PubSub, channel string) *Service {
 }
 
 func clientInfo(client *Client) ClientInfo {
+	if client == nil {
+		return ClientInfo{}
+	}
 	return ClientInfo{
-		UserID: client.UserID,
-		ConnID: client.ConnID,
+		ConnID:        client.ConnID,
+		IdentityType:  client.IdentityType,
+		IdentityID:    client.IdentityID,
+		UserID:        client.UserID,
+		ParticipantID: client.ParticipantID,
 	}
 }
 
@@ -73,10 +82,10 @@ func (s *Service) run() {
 			s.mu.Lock()
 			s.clients[client] = true
 
-			if s.userClients[client.UserID] == nil {
-				s.userClients[client.UserID] = make(map[*Client]bool)
+			if s.identityClients[client.IdentityID] == nil {
+				s.identityClients[client.IdentityID] = make(map[*Client]bool)
 			}
-			s.userClients[client.UserID][client] = true
+			s.identityClients[client.IdentityID][client] = true
 			s.mu.Unlock()
 
 			s.logConnect(clientInfo(client))
@@ -85,9 +94,9 @@ func (s *Service) run() {
 			s.mu.Lock()
 			if _, ok := s.clients[client]; ok {
 				delete(s.clients, client)
-				delete(s.userClients[client.UserID], client)
-				if len(s.userClients[client.UserID]) == 0 {
-					delete(s.userClients, client.UserID)
+				delete(s.identityClients[client.IdentityID], client)
+				if len(s.identityClients[client.IdentityID]) == 0 {
+					delete(s.identityClients, client.IdentityID)
 				}
 				close(client.Send)
 			}
@@ -107,8 +116,9 @@ func (s *Service) Subscribe(eventType string, handler EventHandler) {
 	s.mu.Unlock()
 }
 
-func (s *Service) Connect(w http.ResponseWriter, r *http.Request, userID string) {
-	if strings.TrimSpace(userID) == "" {
+func (s *Service) Connect(w http.ResponseWriter, r *http.Request, identity ConnectIdentity) {
+	identityID, ok := resolveIdentityID(identity)
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -121,13 +131,16 @@ func (s *Service) Connect(w http.ResponseWriter, r *http.Request, userID string)
 
 	connID := uuid.NewString()
 	client := &Client{
-		Conn:   conn,
-		UserID: userID,
-		ConnID: connID,
-		Send:   make(chan []byte, 256),
+		Conn:          conn,
+		ConnID:        connID,
+		IdentityType:  identity.Type,
+		IdentityID:    identityID,
+		UserID:        strings.TrimSpace(identity.UserID),
+		ParticipantID: strings.TrimSpace(identity.ParticipantID),
+		Send:          make(chan []byte, 256),
 	}
 
-	s.disconnectUserConnections(userID)
+	s.disconnectIdentityConnections(identityID)
 
 	s.register <- client
 
@@ -229,10 +242,10 @@ func (s *Service) Broadcast(message any) error {
 	return s.server.Publish(s.channel, message)
 }
 
-func (s *Service) disconnectUserConnections(userID string) {
+func (s *Service) disconnectIdentityConnections(identityID string) {
 	s.mu.RLock()
-	existing := make([]*Client, 0, len(s.userClients[userID]))
-	for client := range s.userClients[userID] {
+	existing := make([]*Client, 0, len(s.identityClients[identityID]))
+	for client := range s.identityClients[identityID] {
 		existing = append(existing, client)
 	}
 	s.mu.RUnlock()
@@ -253,15 +266,37 @@ func (s *Service) dispatchEvent(info ClientInfo, event Event) {
 }
 
 func (s *Service) logConnect(info ClientInfo) {
-	logger.L().Info("ws connected", "user_id", info.UserID, "conn_id", info.ConnID)
+	logger.L().Info(
+		"ws connected",
+		"conn_id", info.ConnID,
+		"identity_type", info.IdentityType,
+		"identity_id", info.IdentityID,
+		"user_id", info.UserID,
+		"participant_id", info.ParticipantID,
+	)
 }
 
 func (s *Service) logDisconnect(info ClientInfo) {
-	logger.L().Info("ws disconnected", "user_id", info.UserID, "conn_id", info.ConnID)
+	logger.L().Info(
+		"ws disconnected",
+		"conn_id", info.ConnID,
+		"identity_type", info.IdentityType,
+		"identity_id", info.IdentityID,
+		"user_id", info.UserID,
+		"participant_id", info.ParticipantID,
+	)
 }
 
 func (s *Service) logError(info ClientInfo, err error) {
-	logger.L().Error("ws error", "user_id", info.UserID, "conn_id", info.ConnID, "err", err)
+	logger.L().Error(
+		"ws error",
+		"conn_id", info.ConnID,
+		"identity_type", info.IdentityType,
+		"identity_id", info.IdentityID,
+		"user_id", info.UserID,
+		"participant_id", info.ParticipantID,
+		"err", err,
+	)
 }
 
 func (s *Service) sendHello(client *Client) {
@@ -275,7 +310,7 @@ func (s *Service) sendHello(client *Client) {
 	event := Event{
 		Type:      EventTypeHello,
 		Payload:   payload,
-		UserID:    client.UserID,
+		UserID:    clientEventUserID(client),
 		Timestamp: time.Now().UTC(),
 	}
 	data, err := json.Marshal(event)
@@ -297,7 +332,7 @@ func (s *Service) normalizeIncomingEvent(client *Client, event *Event) {
 
 	event.Type = strings.TrimSpace(event.Type)
 	event.RoomID = strings.TrimSpace(event.RoomID)
-	event.UserID = client.UserID
+	event.UserID = clientEventUserID(client)
 	if event.Timestamp.IsZero() {
 		event.Timestamp = time.Now().UTC()
 	} else {
@@ -318,4 +353,33 @@ func (s *Service) normalizeOutgoingEvent(event *Event) {
 	} else {
 		event.Timestamp = event.Timestamp.UTC()
 	}
+}
+
+func resolveIdentityID(identity ConnectIdentity) (string, bool) {
+	switch identity.Type {
+	case IdentityTypeUser:
+		userID := strings.TrimSpace(identity.UserID)
+		if userID == "" {
+			return "", false
+		}
+		return "user:" + userID, true
+	case IdentityTypeGuest:
+		participantID := strings.TrimSpace(identity.ParticipantID)
+		if participantID == "" {
+			return "", false
+		}
+		return "guest:" + participantID, true
+	default:
+		return "", false
+	}
+}
+
+func clientEventUserID(client *Client) string {
+	if client == nil {
+		return ""
+	}
+	if strings.TrimSpace(client.UserID) != "" {
+		return strings.TrimSpace(client.UserID)
+	}
+	return strings.TrimSpace(client.ParticipantID)
 }

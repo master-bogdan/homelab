@@ -77,6 +77,7 @@ func (deps *AppDeps) SetupApp() {
 		wsModule := ws.NewWsModule(ws.WsModuleDeps{
 			Router:      r,
 			AuthService: oauth2Module.AuthService,
+			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
 			Server:      deps.WsServer,
 		})
 
