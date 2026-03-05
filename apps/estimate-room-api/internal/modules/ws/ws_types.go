@@ -40,6 +40,14 @@ type ClientInfo struct {
 
 type EventHandler func(ClientInfo, Event)
 
+type DisconnectInfo struct {
+	Client       ClientInfo
+	RoomID       string
+	PresenceLeft bool
+}
+
+type DisconnectHandler func(DisconnectInfo)
+
 type PubSub interface {
 	Subscribe(channel string, onMessage func([]byte))
 	Publish(channel string, message any) error
