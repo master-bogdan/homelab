@@ -109,6 +109,16 @@ CREATE TABLE "tasks" (
   "updated_at" timestamptz NOT NULL DEFAULT (now())
 );
 
+CREATE TABLE "task_rounds" (
+  "task_id" text NOT NULL,
+  "round_number" int NOT NULL,
+  "is_revealed" boolean NOT NULL DEFAULT false,
+  "revealed_at" timestamptz,
+  "created_at" timestamptz NOT NULL DEFAULT (now()),
+  "updated_at" timestamptz NOT NULL DEFAULT (now()),
+  PRIMARY KEY ("task_id", "round_number")
+);
+
 CREATE TABLE "votes" (
   "votes_id" text PRIMARY KEY,
   "task_id" text NOT NULL,
@@ -264,6 +274,8 @@ ALTER TABLE "room_participants" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" (
 ALTER TABLE "room_participants" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 
 ALTER TABLE "tasks" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("room_id");
+
+ALTER TABLE "task_rounds" ADD FOREIGN KEY ("task_id") REFERENCES "tasks" ("task_id");
 
 ALTER TABLE "votes" ADD FOREIGN KEY ("task_id") REFERENCES "tasks" ("task_id");
 

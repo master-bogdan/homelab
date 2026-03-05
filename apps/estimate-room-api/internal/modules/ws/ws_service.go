@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -223,6 +224,59 @@ func (s *Service) SetParticipantID(connID, participantID string) error {
 
 	client.ParticipantID = trimmedParticipantID
 	return nil
+}
+
+func (s *Service) SendToConnection(connID string, event Event) error {
+	trimmedConnID := strings.TrimSpace(connID)
+	if trimmedConnID == "" {
+		return errors.New("connID is required")
+	}
+
+	s.normalizeOutgoingEvent(&event)
+	data, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	s.mu.RLock()
+	client, ok := s.connClients[trimmedConnID]
+	s.mu.RUnlock()
+	if !ok || client == nil {
+		return errors.New("connection not found")
+	}
+
+	select {
+	case client.Send <- data:
+		return nil
+	default:
+		s.unregister <- client
+		return errors.New("connection is not writable")
+	}
+}
+
+func (s *Service) GetRoomOnlineParticipantIDs(roomID string) []string {
+	trimmedRoomID := strings.TrimSpace(roomID)
+	if trimmedRoomID == "" {
+		return nil
+	}
+
+	s.mu.RLock()
+	roomMembers := s.roomClients[trimmedRoomID]
+	idsMap := make(map[string]struct{}, len(roomMembers))
+	for client := range roomMembers {
+		participantID := strings.TrimSpace(client.ParticipantID)
+		if participantID != "" {
+			idsMap[participantID] = struct{}{}
+		}
+	}
+	s.mu.RUnlock()
+
+	ids := make([]string, 0, len(idsMap))
+	for id := range idsMap {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
 }
 
 func (s *Service) Connect(w http.ResponseWriter, r *http.Request, identity ConnectIdentity) {

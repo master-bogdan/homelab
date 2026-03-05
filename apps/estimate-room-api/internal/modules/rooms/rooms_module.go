@@ -28,12 +28,14 @@ type RoomsModuleDeps struct {
 func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	roomsRepo := roomsrepositories.NewRoomsRepository(deps.DB)
 	taskRepo := roomsrepositories.NewRoomTaskRepository(deps.DB)
+	voteRepo := roomsrepositories.NewRoomVoteRepository(deps.DB)
+	roundRepo := roomsrepositories.NewRoomTaskRoundRepository(deps.DB)
 	participantRepo := roomsrepositories.NewRoomParticipantRepository(deps.DB)
 	svc := NewRoomsService(roomsRepo, participantRepo)
 	taskSvc := NewRoomsTaskService(roomsRepo, taskRepo, participantRepo)
 	inviteSvc := NewRoomsInviteService(roomsRepo, participantRepo, deps.TokenKey)
 	ctrl := NewRoomsController(svc, taskSvc, inviteSvc, deps.AuthService)
-	gw := NewRoomsGateway(deps.WsService, participantRepo, taskRepo)
+	gw := NewRoomsGateway(deps.WsService, roomsRepo, participantRepo, taskRepo, voteRepo, roundRepo)
 
 	deps.Router.Route("/rooms", func(r chi.Router) {
 		r.Post("/", ctrl.CreateRoom)

@@ -15,6 +15,7 @@ type RoomParticipantRepository interface {
 	FindActiveByUserID(roomID, userID string) (*roomsmodels.RoomParticipantModel, error)
 	FindActiveByGuestName(roomID, guestName string) (*roomsmodels.RoomParticipantModel, error)
 	FindActiveByID(roomID, participantID string) (*roomsmodels.RoomParticipantModel, error)
+	CountActiveByRoom(roomID string) (int, error)
 	Create(model *roomsmodels.RoomParticipantModel) (*roomsmodels.RoomParticipantModel, error)
 }
 
@@ -82,6 +83,21 @@ func (r *roomParticipantRepository) FindActiveByID(roomID, participantID string)
 	}
 
 	return participant, nil
+}
+
+func (r *roomParticipantRepository) CountActiveByRoom(roomID string) (int, error) {
+	var count int
+	err := r.db.NewSelect().
+		TableExpr("room_participants AS rp").
+		ColumnExpr("COUNT(*)").
+		Where("rp.room_id = ?", roomID).
+		Where("rp.left_at IS NULL").
+		Scan(context.Background(), &count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
 
 func (r *roomParticipantRepository) Create(model *roomsmodels.RoomParticipantModel) (*roomsmodels.RoomParticipantModel, error) {

@@ -116,6 +116,19 @@ Table tasks {
   updated_at          timestamptz [not null, default: `now()`]
 }
 
+Table task_rounds {
+  task_id       text        [not null, ref: > tasks.task_id]
+  round_number  int         [not null]
+  is_revealed   boolean     [not null, default: false]
+  revealed_at   timestamptz
+  created_at    timestamptz [not null, default: `now()`]
+  updated_at    timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (task_id, round_number) [pk]
+  }
+}
+
 Table votes {
   votes_id             text        [pk]
   task_id        text        [not null, ref: > tasks.task_id]

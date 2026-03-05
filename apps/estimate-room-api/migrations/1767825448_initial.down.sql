@@ -9,6 +9,7 @@ DROP TABLE IF EXISTS team_stats;
 DROP TABLE IF EXISTS user_achievements;
 DROP TABLE IF EXISTS user_stats;
 DROP TABLE IF EXISTS votes;
+DROP TABLE IF EXISTS task_rounds;
 DROP TABLE IF EXISTS tasks;
 DROP TABLE IF EXISTS room_participants;
 DROP TABLE IF EXISTS rooms;
