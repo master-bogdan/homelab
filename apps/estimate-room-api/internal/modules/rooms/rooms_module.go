@@ -33,7 +33,7 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	taskSvc := NewRoomsTaskService(roomsRepo, taskRepo, participantRepo)
 	inviteSvc := NewRoomsInviteService(roomsRepo, participantRepo, deps.TokenKey)
 	ctrl := NewRoomsController(svc, taskSvc, inviteSvc, deps.AuthService)
-	gw := NewRoomsGateway(deps.WsService, participantRepo)
+	gw := NewRoomsGateway(deps.WsService, participantRepo, taskRepo)
 
 	deps.Router.Route("/rooms", func(r chi.Router) {
 		r.Post("/", ctrl.CreateRoom)

@@ -15,15 +15,18 @@ import (
 type roomsGateway struct {
 	wsService       *ws.Service
 	participantRepo roomsrepositories.RoomParticipantRepository
+	taskRepo        roomsrepositories.RoomTaskRepository
 }
 
 func NewRoomsGateway(
 	wsService *ws.Service,
 	participantRepo roomsrepositories.RoomParticipantRepository,
+	taskRepo roomsrepositories.RoomTaskRepository,
 ) *roomsGateway {
 	return &roomsGateway{
 		wsService:       wsService,
 		participantRepo: participantRepo,
+		taskRepo:        taskRepo,
 	}
 }
 
@@ -34,8 +37,9 @@ const (
 	RoomsVoteReveal     = "ROOMS_VOTE_REVEAL"
 	RoomsRoundNext      = "ROOMS_ROUND_NEXT"
 
-	RoomsParticipantJoined = "ROOMS_PARTICIPANT_JOINED"
-	RoomsParticipantLeft   = "ROOMS_PARTICIPANT_LEFT"
+	RoomsParticipantJoined  = "ROOMS_PARTICIPANT_JOINED"
+	RoomsParticipantLeft    = "ROOMS_PARTICIPANT_LEFT"
+	RoomsTaskCurrentChanged = "ROOMS_TASK_CURRENT_CHANGED"
 )
 
 type roomJoinPayload struct {
@@ -47,6 +51,15 @@ type roomPresencePayload struct {
 	UserID        *string                         `json:"userId,omitempty"`
 	GuestName     *string                         `json:"guestName,omitempty"`
 	Role          roomsmodels.RoomParticipantRole `json:"role,omitempty"`
+}
+
+type roomSetCurrentTaskPayload struct {
+	TaskID string `json:"taskId"`
+}
+
+type roomCurrentTaskChangedPayload struct {
+	CurrentTaskID  string  `json:"currentTaskId"`
+	PreviousTaskID *string `json:"previousTaskId,omitempty"`
 }
 
 func (g *roomsGateway) handleRoomJoin(client ws.ClientInfo, event ws.Event) {
@@ -97,7 +110,61 @@ func (g *roomsGateway) handleRoomJoin(client ws.ClientInfo, event ws.Event) {
 }
 
 func (g *roomsGateway) handleTaskSetCurrent(client ws.ClientInfo, event ws.Event) {
-	logger.L().Info("task set current received", "room_id", event.RoomID, "user_id", client.UserID, "conn_id", client.ConnID)
+	roomID := strings.TrimSpace(event.RoomID)
+	if roomID == "" {
+		logger.L().Warn("task set current ignored: missing room id", "user_id", client.UserID, "conn_id", client.ConnID)
+		return
+	}
+
+	payload := roomSetCurrentTaskPayload{}
+	if len(event.Payload) > 0 {
+		if err := json.Unmarshal(event.Payload, &payload); err != nil {
+			logger.L().Warn("task set current ignored: invalid payload", "err", err, "room_id", roomID, "conn_id", client.ConnID)
+			return
+		}
+	}
+
+	taskID := strings.TrimSpace(payload.TaskID)
+	if taskID == "" {
+		logger.L().Warn("task set current ignored: missing task id", "room_id", roomID, "conn_id", client.ConnID)
+		return
+	}
+
+	participant, err := g.resolveParticipant(client, roomID)
+	if err != nil {
+		logJoinDenied(client, roomID, err)
+		return
+	}
+	if participant.Role != roomsmodels.RoomParticipantRoleAdmin {
+		logger.L().Warn("task set current denied: admin only", "room_id", roomID, "conn_id", client.ConnID)
+		return
+	}
+
+	currentTask, previousTask, err := g.taskRepo.SetCurrentVotingTask(roomID, taskID)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrForbidden) {
+			logger.L().Warn("task set current denied", "room_id", roomID, "task_id", taskID, "reason", err.Error())
+			return
+		}
+		logger.L().Error("task set current failed", "room_id", roomID, "task_id", taskID, "err", err)
+		return
+	}
+
+	var previousTaskID *string
+	if previousTask != nil && strings.TrimSpace(previousTask.TaskID) != "" {
+		id := previousTask.TaskID
+		previousTaskID = &id
+	}
+
+	if err := g.broadcastCurrentTaskChanged(roomID, roomCurrentTaskChangedPayload{
+		CurrentTaskID:  currentTask.TaskID,
+		PreviousTaskID: previousTaskID,
+	}); err != nil {
+		logger.L().Error("failed to broadcast current task changed", "room_id", roomID, "task_id", taskID, "err", err)
+		return
+	}
+
+	logger.L().Info("task current changed", "room_id", roomID, "task_id", currentTask.TaskID, "conn_id", client.ConnID)
 }
 
 func (g *roomsGateway) handleVoteCast(client ws.ClientInfo, event ws.Event) {
@@ -179,4 +246,17 @@ func logJoinDenied(client ws.ClientInfo, roomID string, err error) {
 	default:
 		logger.L().Error("room join failed", "room_id", roomID, "user_id", client.UserID, "conn_id", client.ConnID, "err", err)
 	}
+}
+
+func (g *roomsGateway) broadcastCurrentTaskChanged(roomID string, payload roomCurrentTaskChangedPayload) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	return g.wsService.Broadcast(ws.Event{
+		Type:    RoomsTaskCurrentChanged,
+		RoomID:  roomID,
+		Payload: data,
+	})
 }

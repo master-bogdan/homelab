@@ -14,6 +14,8 @@ type RoomTaskRepository interface {
 	Create(model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error)
 	FindByRoomID(roomID string) ([]*roomsmodels.RoomTaskModel, error)
 	FindByID(roomID, taskID string) (*roomsmodels.RoomTaskModel, error)
+	FindCurrentVotingTask(roomID string) (*roomsmodels.RoomTaskModel, error)
+	SetCurrentVotingTask(roomID, taskID string) (updatedTask *roomsmodels.RoomTaskModel, previousTask *roomsmodels.RoomTaskModel, err error)
 	Update(roomID string, model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error)
 	Delete(roomID, taskID string) error
 }
@@ -69,6 +71,124 @@ func (r *roomTaskRepository) FindByID(roomID, taskID string) (*roomsmodels.RoomT
 	}
 
 	return task, nil
+}
+
+func (r *roomTaskRepository) FindCurrentVotingTask(roomID string) (*roomsmodels.RoomTaskModel, error) {
+	task := new(roomsmodels.RoomTaskModel)
+	err := r.db.NewSelect().
+		Model(task).
+		Where("t.room_id = ?", roomID).
+		Where("t.status = ?", "VOTING").
+		OrderExpr("t.updated_at DESC").
+		Limit(1).
+		Scan(context.Background())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, apperrors.ErrNotFound
+		}
+		return nil, err
+	}
+
+	return task, nil
+}
+
+func (r *roomTaskRepository) SetCurrentVotingTask(roomID, taskID string) (*roomsmodels.RoomTaskModel, *roomsmodels.RoomTaskModel, error) {
+	var previousTask *roomsmodels.RoomTaskModel
+	committed := false
+
+	tx, err := r.db.BeginTx(context.Background(), nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+
+	targetTask := new(roomsmodels.RoomTaskModel)
+	err = tx.NewSelect().
+		Model(targetTask).
+		Where("t.room_id = ?", roomID).
+		Where("t.task_id = ?", taskID).
+		Limit(1).
+		Scan(context.Background())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil, apperrors.ErrNotFound
+		}
+		return nil, nil, err
+	}
+
+	currentVotingTask := new(roomsmodels.RoomTaskModel)
+	err = tx.NewSelect().
+		Model(currentVotingTask).
+		Where("t.room_id = ?", roomID).
+		Where("t.status = ?", "VOTING").
+		OrderExpr("t.updated_at DESC").
+		Limit(1).
+		Scan(context.Background())
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, nil, err
+	}
+
+	if currentVotingTask.TaskID != "" && currentVotingTask.TaskID != taskID {
+		result, updateErr := tx.NewUpdate().
+			Model((*roomsmodels.RoomTaskModel)(nil)).
+			Set("status = ?", "PENDING").
+			Set("updated_at = NOW()").
+			Where("room_id = ?", roomID).
+			Where("task_id = ?", currentVotingTask.TaskID).
+			Exec(context.Background())
+		if updateErr != nil {
+			return nil, nil, updateErr
+		}
+		rows, rowsErr := result.RowsAffected()
+		if rowsErr != nil {
+			return nil, nil, rowsErr
+		}
+		if rows > 0 {
+			currentVotingTask.Status = "PENDING"
+			previousTask = currentVotingTask
+		}
+	}
+
+	result, err := tx.NewUpdate().
+		Model((*roomsmodels.RoomTaskModel)(nil)).
+		Set("status = ?", "VOTING").
+		Set("updated_at = NOW()").
+		Where("room_id = ?", roomID).
+		Where("task_id = ?", taskID).
+		Exec(context.Background())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, nil, err
+	}
+	if rowsAffected == 0 {
+		return nil, nil, apperrors.ErrNotFound
+	}
+
+	updatedTask := new(roomsmodels.RoomTaskModel)
+	err = tx.NewSelect().
+		Model(updatedTask).
+		Where("t.room_id = ?", roomID).
+		Where("t.task_id = ?", taskID).
+		Limit(1).
+		Scan(context.Background())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, nil, err
+	}
+	committed = true
+
+	return updatedTask, previousTask, nil
 }
 
 func (r *roomTaskRepository) Update(roomID string, model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error) {
