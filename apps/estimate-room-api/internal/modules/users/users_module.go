@@ -3,7 +3,9 @@ package users
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
+	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
+	"github.com/uptrace/bun"
 )
 
 type UsersModule struct {
@@ -13,13 +15,14 @@ type UsersModule struct {
 
 type UsersModuleDeps struct {
 	Router      chi.Router
-	AuthService auth.AuthService
-	UserRepo    UserRepository
+	DB          *bun.DB
+	AuthService oauth2.AuthService
 }
 
 func NewUsersModule(deps UsersModuleDeps) *UsersModule {
-	svc := NewUsersService(deps.AuthService, deps.UserRepo)
-	ctrl := NewUsersController(svc)
+	userRepo := usersrepositories.NewUserRepository(deps.DB)
+	svc := NewUsersService(userRepo)
+	ctrl := NewUsersController(svc, deps.AuthService)
 
 	deps.Router.Route("/users", func(r chi.Router) {
 		r.Get("/me", ctrl.GetMe)

@@ -4,35 +4,24 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	healthdto "github.com/master-bogdan/estimate-room-api/internal/modules/health/dto"
 	"github.com/redis/go-redis/v9"
+	"github.com/uptrace/bun"
 )
 
-type LivenessStatus struct {
-	Status string        `json:"status"`
-	Uptime time.Duration `json:"uptime" swaggertype:"string"`
-}
-
-type ReadinessStatus struct {
-	Status string        `json:"status"`
-	Uptime time.Duration `json:"uptime" swaggertype:"string"`
-	DB     string        `json:"db"`
-	Redis  string        `json:"redis"`
-}
-
 type HealthService interface {
-	CheckHealth(ctx context.Context) (LivenessStatus, error)
-	CheckReadiness(ctx context.Context) (ReadinessStatus, error)
+	CheckHealth(ctx context.Context) (healthdto.LivenessStatus, error)
+	CheckReadiness(ctx context.Context) (healthdto.ReadinessStatus, error)
 }
 
 type healthService struct {
-	db      *pgxpool.Pool
+	db      *bun.DB
 	redis   *redis.Client
 	started time.Time
 }
 
 type HealthServiceDeps struct {
-	DB    *pgxpool.Pool
+	DB    *bun.DB
 	Redis *redis.Client
 }
 
@@ -44,15 +33,15 @@ func NewHealthService(deps HealthServiceDeps) HealthService {
 	}
 }
 
-func (s *healthService) CheckHealth(ctx context.Context) (LivenessStatus, error) {
-	return LivenessStatus{
+func (s *healthService) CheckHealth(ctx context.Context) (healthdto.LivenessStatus, error) {
+	return healthdto.LivenessStatus{
 		Status: "OK",
 		Uptime: time.Since(s.started),
 	}, nil
 }
 
-func (s *healthService) CheckReadiness(ctx context.Context) (ReadinessStatus, error) {
-	status := ReadinessStatus{
+func (s *healthService) CheckReadiness(ctx context.Context) (healthdto.ReadinessStatus, error) {
+	status := healthdto.ReadinessStatus{
 		Status: "OK",
 		Uptime: time.Since(s.started),
 		DB:     "up",
@@ -62,7 +51,7 @@ func (s *healthService) CheckReadiness(ctx context.Context) (ReadinessStatus, er
 	if s.db == nil {
 		status.DB = "down"
 		status.Status = "not OK"
-	} else if err := s.db.Ping(ctx); err != nil {
+	} else if err := s.db.PingContext(ctx); err != nil {
 		status.DB = "down"
 		status.Status = "not OK"
 	}

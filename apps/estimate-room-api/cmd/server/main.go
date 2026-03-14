@@ -20,8 +20,8 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/app"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/redis"
+	wsserver "github.com/master-bogdan/estimate-room-api/internal/infra/wsserver"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
-	"github.com/master-bogdan/estimate-room-api/internal/pkg/ws"
 )
 
 var IsGracefulShutdown atomic.Bool
@@ -50,14 +50,12 @@ func main() {
 		logger.L().Error("failed to connect to database", "err", err)
 		os.Exit(1)
 	}
-	defer db.Close()
 
 	redisClient, err := redis.Connect(cfg.DB.RedisURL)
 	if err != nil {
 		logger.L().Error("failed to connect to cache database", "err", err)
 		os.Exit(1)
 	}
-	defer redisClient.Close()
 
 	redisPubSubClient, err := redis.Connect(cfg.DB.RedisURL)
 	if err != nil {
@@ -65,9 +63,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	defer redisPubSubClient.Close()
-
-	wsServer := ws.NewWsServer(redisClient, redisPubSubClient)
+	wsServer, err := wsserver.NewServer(wsserver.ServerDeps{
+		PubClient: redisClient,
+		SubClient: redisPubSubClient,
+	})
+	if err != nil {
+		logger.L().Error("failed to start websocket server", "err", err)
+		os.Exit(1)
+	}
 
 	router := chi.NewRouter()
 
@@ -77,10 +80,11 @@ func main() {
 		Cfg:                cfg,
 		Router:             router,
 		IsGracefulShutdown: &IsGracefulShutdown,
-		Ws:                 wsServer,
+		WsServer:           wsServer,
 	}
 
-	application.SetupApp()
+	backgroundCtx, cancelBackground := context.WithCancel(context.Background())
+	application.SetupApp(backgroundCtx)
 
 	addr := net.JoinHostPort(
 		strings.TrimSpace(cfg.Server.Host),
@@ -105,21 +109,33 @@ func main() {
 		}
 	}()
 
-	gracefulShutdown(srv, wsServer, application.DB, application.Redis)
+	gracefulShutdown(srv, wsServer, application.DB, application.Redis, redisPubSubClient, cancelBackground)
 }
 
-func gracefulShutdown(srv *http.Server, ws *ws.WsServer, db interface{ Close() }, redis interface{ Close() error }) {
+func gracefulShutdown(
+	srv *http.Server,
+	ws *wsserver.Server,
+	db interface{ Close() error },
+	redis interface{ Close() error },
+	redisPubSub interface{ Close() error },
+	cancelBackground context.CancelFunc,
+) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	<-quit
 	logger.L().Info("Shutting down server...")
 	IsGracefulShutdown.Store(true)
+	if cancelBackground != nil {
+		cancelBackground()
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	ws.Shutdown()
+	if ws != nil {
+		ws.Shutdown()
+	}
 
 	err := srv.Shutdown(ctx)
 	if err != nil {
@@ -132,8 +148,17 @@ func gracefulShutdown(srv *http.Server, ws *ws.WsServer, db interface{ Close() }
 		logger.L().Error("Error closing cache database", "err", err)
 	}
 
+	logger.L().Info("Closing cache pubsub connection...")
+	err = redisPubSub.Close()
+	if err != nil {
+		logger.L().Error("Error closing cache pubsub connection", "err", err)
+	}
+
 	logger.L().Info("Closing database connection...")
-	db.Close()
+	err = db.Close()
+	if err != nil {
+		logger.L().Error("Error closing database", "err", err)
+	}
 
 	logger.L().Info("Server gracefully stopped")
 }

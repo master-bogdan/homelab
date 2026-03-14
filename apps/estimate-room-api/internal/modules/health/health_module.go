@@ -5,8 +5,8 @@ import (
 	"sync/atomic"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/uptrace/bun"
 )
 
 type HealthModule struct {
@@ -16,7 +16,7 @@ type HealthModule struct {
 
 type HealthModuleDeps struct {
 	Router             chi.Router
-	DB                 *pgxpool.Pool
+	DB                 *bun.DB
 	Redis              *redis.Client
 	IsGracefulShutdown *atomic.Bool
 }
