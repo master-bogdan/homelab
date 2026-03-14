@@ -20,6 +20,7 @@ type roomsGateway struct {
 	taskRepo        roomsrepositories.RoomTaskRepository
 	voteRepo        roomsrepositories.RoomVoteRepository
 	roundRepo       roomsrepositories.RoomTaskRoundRepository
+	voteService     RoomsVoteService
 }
 
 func NewRoomsGateway(
@@ -29,6 +30,7 @@ func NewRoomsGateway(
 	taskRepo roomsrepositories.RoomTaskRepository,
 	voteRepo roomsrepositories.RoomVoteRepository,
 	roundRepo roomsrepositories.RoomTaskRoundRepository,
+	voteService RoomsVoteService,
 ) *roomsGateway {
 	return &roomsGateway{
 		wsService:       wsService,
@@ -37,6 +39,7 @@ func NewRoomsGateway(
 		taskRepo:        taskRepo,
 		voteRepo:        voteRepo,
 		roundRepo:       roundRepo,
+		voteService:     voteService,
 	}
 }
 
@@ -46,13 +49,16 @@ const (
 	RoomsVoteCast       = "ROOMS_VOTE_CAST"
 	RoomsVoteReveal     = "ROOMS_VOTE_REVEAL"
 	RoomsRoundNext      = "ROOMS_ROUND_NEXT"
+	RoomsTaskFinalize   = "ROOMS_TASK_FINALIZE"
 
 	RoomsParticipantJoined  = "ROOMS_PARTICIPANT_JOINED"
 	RoomsParticipantLeft    = "ROOMS_PARTICIPANT_LEFT"
 	RoomsTaskCurrentChanged = "ROOMS_TASK_CURRENT_CHANGED"
 	RoomsVoteStatusChanged  = "ROOMS_VOTE_STATUS_CHANGED"
+	RoomsVotesAllCast       = "ROOMS_VOTES_ALL_CAST"
 	RoomsVotesRevealed      = "ROOMS_VOTES_REVEALED"
 	RoomsRoundChanged       = "ROOMS_ROUND_CHANGED"
+	RoomsTaskFinalized      = "ROOMS_TASK_FINALIZED"
 	RoomsSnapshot           = "ROOMS_SNAPSHOT"
 )
 
@@ -72,9 +78,11 @@ type roomSetCurrentTaskPayload struct {
 }
 
 type roomCurrentTaskChangedPayload struct {
-	CurrentTaskID  string  `json:"currentTaskId"`
-	PreviousTaskID *string `json:"previousTaskId,omitempty"`
-	RoundNumber    int     `json:"roundNumber"`
+	CurrentTaskID          string   `json:"currentTaskId"`
+	PreviousTaskID         *string  `json:"previousTaskId,omitempty"`
+	RoundNumber            int      `json:"roundNumber"`
+	RoundStatus            string   `json:"roundStatus"`
+	EligibleParticipantIDs []string `json:"eligibleParticipantIds"`
 }
 
 type roomVoteCastPayload struct {
@@ -86,6 +94,13 @@ type roomVoteStatusChangedPayload struct {
 	ParticipantID string `json:"participantId"`
 	RoundNumber   int    `json:"roundNumber"`
 	Voted         bool   `json:"voted"`
+}
+
+type roomVotesAllCastPayload struct {
+	TaskID                 string   `json:"taskId"`
+	RoundNumber            int      `json:"roundNumber"`
+	EligibleParticipantIDs []string `json:"eligibleParticipantIds"`
+	VotedParticipantIDs    []string `json:"votedParticipantIds"`
 }
 
 type roomRevealedVote struct {
@@ -101,15 +116,27 @@ type roomVoteSummary struct {
 type roomVotesRevealedPayload struct {
 	TaskID      string             `json:"taskId"`
 	RoundNumber int                `json:"roundNumber"`
+	RoundStatus string             `json:"roundStatus"`
 	AllVoted    bool               `json:"allVoted"`
 	Votes       []roomRevealedVote `json:"votes"`
 	Summary     roomVoteSummary    `json:"summary"`
 }
 
 type roomRoundChangedPayload struct {
-	TaskID      string `json:"taskId"`
-	RoundNumber int    `json:"roundNumber"`
-	IsRevealed  bool   `json:"isRevealed"`
+	TaskID                 string   `json:"taskId"`
+	RoundNumber            int      `json:"roundNumber"`
+	RoundStatus            string   `json:"roundStatus"`
+	EligibleParticipantIDs []string `json:"eligibleParticipantIds"`
+}
+
+type roomTaskFinalizePayload struct {
+	Value string `json:"value"`
+}
+
+type roomTaskFinalizedPayload struct {
+	TaskID             string `json:"taskId"`
+	FinalEstimateValue string `json:"finalEstimateValue"`
+	Status             string `json:"status"`
 }
 
 type roomSnapshotRoom struct {
@@ -139,15 +166,16 @@ type roomSnapshotTask struct {
 }
 
 type roomSnapshotPayload struct {
-	Room                roomSnapshotRoom          `json:"room"`
-	Participants        []roomSnapshotParticipant `json:"participants"`
-	Tasks               []roomSnapshotTask        `json:"tasks"`
-	CurrentTaskID       *string                   `json:"currentTaskId,omitempty"`
-	CurrentRoundNumber  int                       `json:"currentRoundNumber"`
-	VotedParticipantIDs []string                  `json:"votedParticipantIds"`
-	IsRevealed          bool                      `json:"isRevealed"`
-	RevealedVotes       []roomRevealedVote        `json:"revealedVotes,omitempty"`
-	Summary             *roomVoteSummary          `json:"summary,omitempty"`
+	Room                   roomSnapshotRoom          `json:"room"`
+	Participants           []roomSnapshotParticipant `json:"participants"`
+	Tasks                  []roomSnapshotTask        `json:"tasks"`
+	CurrentTaskID          *string                   `json:"currentTaskId,omitempty"`
+	CurrentRoundNumber     int                       `json:"currentRoundNumber"`
+	RoundStatus            string                    `json:"roundStatus"`
+	EligibleParticipantIDs []string                  `json:"eligibleParticipantIds"`
+	VotedParticipantIDs    []string                  `json:"votedParticipantIds"`
+	RevealedVotes          []roomRevealedVote        `json:"revealedVotes,omitempty"`
+	Summary                *roomVoteSummary          `json:"summary,omitempty"`
 }
 
 func (g *roomsGateway) handleRoomJoin(client ws.ClientInfo, event ws.Event) {
@@ -230,19 +258,19 @@ func (g *roomsGateway) handleTaskSetCurrent(client ws.ClientInfo, event ws.Event
 		return
 	}
 
-	currentTask, previousTask, err := g.taskRepo.SetCurrentVotingTask(roomID, taskID)
+	eligibleParticipantIDs, err := g.currentEligibleParticipantIDs(roomID)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrForbidden) {
+		logger.L().Error("task set current failed: eligible participants lookup failed", "room_id", roomID, "task_id", taskID, "err", err)
+		return
+	}
+
+	currentTask, previousTask, roundState, err := g.voteService.SetCurrentTask(roomID, taskID, client.UserID, eligibleParticipantIDs)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrForbidden) || errors.Is(err, apperrors.ErrBadRequest) {
 			logger.L().Warn("task set current denied", "room_id", roomID, "task_id", taskID, "reason", err.Error())
 			return
 		}
 		logger.L().Error("task set current failed", "room_id", roomID, "task_id", taskID, "err", err)
-		return
-	}
-
-	roundState, err := g.roundRepo.GetOrCreateCurrent(currentTask.TaskID)
-	if err != nil {
-		logger.L().Error("task set current failed: round init failed", "room_id", roomID, "task_id", currentTask.TaskID, "err", err)
 		return
 	}
 
@@ -253,9 +281,11 @@ func (g *roomsGateway) handleTaskSetCurrent(client ws.ClientInfo, event ws.Event
 	}
 
 	if err := g.broadcastCurrentTaskChanged(roomID, roomCurrentTaskChangedPayload{
-		CurrentTaskID:  currentTask.TaskID,
-		PreviousTaskID: previousTaskID,
-		RoundNumber:    roundState.RoundNumber,
+		CurrentTaskID:          currentTask.TaskID,
+		PreviousTaskID:         previousTaskID,
+		RoundNumber:            roundState.RoundNumber,
+		RoundStatus:            string(roundState.Status),
+		EligibleParticipantIDs: append([]string(nil), roundState.EligibleParticipantIDs...),
 	}); err != nil {
 		logger.L().Error("failed to broadcast current task changed", "room_id", roomID, "task_id", taskID, "err", err)
 		return
@@ -291,50 +321,36 @@ func (g *roomsGateway) handleVoteCast(client ws.ClientInfo, event ws.Event) {
 		return
 	}
 
-	currentTask, err := g.taskRepo.FindCurrentVotingTask(roomID)
+	result, err := g.voteService.CastVote(roomID, participant, voteValue)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			logger.L().Warn("vote cast denied: no active task", "room_id", roomID, "conn_id", client.ConnID)
-			return
+		switch {
+		case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrForbidden), errors.Is(err, apperrors.ErrBadRequest):
+			logger.L().Warn("vote cast denied", "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
+		default:
+			logger.L().Error("vote cast failed", "room_id", roomID, "conn_id", client.ConnID, "err", err)
 		}
-		logger.L().Error("vote cast failed: active task lookup failed", "room_id", roomID, "err", err)
-		return
-	}
-
-	currentRound, err := g.roundRepo.GetOrCreateCurrent(currentTask.TaskID)
-	if err != nil {
-		logger.L().Error("vote cast failed: round lookup failed", "room_id", roomID, "task_id", currentTask.TaskID, "err", err)
-		return
-	}
-	if currentRound.IsRevealed {
-		logger.L().Warn("vote cast denied: round already revealed", "room_id", roomID, "task_id", currentTask.TaskID, "round", currentRound.RoundNumber)
-		return
-	}
-
-	room, err := g.roomsRepo.FindByID(roomID)
-	if err != nil {
-		logger.L().Error("vote cast failed: room lookup failed", "room_id", roomID, "err", err)
-		return
-	}
-
-	if !isDeckValueAllowed(room.Deck.Values, voteValue) {
-		logger.L().Warn("vote cast denied: value not allowed by deck", "room_id", roomID, "value", voteValue)
-		return
-	}
-
-	_, err = g.voteRepo.Upsert(currentTask.TaskID, participant.RoomParticipantID, currentRound.RoundNumber, voteValue)
-	if err != nil {
-		logger.L().Error("vote cast failed: upsert failed", "room_id", roomID, "task_id", currentTask.TaskID, "err", err)
 		return
 	}
 
 	if err := g.broadcastVoteStatusChanged(roomID, roomVoteStatusChangedPayload{
-		TaskID:        currentTask.TaskID,
+		TaskID:        result.Task.TaskID,
 		ParticipantID: participant.RoomParticipantID,
-		RoundNumber:   currentRound.RoundNumber,
+		RoundNumber:   result.Round.RoundNumber,
 		Voted:         true,
 	}); err != nil {
-		logger.L().Error("failed to broadcast vote status changed", "room_id", roomID, "task_id", currentTask.TaskID, "err", err)
+		logger.L().Error("failed to broadcast vote status changed", "room_id", roomID, "task_id", result.Task.TaskID, "err", err)
+		return
+	}
+
+	if result.AllVotesCast {
+		if err := g.broadcastVotesAllCast(roomID, roomVotesAllCastPayload{
+			TaskID:                 result.Task.TaskID,
+			RoundNumber:            result.Round.RoundNumber,
+			EligibleParticipantIDs: append([]string(nil), result.EligibleParticipantIDs...),
+			VotedParticipantIDs:    append([]string(nil), result.VotedParticipantIDs...),
+		}); err != nil {
+			logger.L().Error("failed to broadcast votes all cast", "room_id", roomID, "task_id", result.Task.TaskID, "err", err)
+		}
 	}
 }
 
@@ -355,61 +371,30 @@ func (g *roomsGateway) handleVoteReveal(client ws.ClientInfo, event ws.Event) {
 		return
 	}
 
-	currentTask, err := g.taskRepo.FindCurrentVotingTask(roomID)
+	result, err := g.voteService.RevealCurrentRound(roomID, client.UserID)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			logger.L().Warn("vote reveal denied: no active task", "room_id", roomID, "conn_id", client.ConnID)
-			return
+		switch {
+		case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrForbidden), errors.Is(err, apperrors.ErrBadRequest):
+			logger.L().Warn("vote reveal denied", "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
+		default:
+			logger.L().Error("vote reveal failed", "room_id", roomID, "conn_id", client.ConnID, "err", err)
 		}
-		logger.L().Error("vote reveal failed: active task lookup failed", "room_id", roomID, "err", err)
 		return
 	}
 
-	currentRound, err := g.roundRepo.GetOrCreateCurrent(currentTask.TaskID)
-	if err != nil {
-		logger.L().Error("vote reveal failed: round lookup failed", "room_id", roomID, "task_id", currentTask.TaskID, "err", err)
-		return
-	}
-
-	votes, err := g.voteRepo.ListByTaskAndRound(currentTask.TaskID, currentRound.RoundNumber)
-	if err != nil {
-		logger.L().Error("vote reveal failed: votes lookup failed", "room_id", roomID, "task_id", currentTask.TaskID, "round", currentRound.RoundNumber, "err", err)
-		return
-	}
-
-	activeCount, err := g.participantRepo.CountActiveByRoom(roomID)
-	if err != nil {
-		logger.L().Error("vote reveal failed: participants count failed", "room_id", roomID, "err", err)
-		return
-	}
-	votedCount, err := g.voteRepo.CountDistinctParticipantsByTaskAndRound(currentTask.TaskID, currentRound.RoundNumber)
-	if err != nil {
-		logger.L().Error("vote reveal failed: voted count failed", "room_id", roomID, "task_id", currentTask.TaskID, "round", currentRound.RoundNumber, "err", err)
-		return
-	}
-	allVoted := activeCount > 0 && votedCount >= activeCount
-
-	if !currentRound.IsRevealed {
-		updatedRound, markErr := g.roundRepo.MarkRevealed(currentTask.TaskID, currentRound.RoundNumber)
-		if markErr != nil {
-			logger.L().Error("vote reveal failed: mark revealed failed", "room_id", roomID, "task_id", currentTask.TaskID, "round", currentRound.RoundNumber, "err", markErr)
-			return
-		}
-		currentRound = updatedRound
-	}
-
-	revealedVotes := mapVotes(votes)
-	summary := buildVoteSummary(votes)
+	revealedVotes := mapVotes(result.Votes)
+	summary := buildVoteSummary(result.Votes)
 	payload := roomVotesRevealedPayload{
-		TaskID:      currentTask.TaskID,
-		RoundNumber: currentRound.RoundNumber,
-		AllVoted:    allVoted,
+		TaskID:      result.Task.TaskID,
+		RoundNumber: result.Round.RoundNumber,
+		RoundStatus: string(result.Round.Status),
+		AllVoted:    result.AllVoted,
 		Votes:       revealedVotes,
 		Summary:     summary,
 	}
 
 	if err := g.broadcastVotesRevealed(roomID, payload); err != nil {
-		logger.L().Error("failed to broadcast votes revealed", "room_id", roomID, "task_id", currentTask.TaskID, "round", currentRound.RoundNumber, "err", err)
+		logger.L().Error("failed to broadcast votes revealed", "room_id", roomID, "task_id", result.Task.TaskID, "round", result.Round.RoundNumber, "err", err)
 		return
 	}
 }
@@ -431,28 +416,65 @@ func (g *roomsGateway) handleRoundNext(client ws.ClientInfo, event ws.Event) {
 		return
 	}
 
-	currentTask, err := g.taskRepo.FindCurrentVotingTask(roomID)
+	eligibleParticipantIDs, err := g.currentEligibleParticipantIDs(roomID)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			logger.L().Warn("round next denied: no active task", "room_id", roomID, "conn_id", client.ConnID)
-			return
-		}
-		logger.L().Error("round next failed: active task lookup failed", "room_id", roomID, "err", err)
+		logger.L().Error("round next failed: eligible participants lookup failed", "room_id", roomID, "conn_id", client.ConnID, "err", err)
 		return
 	}
 
-	nextRound, err := g.roundRepo.Advance(currentTask.TaskID)
+	currentTask, nextRound, err := g.voteService.StartNextRound(roomID, client.UserID, eligibleParticipantIDs)
 	if err != nil {
-		logger.L().Error("round next failed", "room_id", roomID, "task_id", currentTask.TaskID, "err", err)
+		switch {
+		case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrForbidden), errors.Is(err, apperrors.ErrBadRequest):
+			logger.L().Warn("round next denied", "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
+		default:
+			logger.L().Error("round next failed", "room_id", roomID, "conn_id", client.ConnID, "err", err)
+		}
 		return
 	}
 
 	if err := g.broadcastRoundChanged(roomID, roomRoundChangedPayload{
-		TaskID:      currentTask.TaskID,
-		RoundNumber: nextRound.RoundNumber,
-		IsRevealed:  nextRound.IsRevealed,
+		TaskID:                 currentTask.TaskID,
+		RoundNumber:            nextRound.RoundNumber,
+		RoundStatus:            string(nextRound.Status),
+		EligibleParticipantIDs: append([]string(nil), nextRound.EligibleParticipantIDs...),
 	}); err != nil {
 		logger.L().Error("failed to broadcast round changed", "room_id", roomID, "task_id", currentTask.TaskID, "err", err)
+	}
+}
+
+func (g *roomsGateway) handleTaskFinalize(client ws.ClientInfo, event ws.Event) {
+	roomID := strings.TrimSpace(event.RoomID)
+	if roomID == "" {
+		logger.L().Warn("task finalize ignored: missing room id", "user_id", client.UserID, "conn_id", client.ConnID)
+		return
+	}
+
+	payload := roomTaskFinalizePayload{}
+	if len(event.Payload) > 0 {
+		if err := json.Unmarshal(event.Payload, &payload); err != nil {
+			logger.L().Warn("task finalize ignored: invalid payload", "err", err, "room_id", roomID, "conn_id", client.ConnID)
+			return
+		}
+	}
+
+	updatedTask, err := g.voteService.FinalizeCurrentTask(roomID, client.UserID, payload.Value)
+	if err != nil {
+		switch {
+		case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrForbidden), errors.Is(err, apperrors.ErrBadRequest):
+			logger.L().Warn("task finalize denied", "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
+		default:
+			logger.L().Error("task finalize failed", "room_id", roomID, "conn_id", client.ConnID, "err", err)
+		}
+		return
+	}
+
+	if err := g.broadcastTaskFinalized(roomID, roomTaskFinalizedPayload{
+		TaskID:             updatedTask.TaskID,
+		FinalEstimateValue: strings.TrimSpace(*updatedTask.FinalEstimateValue),
+		Status:             updatedTask.Status,
+	}); err != nil {
+		logger.L().Error("failed to broadcast task finalized", "room_id", roomID, "task_id", updatedTask.TaskID, "err", err)
 	}
 }
 
@@ -548,11 +570,12 @@ func (g *roomsGateway) buildSnapshot(roomID string) (*roomSnapshotPayload, error
 			AdminUserID: room.AdminUserID,
 			Deck:        room.Deck,
 		},
-		Participants:        participants,
-		Tasks:               tasks,
-		CurrentRoundNumber:  1,
-		VotedParticipantIDs: make([]string, 0),
-		IsRevealed:          false,
+		Participants:           participants,
+		Tasks:                  tasks,
+		CurrentRoundNumber:     1,
+		RoundStatus:            "",
+		EligibleParticipantIDs: make([]string, 0),
+		VotedParticipantIDs:    make([]string, 0),
 	}
 
 	currentTask, err := g.taskRepo.FindCurrentVotingTask(roomID)
@@ -566,20 +589,21 @@ func (g *roomsGateway) buildSnapshot(roomID string) (*roomSnapshotPayload, error
 	currentTaskID := currentTask.TaskID
 	snapshot.CurrentTaskID = &currentTaskID
 
-	currentRound, err := g.roundRepo.GetOrCreateCurrent(currentTask.TaskID)
+	currentRound, err := g.roundRepo.GetOrCreateCurrent(currentTask.TaskID, nil)
 	if err != nil {
 		return nil, err
 	}
 	snapshot.CurrentRoundNumber = currentRound.RoundNumber
-	snapshot.IsRevealed = currentRound.IsRevealed
+	snapshot.RoundStatus = string(currentRound.Status)
+	snapshot.EligibleParticipantIDs = append([]string(nil), currentRound.EligibleParticipantIDs...)
 
 	votes, err := g.voteRepo.ListByTaskAndRound(currentTask.TaskID, currentRound.RoundNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	snapshot.VotedParticipantIDs = uniqueSortedParticipantIDs(votes)
-	if currentRound.IsRevealed {
+	snapshot.VotedParticipantIDs = filterParticipantIDs(uniqueSortedParticipantIDs(votes), currentRound.EligibleParticipantIDs)
+	if currentRound.Status == roomsmodels.RoomTaskRoundStatusRevealed {
 		revealedVotes := mapVotes(votes)
 		summary := buildVoteSummary(votes)
 		snapshot.RevealedVotes = revealedVotes
@@ -587,6 +611,30 @@ func (g *roomsGateway) buildSnapshot(roomID string) (*roomSnapshotPayload, error
 	}
 
 	return snapshot, nil
+}
+
+func (g *roomsGateway) currentEligibleParticipantIDs(roomID string) ([]string, error) {
+	onlineParticipantIDs := g.wsService.GetRoomOnlineParticipantIDs(roomID)
+	if len(onlineParticipantIDs) == 0 {
+		return []string{}, nil
+	}
+
+	participants, err := g.participantRepo.ListActiveByRoom(roomID)
+	if err != nil {
+		return nil, err
+	}
+
+	eligible := make([]string, 0, len(participants))
+	for _, participant := range participants {
+		if participant == nil || !isVotingParticipantRole(participant.Role) {
+			continue
+		}
+		if containsParticipantID(onlineParticipantIDs, participant.RoomParticipantID) {
+			eligible = append(eligible, participant.RoomParticipantID)
+		}
+	}
+
+	return normalizeParticipantIDs(eligible), nil
 }
 
 func (g *roomsGateway) sendSnapshot(connID, roomID string, snapshot *roomSnapshotPayload) error {
@@ -658,6 +706,19 @@ func (g *roomsGateway) broadcastVoteStatusChanged(roomID string, payload roomVot
 	})
 }
 
+func (g *roomsGateway) broadcastVotesAllCast(roomID string, payload roomVotesAllCastPayload) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	return g.wsService.Broadcast(ws.Event{
+		Type:    RoomsVotesAllCast,
+		RoomID:  roomID,
+		Payload: data,
+	})
+}
+
 func (g *roomsGateway) broadcastVotesRevealed(roomID string, payload roomVotesRevealedPayload) error {
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -679,6 +740,19 @@ func (g *roomsGateway) broadcastRoundChanged(roomID string, payload roomRoundCha
 
 	return g.wsService.Broadcast(ws.Event{
 		Type:    RoomsRoundChanged,
+		RoomID:  roomID,
+		Payload: data,
+	})
+}
+
+func (g *roomsGateway) broadcastTaskFinalized(roomID string, payload roomTaskFinalizedPayload) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	return g.wsService.Broadcast(ws.Event{
+		Type:    RoomsTaskFinalized,
 		RoomID:  roomID,
 		Payload: data,
 	})

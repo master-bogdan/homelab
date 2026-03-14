@@ -312,6 +312,7 @@ func (c *roomsController) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		Description:        dto.Description,
 		ExternalKey:        dto.ExternalKey,
 		Status:             dto.Status,
+		IsActive:           dto.IsActive,
 		FinalEstimateValue: dto.FinalEstimateValue,
 	})
 	if err != nil {

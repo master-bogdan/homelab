@@ -2,6 +2,7 @@ package rooms
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -23,6 +24,7 @@ type RoomsTaskService interface {
 type roomsTaskService struct {
 	roomsRepo       roomsrepositories.RoomsRepository
 	taskRepo        roomsrepositories.RoomTaskRepository
+	voteService     RoomsVoteService
 	participantRepo roomsrepositories.RoomParticipantRepository
 	logger          *slog.Logger
 }
@@ -38,17 +40,20 @@ type UpdateTaskInput struct {
 	Description        *string
 	ExternalKey        *string
 	Status             *string
+	IsActive           *bool
 	FinalEstimateValue *string
 }
 
 func NewRoomsTaskService(
 	roomsRepo roomsrepositories.RoomsRepository,
 	taskRepo roomsrepositories.RoomTaskRepository,
+	voteService RoomsVoteService,
 	participantRepo roomsrepositories.RoomParticipantRepository,
 ) RoomsTaskService {
 	return &roomsTaskService{
 		roomsRepo:       roomsRepo,
 		taskRepo:        taskRepo,
+		voteService:     voteService,
 		participantRepo: participantRepo,
 		logger:          logger.L().With(slog.String("service", "rooms-tasks")),
 	}
@@ -81,6 +86,7 @@ func (s *roomsTaskService) CreateTask(roomID, userID string, input CreateTaskInp
 		Description: description,
 		ExternalKey: externalKey,
 		Status:      "PENDING",
+		IsActive:    false,
 	}
 
 	return s.taskRepo.Create(task)
@@ -112,40 +118,19 @@ func (s *roomsTaskService) UpdateTask(roomID, taskID, userID string, input Updat
 		return nil, err
 	}
 
-	if input.Title != nil {
-		title := strings.TrimSpace(*input.Title)
-		if title == "" {
-			return nil, apperrors.ErrBadRequest
-		}
-		task.Title = title
-	}
-
-	if input.Description != nil {
-		if *input.Description == "" {
-			task.Description = nil
-		} else {
-			task.Description = input.Description
+	if hasVoteStateInput(input) {
+		task, err = s.applyVoteStateUpdate(roomID, task, userID, input)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	if input.ExternalKey != nil {
-		if *input.ExternalKey == "" {
-			task.ExternalKey = nil
-		} else {
-			task.ExternalKey = input.ExternalKey
-		}
+	changed, err := applyTaskMetadata(task, input)
+	if err != nil {
+		return nil, err
 	}
-
-	if input.Status != nil {
-		task.Status = strings.TrimSpace(*input.Status)
-	}
-
-	if input.FinalEstimateValue != nil {
-		if *input.FinalEstimateValue == "" {
-			task.FinalEstimateValue = nil
-		} else {
-			task.FinalEstimateValue = input.FinalEstimateValue
-		}
+	if !changed {
+		return task, nil
 	}
 
 	return s.taskRepo.Update(roomID, task)
@@ -157,6 +142,108 @@ func (s *roomsTaskService) DeleteTask(roomID, taskID, userID string) error {
 	}
 
 	return s.taskRepo.Delete(roomID, taskID)
+}
+
+func (s *roomsTaskService) applyVoteStateUpdate(
+	roomID string,
+	task *roomsmodels.RoomTaskModel,
+	userID string,
+	input UpdateTaskInput,
+) (*roomsmodels.RoomTaskModel, error) {
+	status := ""
+	if input.Status != nil {
+		status = strings.TrimSpace(*input.Status)
+	}
+
+	activateRequested := (input.IsActive != nil && *input.IsActive) || status == "VOTING"
+	deactivateRequested := input.IsActive != nil && !*input.IsActive
+	finalizeRequested := input.FinalEstimateValue != nil || status == "ESTIMATED"
+
+	if activateRequested && (finalizeRequested || status == "SKIPPED" || status == "PENDING" || deactivateRequested) {
+		return nil, fmt.Errorf("%w: conflicting task state update", apperrors.ErrBadRequest)
+	}
+	if status == "VOTING" && input.IsActive != nil && !*input.IsActive {
+		return nil, fmt.Errorf("%w: active task must remain active while voting", apperrors.ErrBadRequest)
+	}
+
+	switch {
+	case activateRequested:
+		updatedTask, _, _, err := s.voteService.SetCurrentTask(roomID, task.TaskID, userID, nil)
+		if err != nil {
+			return nil, err
+		}
+		return updatedTask, nil
+	case finalizeRequested:
+		value := ""
+		if input.FinalEstimateValue != nil {
+			value = strings.TrimSpace(*input.FinalEstimateValue)
+		}
+		if value == "" {
+			if task.FinalEstimateValue == nil || strings.TrimSpace(*task.FinalEstimateValue) == "" {
+				return nil, fmt.Errorf("%w: final estimate value is required", apperrors.ErrBadRequest)
+			}
+			value = strings.TrimSpace(*task.FinalEstimateValue)
+		}
+		return s.voteService.FinalizeTask(roomID, task.TaskID, userID, value)
+	case status == "SKIPPED":
+		task.Status = "SKIPPED"
+		task.IsActive = false
+		task.FinalEstimateValue = nil
+		return s.taskRepo.Update(roomID, task)
+	case status == "PENDING" || deactivateRequested:
+		task.Status = "PENDING"
+		task.IsActive = false
+		return s.taskRepo.Update(roomID, task)
+	default:
+		return task, nil
+	}
+}
+
+func hasVoteStateInput(input UpdateTaskInput) bool {
+	return input.Status != nil || input.IsActive != nil || input.FinalEstimateValue != nil
+}
+
+func applyTaskMetadata(task *roomsmodels.RoomTaskModel, input UpdateTaskInput) (bool, error) {
+	changed := false
+
+	if input.Title != nil {
+		title := strings.TrimSpace(*input.Title)
+		if title == "" {
+			return false, apperrors.ErrBadRequest
+		}
+		if task.Title != title {
+			task.Title = title
+			changed = true
+		}
+	}
+
+	if input.Description != nil {
+		trimmed := strings.TrimSpace(*input.Description)
+		if trimmed == "" {
+			if task.Description != nil {
+				task.Description = nil
+				changed = true
+			}
+		} else if task.Description == nil || *task.Description != *input.Description {
+			task.Description = input.Description
+			changed = true
+		}
+	}
+
+	if input.ExternalKey != nil {
+		trimmed := strings.TrimSpace(*input.ExternalKey)
+		if trimmed == "" {
+			if task.ExternalKey != nil {
+				task.ExternalKey = nil
+				changed = true
+			}
+		} else if task.ExternalKey == nil || *task.ExternalKey != *input.ExternalKey {
+			task.ExternalKey = input.ExternalKey
+			changed = true
+		}
+	}
+
+	return changed, nil
 }
 
 func (s *roomsTaskService) ensureRoomAdmin(roomID, userID string) (*roomsmodels.RoomsModel, error) {

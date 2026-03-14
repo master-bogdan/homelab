@@ -29,6 +29,11 @@ CREATE TYPE "task_status" AS ENUM (
   'SKIPPED'
 );
 
+CREATE TYPE "round_status" AS ENUM (
+  'ACTIVE',
+  'REVEALED'
+);
+
 CREATE TABLE "users" (
   "user_id" text PRIMARY KEY,
   "email" text UNIQUE,
@@ -103,7 +108,8 @@ CREATE TABLE "tasks" (
   "title" text NOT NULL,
   "description" text,
   "external_key" text,
-  "status" task_status NOT NULL DEFAULT 'pending',
+  "status" task_status NOT NULL DEFAULT 'PENDING',
+  "is_active" boolean NOT NULL DEFAULT false,
   "final_estimate_value" text,
   "created_at" timestamptz NOT NULL DEFAULT (now()),
   "updated_at" timestamptz NOT NULL DEFAULT (now())
@@ -112,8 +118,8 @@ CREATE TABLE "tasks" (
 CREATE TABLE "task_rounds" (
   "task_id" text NOT NULL,
   "round_number" int NOT NULL,
-  "is_revealed" boolean NOT NULL DEFAULT false,
-  "revealed_at" timestamptz,
+  "eligible_participant_ids" jsonb NOT NULL DEFAULT '[]'::jsonb,
+  "status" round_status NOT NULL DEFAULT 'ACTIVE',
   "created_at" timestamptz NOT NULL DEFAULT (now()),
   "updated_at" timestamptz NOT NULL DEFAULT (now()),
   PRIMARY KEY ("task_id", "round_number")
@@ -238,6 +244,7 @@ VALUES
   );
 
 CREATE UNIQUE INDEX ON "votes" ("task_id", "participant_id", "round_number");
+CREATE UNIQUE INDEX "tasks_one_active_per_room_idx" ON "tasks" ("room_id") WHERE "is_active" = true;
 
 CREATE INDEX "idx_oauth2_auth_codes_code" ON "oauth2_auth_codes" ("code");
 

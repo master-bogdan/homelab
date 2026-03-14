@@ -12,8 +12,8 @@ import (
 
 type RoomTaskRoundRepository interface {
 	GetCurrent(taskID string) (*roomsmodels.RoomTaskRoundModel, error)
-	GetOrCreateCurrent(taskID string) (*roomsmodels.RoomTaskRoundModel, error)
-	Advance(taskID string) (*roomsmodels.RoomTaskRoundModel, error)
+	GetOrCreateCurrent(taskID string, eligibleParticipantIDs []string) (*roomsmodels.RoomTaskRoundModel, error)
+	Advance(taskID string, eligibleParticipantIDs []string) (*roomsmodels.RoomTaskRoundModel, error)
 	MarkRevealed(taskID string, roundNumber int) (*roomsmodels.RoomTaskRoundModel, error)
 }
 
@@ -43,7 +43,7 @@ func (r *roomTaskRoundRepository) GetCurrent(taskID string) (*roomsmodels.RoomTa
 	return model, nil
 }
 
-func (r *roomTaskRoundRepository) GetOrCreateCurrent(taskID string) (*roomsmodels.RoomTaskRoundModel, error) {
+func (r *roomTaskRoundRepository) GetOrCreateCurrent(taskID string, eligibleParticipantIDs []string) (*roomsmodels.RoomTaskRoundModel, error) {
 	current, err := r.GetCurrent(taskID)
 	if err == nil {
 		return current, nil
@@ -53,14 +53,15 @@ func (r *roomTaskRoundRepository) GetOrCreateCurrent(taskID string) (*roomsmodel
 	}
 
 	model := &roomsmodels.RoomTaskRoundModel{
-		TaskID:      taskID,
-		RoundNumber: 1,
-		IsRevealed:  false,
+		TaskID:                 taskID,
+		RoundNumber:            1,
+		EligibleParticipantIDs: eligibleParticipantIDs,
+		Status:                 roomsmodels.RoomTaskRoundStatusActive,
 	}
 
 	_, err = r.db.NewInsert().
 		Model(model).
-		Column("task_id", "round_number", "is_revealed").
+		Column("task_id", "round_number", "eligible_participant_ids", "status").
 		On("CONFLICT (task_id, round_number) DO NOTHING").
 		Exec(context.Background())
 	if err != nil {
@@ -70,21 +71,22 @@ func (r *roomTaskRoundRepository) GetOrCreateCurrent(taskID string) (*roomsmodel
 	return r.GetCurrent(taskID)
 }
 
-func (r *roomTaskRoundRepository) Advance(taskID string) (*roomsmodels.RoomTaskRoundModel, error) {
-	current, err := r.GetOrCreateCurrent(taskID)
+func (r *roomTaskRoundRepository) Advance(taskID string, eligibleParticipantIDs []string) (*roomsmodels.RoomTaskRoundModel, error) {
+	current, err := r.GetOrCreateCurrent(taskID, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	next := &roomsmodels.RoomTaskRoundModel{
-		TaskID:      taskID,
-		RoundNumber: current.RoundNumber + 1,
-		IsRevealed:  false,
+		TaskID:                 taskID,
+		RoundNumber:            current.RoundNumber + 1,
+		EligibleParticipantIDs: eligibleParticipantIDs,
+		Status:                 roomsmodels.RoomTaskRoundStatusActive,
 	}
 
 	_, err = r.db.NewInsert().
 		Model(next).
-		Column("task_id", "round_number", "is_revealed").
+		Column("task_id", "round_number", "eligible_participant_ids", "status").
 		On("CONFLICT (task_id, round_number) DO NOTHING").
 		Exec(context.Background())
 	if err != nil {
@@ -97,8 +99,7 @@ func (r *roomTaskRoundRepository) Advance(taskID string) (*roomsmodels.RoomTaskR
 func (r *roomTaskRoundRepository) MarkRevealed(taskID string, roundNumber int) (*roomsmodels.RoomTaskRoundModel, error) {
 	result, err := r.db.NewUpdate().
 		Model((*roomsmodels.RoomTaskRoundModel)(nil)).
-		Set("is_revealed = TRUE").
-		Set("revealed_at = NOW()").
+		Set("status = ?", roomsmodels.RoomTaskRoundStatusRevealed).
 		Set("updated_at = NOW()").
 		Where("task_id = ?", taskID).
 		Where("round_number = ?", roundNumber).

@@ -20,6 +20,7 @@ DROP TABLE IF EXISTS user_settings;
 DROP TABLE IF EXISTS users;
 
 DROP TYPE IF EXISTS task_status;
+DROP TYPE IF EXISTS round_status;
 DROP TYPE IF EXISTS room_participant_role;
 DROP TYPE IF EXISTS room_status;
 DROP TYPE IF EXISTS team_member_role;

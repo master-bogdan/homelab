@@ -32,6 +32,11 @@ Enum task_status {
   SKIPPED
 }
 
+Enum round_status {
+  ACTIVE
+  REVEALED
+}
+
 // ---------- Core ----------
 Table users {
   user_id        text        [pk]
@@ -111,16 +116,21 @@ Table tasks {
   description         text
   external_key        text
   status              task_status [not null, default: 'PENDING']
+  is_active           boolean     [not null, default: false]
   final_estimate_value text
   created_at          timestamptz [not null, default: `now()`]
   updated_at          timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (room_id) [name: 'tasks_one_active_per_room_idx', unique, note: 'partial unique index where is_active = true']
+  }
 }
 
 Table task_rounds {
   task_id       text        [not null, ref: > tasks.task_id]
   round_number  int         [not null]
-  is_revealed   boolean     [not null, default: false]
-  revealed_at   timestamptz
+  eligible_participant_ids jsonb [not null, default: '[]', note: 'JSONB array of participant ids eligible for the round']
+  status        round_status [not null, default: 'ACTIVE']
   created_at    timestamptz [not null, default: `now()`]
   updated_at    timestamptz [not null, default: `now()`]
 

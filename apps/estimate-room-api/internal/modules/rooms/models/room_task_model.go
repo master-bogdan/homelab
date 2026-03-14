@@ -15,6 +15,7 @@ type RoomTaskModel struct {
 	Description        *string   `bun:"description"`
 	ExternalKey        *string   `bun:"external_key"`
 	Status             string    `bun:"status"`
+	IsActive           bool      `bun:"is_active"`
 	FinalEstimateValue *string   `bun:"final_estimate_value"`
 	CreatedAt          time.Time `bun:"created_at"`
 	UpdatedAt          time.Time `bun:"updated_at"`

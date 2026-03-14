@@ -31,7 +31,7 @@ func NewRoomTaskRepository(db *bun.DB) RoomTaskRepository {
 func (r *roomTaskRepository) Create(model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error) {
 	_, err := r.db.NewInsert().
 		Model(model).
-		Column("task_id", "room_id", "title", "description", "external_key", "status", "final_estimate_value").
+		Column("task_id", "room_id", "title", "description", "external_key", "status", "is_active", "final_estimate_value").
 		Returning("*").
 		Exec(context.Background())
 	if err != nil {
@@ -78,7 +78,7 @@ func (r *roomTaskRepository) FindCurrentVotingTask(roomID string) (*roomsmodels.
 	err := r.db.NewSelect().
 		Model(task).
 		Where("t.room_id = ?", roomID).
-		Where("t.status = ?", "VOTING").
+		Where("t.is_active = TRUE").
 		OrderExpr("t.updated_at DESC").
 		Limit(1).
 		Scan(context.Background())
@@ -119,12 +119,15 @@ func (r *roomTaskRepository) SetCurrentVotingTask(roomID, taskID string) (*rooms
 		}
 		return nil, nil, err
 	}
+	if targetTask.Status == "ESTIMATED" || targetTask.Status == "SKIPPED" {
+		return nil, nil, apperrors.ErrBadRequest
+	}
 
 	currentVotingTask := new(roomsmodels.RoomTaskModel)
 	err = tx.NewSelect().
 		Model(currentVotingTask).
 		Where("t.room_id = ?", roomID).
-		Where("t.status = ?", "VOTING").
+		Where("t.is_active = TRUE").
 		OrderExpr("t.updated_at DESC").
 		Limit(1).
 		Scan(context.Background())
@@ -136,6 +139,7 @@ func (r *roomTaskRepository) SetCurrentVotingTask(roomID, taskID string) (*rooms
 		result, updateErr := tx.NewUpdate().
 			Model((*roomsmodels.RoomTaskModel)(nil)).
 			Set("status = ?", "PENDING").
+			Set("is_active = FALSE").
 			Set("updated_at = NOW()").
 			Where("room_id = ?", roomID).
 			Where("task_id = ?", currentVotingTask.TaskID).
@@ -149,6 +153,7 @@ func (r *roomTaskRepository) SetCurrentVotingTask(roomID, taskID string) (*rooms
 		}
 		if rows > 0 {
 			currentVotingTask.Status = "PENDING"
+			currentVotingTask.IsActive = false
 			previousTask = currentVotingTask
 		}
 	}
@@ -156,6 +161,7 @@ func (r *roomTaskRepository) SetCurrentVotingTask(roomID, taskID string) (*rooms
 	result, err := tx.NewUpdate().
 		Model((*roomsmodels.RoomTaskModel)(nil)).
 		Set("status = ?", "VOTING").
+		Set("is_active = TRUE").
 		Set("updated_at = NOW()").
 		Where("room_id = ?", roomID).
 		Where("task_id = ?", taskID).
@@ -194,7 +200,7 @@ func (r *roomTaskRepository) SetCurrentVotingTask(roomID, taskID string) (*rooms
 func (r *roomTaskRepository) Update(roomID string, model *roomsmodels.RoomTaskModel) (*roomsmodels.RoomTaskModel, error) {
 	result, err := r.db.NewUpdate().
 		Model(model).
-		Column("title", "description", "external_key", "status", "final_estimate_value").
+		Column("title", "description", "external_key", "status", "is_active", "final_estimate_value").
 		Set("updated_at = NOW()").
 		WherePK().
 		Where("room_id = ?", roomID).

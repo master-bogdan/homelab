@@ -168,6 +168,9 @@ func TestTasksCRUD(t *testing.T) {
 	if createdTask.Status != "PENDING" {
 		t.Fatalf("expected status PENDING, got %s", createdTask.Status)
 	}
+	if createdTask.IsActive {
+		t.Fatal("expected created task to be inactive")
+	}
 
 	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/rooms/"+roomID+"/tasks/", nil)
 	listReq.Header.Set("Authorization", "Bearer "+accessToken)
@@ -197,7 +200,7 @@ func TestTasksCRUD(t *testing.T) {
 		t.Fatalf("expected 200 OK on get, got %d: %s", getRR.Code, getRR.Body.String())
 	}
 
-	updateReqBody := []byte(`{"title":"Updated task","status":"VOTING","finalEstimateValue":"5"}`)
+	updateReqBody := []byte(`{"title":"Updated task"}`)
 	updateReq := httptest.NewRequest(http.MethodPatch, "/api/v1/rooms/"+roomID+"/tasks/"+createdTask.TaskID, bytes.NewReader(updateReqBody))
 	updateReq.Header.Set("Authorization", "Bearer "+accessToken)
 
@@ -215,11 +218,65 @@ func TestTasksCRUD(t *testing.T) {
 	if updatedTask.Title != "Updated task" {
 		t.Fatalf("expected updated title, got %s", updatedTask.Title)
 	}
-	if updatedTask.Status != "VOTING" {
-		t.Fatalf("expected updated status VOTING, got %s", updatedTask.Status)
+	if updatedTask.Status != "PENDING" {
+		t.Fatalf("expected updated status PENDING, got %s", updatedTask.Status)
 	}
-	if updatedTask.FinalEstimateValue == nil || *updatedTask.FinalEstimateValue != "5" {
-		t.Fatalf("expected final estimate value 5, got %#v", updatedTask.FinalEstimateValue)
+	if updatedTask.IsActive {
+		t.Fatal("expected metadata update to keep task inactive")
+	}
+
+	activateReq := httptest.NewRequest(http.MethodPatch, "/api/v1/rooms/"+roomID+"/tasks/"+createdTask.TaskID, bytes.NewReader([]byte(`{"isActive":true}`)))
+	activateReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	activateRR := httptest.NewRecorder()
+	router.ServeHTTP(activateRR, activateReq)
+
+	if activateRR.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on activation, got %d: %s", activateRR.Code, activateRR.Body.String())
+	}
+
+	var activatedTask roomsmodels.RoomTaskModel
+	if err := json.NewDecoder(activateRR.Body).Decode(&activatedTask); err != nil {
+		t.Fatalf("failed to decode activated task: %v", err)
+	}
+	if activatedTask.Status != "VOTING" {
+		t.Fatalf("expected activated status VOTING, got %s", activatedTask.Status)
+	}
+	if !activatedTask.IsActive {
+		t.Fatal("expected activated task to be active")
+	}
+
+	_, err := db.ExecContext(context.Background(), `
+			UPDATE task_rounds
+			SET status = 'REVEALED', updated_at = NOW()
+			WHERE task_id = $1 AND round_number = 1
+		`, createdTask.TaskID)
+	if err != nil {
+		t.Fatalf("failed to mark round revealed: %v", err)
+	}
+
+	finalizeReq := httptest.NewRequest(http.MethodPatch, "/api/v1/rooms/"+roomID+"/tasks/"+createdTask.TaskID, bytes.NewReader([]byte(`{"finalEstimateValue":"5"}`)))
+	finalizeReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	finalizeRR := httptest.NewRecorder()
+	router.ServeHTTP(finalizeRR, finalizeReq)
+
+	if finalizeRR.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on finalize, got %d: %s", finalizeRR.Code, finalizeRR.Body.String())
+	}
+
+	var finalizedTask roomsmodels.RoomTaskModel
+	if err := json.NewDecoder(finalizeRR.Body).Decode(&finalizedTask); err != nil {
+		t.Fatalf("failed to decode finalized task: %v", err)
+	}
+	if finalizedTask.Status != "ESTIMATED" {
+		t.Fatalf("expected finalized status ESTIMATED, got %s", finalizedTask.Status)
+	}
+	if finalizedTask.IsActive {
+		t.Fatal("expected finalized task to be inactive")
+	}
+	if finalizedTask.FinalEstimateValue == nil || *finalizedTask.FinalEstimateValue != "5" {
+		t.Fatalf("expected final estimate value 5, got %#v", finalizedTask.FinalEstimateValue)
 	}
 
 	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/v1/rooms/"+roomID+"/tasks/"+createdTask.TaskID, nil)
@@ -248,6 +305,99 @@ func TestTasksCRUD(t *testing.T) {
 	}
 	if httpErr.Status != http.StatusNotFound {
 		t.Fatalf("expected error status 404, got %d", httpErr.Status)
+	}
+}
+
+func TestTasksUpdate_ActivatingTaskClearsPreviousActiveTask(t *testing.T) {
+	router, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	accessToken, userID := createAccessToken(t, db)
+	roomID := seedRoom(t, db, userID)
+
+	createTask := func(title string) roomsmodels.RoomTaskModel {
+		t.Helper()
+
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+roomID+"/tasks/", bytes.NewReader([]byte(`{"title":"`+title+`"}`)))
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK on create, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var task roomsmodels.RoomTaskModel
+		if err := json.NewDecoder(rr.Body).Decode(&task); err != nil {
+			t.Fatalf("failed to decode task: %v", err)
+		}
+
+		return task
+	}
+
+	firstTask := createTask("Task One")
+	secondTask := createTask("Task Two")
+
+	activate := func(taskID string) roomsmodels.RoomTaskModel {
+		t.Helper()
+
+		req := httptest.NewRequest(http.MethodPatch, "/api/v1/rooms/"+roomID+"/tasks/"+taskID, bytes.NewReader([]byte(`{"isActive":true}`)))
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK on activation, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var task roomsmodels.RoomTaskModel
+		if err := json.NewDecoder(rr.Body).Decode(&task); err != nil {
+			t.Fatalf("failed to decode activated task: %v", err)
+		}
+
+		return task
+	}
+
+	activatedFirst := activate(firstTask.TaskID)
+	if !activatedFirst.IsActive || activatedFirst.Status != "VOTING" {
+		t.Fatalf("expected first task to be active and VOTING, got active=%v status=%s", activatedFirst.IsActive, activatedFirst.Status)
+	}
+
+	activatedSecond := activate(secondTask.TaskID)
+	if !activatedSecond.IsActive || activatedSecond.Status != "VOTING" {
+		t.Fatalf("expected second task to be active and VOTING, got active=%v status=%s", activatedSecond.IsActive, activatedSecond.Status)
+	}
+
+	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/rooms/"+roomID+"/tasks/", nil)
+	listReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	listRR := httptest.NewRecorder()
+	router.ServeHTTP(listRR, listReq)
+
+	if listRR.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on list, got %d: %s", listRR.Code, listRR.Body.String())
+	}
+
+	var tasks []*roomsmodels.RoomTaskModel
+	if err := json.NewDecoder(listRR.Body).Decode(&tasks); err != nil {
+		t.Fatalf("failed to decode tasks list: %v", err)
+	}
+
+	taskByID := make(map[string]*roomsmodels.RoomTaskModel, len(tasks))
+	for _, task := range tasks {
+		taskByID[task.TaskID] = task
+	}
+
+	if taskByID[firstTask.TaskID] == nil || taskByID[secondTask.TaskID] == nil {
+		t.Fatalf("expected both tasks in list, got %#v", taskByID)
+	}
+	if taskByID[firstTask.TaskID].IsActive || taskByID[firstTask.TaskID].Status != "PENDING" {
+		t.Fatalf("expected first task reset to inactive PENDING, got active=%v status=%s", taskByID[firstTask.TaskID].IsActive, taskByID[firstTask.TaskID].Status)
+	}
+	if !taskByID[secondTask.TaskID].IsActive || taskByID[secondTask.TaskID].Status != "VOTING" {
+		t.Fatalf("expected second task active VOTING, got active=%v status=%s", taskByID[secondTask.TaskID].IsActive, taskByID[secondTask.TaskID].Status)
 	}
 }
 

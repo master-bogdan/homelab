@@ -9,6 +9,7 @@ type UpdateRoomTaskDTO struct {
 	Description        *string `json:"description" validate:"omitempty,max=2000"`
 	ExternalKey        *string `json:"externalKey" validate:"omitempty,max=255"`
 	Status             *string `json:"status" validate:"omitempty,oneof=PENDING VOTING ESTIMATED SKIPPED"`
+	IsActive           *bool   `json:"isActive"`
 	FinalEstimateValue *string `json:"finalEstimateValue" validate:"omitempty,max=255"`
 }
 

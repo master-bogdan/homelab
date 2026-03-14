@@ -14,6 +14,7 @@ type RoomsModule struct {
 	Gateway       *roomsGateway
 	Service       RoomsService
 	TaskService   RoomsTaskService
+	VoteService   RoomsVoteService
 	InviteService RoomsInviteService
 }
 
@@ -32,10 +33,11 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	roundRepo := roomsrepositories.NewRoomTaskRoundRepository(deps.DB)
 	participantRepo := roomsrepositories.NewRoomParticipantRepository(deps.DB)
 	svc := NewRoomsService(roomsRepo, participantRepo)
-	taskSvc := NewRoomsTaskService(roomsRepo, taskRepo, participantRepo)
+	voteSvc := NewRoomsVoteService(roomsRepo, taskRepo, voteRepo, roundRepo, participantRepo)
+	taskSvc := NewRoomsTaskService(roomsRepo, taskRepo, voteSvc, participantRepo)
 	inviteSvc := NewRoomsInviteService(roomsRepo, participantRepo, deps.TokenKey)
 	ctrl := NewRoomsController(svc, taskSvc, inviteSvc, deps.AuthService)
-	gw := NewRoomsGateway(deps.WsService, roomsRepo, participantRepo, taskRepo, voteRepo, roundRepo)
+	gw := NewRoomsGateway(deps.WsService, roomsRepo, participantRepo, taskRepo, voteRepo, roundRepo, voteSvc)
 
 	deps.Router.Route("/rooms", func(r chi.Router) {
 		r.Post("/", ctrl.CreateRoom)
@@ -56,6 +58,7 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	deps.WsService.Subscribe(RoomsVoteCast, gw.handleVoteCast)
 	deps.WsService.Subscribe(RoomsVoteReveal, gw.handleVoteReveal)
 	deps.WsService.Subscribe(RoomsRoundNext, gw.handleRoundNext)
+	deps.WsService.Subscribe(RoomsTaskFinalize, gw.handleTaskFinalize)
 	deps.WsService.SubscribeDisconnect(gw.handleDisconnect)
 
 	return &RoomsModule{
@@ -63,6 +66,7 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 		Gateway:       gw,
 		Service:       svc,
 		TaskService:   taskSvc,
+		VoteService:   voteSvc,
 		InviteService: inviteSvc,
 	}
 }
