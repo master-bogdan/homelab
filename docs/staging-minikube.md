@@ -195,7 +195,14 @@ Paths and keys required:
 - `email_use_ssl`
 
 **`kv/staging/n8n`**
+- `postgres_host`
+- `postgres_port`
+- `postgres_database`
+- `postgres_user`
 - `postgres_password`
+- `redis_host`
+- `redis_port`
+- `redis_username`
 - `redis_password`
 - `encryption_key`
 

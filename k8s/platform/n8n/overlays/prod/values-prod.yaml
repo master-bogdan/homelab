@@ -31,6 +31,8 @@ nodes:
 main:
   extraEnvVars:
     N8N_SECURE_COOKIE: "true"
+  extraSecretNamesForEnvFrom:
+    - n8n-prod
   persistence:
     enabled: true
     volumeName: "n8n-main-data"
@@ -49,18 +51,13 @@ main:
 db:
   type: postgresdb
 
+# Prod DB and Redis are external, so connection details come from the shared
+# Vault-backed secret via envFrom at runtime.
 externalPostgresql:
-  host: ""
-  port: 5432
-  database: ""
-  username: ""
-  existingSecret: "n8n-postgres-prod"
+  existingSecret: "n8n-prod"
 
 externalRedis:
-  host: ""
-  port: 6379
-  username: "default"
-  existingSecret: "n8n-redis-prod"
+  existingSecret: "n8n-prod"
 
 worker:
   mode: queue
@@ -68,6 +65,8 @@ worker:
   concurrency: 10
   extraEnvVars:
     N8N_SECURE_COOKIE: "true"
+  extraSecretNamesForEnvFrom:
+    - n8n-prod
 
 webhook:
   mode: queue
@@ -75,9 +74,14 @@ webhook:
   url: "https://n8n.example.invalid"
   extraEnvVars:
     N8N_SECURE_COOKIE: "true"
+  extraSecretNamesForEnvFrom:
+    - n8n-prod
+  mcp:
+    extraSecretNamesForEnvFrom:
+      - n8n-prod
 
 encryptionKey: ""
-existingEncryptionKeySecret: "n8n-encryption-prod"
+existingEncryptionKeySecret: "n8n-prod"
 
 diagnostics:
   enabled: false

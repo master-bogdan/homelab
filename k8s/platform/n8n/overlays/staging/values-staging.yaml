@@ -31,6 +31,8 @@ nodes:
 main:
   extraEnvVars:
     N8N_SECURE_COOKIE: "true"
+  extraSecretNamesForEnvFrom:
+    - n8n-staging
   persistence:
     enabled: true
     volumeName: "n8n-main-data"
@@ -49,18 +51,16 @@ main:
 db:
   type: postgresdb
 
+# The chart only supports password and encryption key secret refs directly.
+# Host and port come from the shared secret via envFrom at runtime.
 externalPostgresql:
-  host: ""
-  port: 5432
-  database: ""
-  username: ""
-  existingSecret: "n8n-postgres-staging"
+  database: n8n_staging
+  username: n8n_staging
+  existingSecret: "n8n-staging"
 
 externalRedis:
-  host: ""
-  port: 6379
   username: "default"
-  existingSecret: "n8n-redis-staging"
+  existingSecret: "n8n-staging"
 
 worker:
   mode: queue
@@ -68,6 +68,8 @@ worker:
   concurrency: 10
   extraEnvVars:
     N8N_SECURE_COOKIE: "true"
+  extraSecretNamesForEnvFrom:
+    - n8n-staging
 
 webhook:
   mode: queue
@@ -75,9 +77,14 @@ webhook:
   url: "https://n8n.apps.192-168-76-2.sslip.io"
   extraEnvVars:
     N8N_SECURE_COOKIE: "true"
+  extraSecretNamesForEnvFrom:
+    - n8n-staging
+  mcp:
+    extraSecretNamesForEnvFrom:
+      - n8n-staging
 
 encryptionKey: ""
-existingEncryptionKeySecret: "n8n-encryption-staging"
+existingEncryptionKeySecret: "n8n-staging"
 
 diagnostics:
   enabled: false
