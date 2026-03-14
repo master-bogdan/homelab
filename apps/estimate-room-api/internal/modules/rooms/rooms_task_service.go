@@ -26,6 +26,7 @@ type roomsTaskService struct {
 	taskRepo        roomsrepositories.RoomTaskRepository
 	voteService     RoomsVoteService
 	participantRepo roomsrepositories.RoomParticipantRepository
+	expiryService   RoomsExpiryService
 	logger          *slog.Logger
 }
 
@@ -49,18 +50,20 @@ func NewRoomsTaskService(
 	taskRepo roomsrepositories.RoomTaskRepository,
 	voteService RoomsVoteService,
 	participantRepo roomsrepositories.RoomParticipantRepository,
+	expiryService RoomsExpiryService,
 ) RoomsTaskService {
 	return &roomsTaskService{
 		roomsRepo:       roomsRepo,
 		taskRepo:        taskRepo,
 		voteService:     voteService,
 		participantRepo: participantRepo,
+		expiryService:   expiryService,
 		logger:          logger.L().With(slog.String("service", "rooms-tasks")),
 	}
 }
 
 func (s *roomsTaskService) CreateTask(roomID, userID string, input CreateTaskInput) (*roomsmodels.RoomTaskModel, error) {
-	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
+	if _, err := s.ensureActiveRoomAdmin(roomID, userID); err != nil {
 		return nil, err
 	}
 
@@ -89,7 +92,14 @@ func (s *roomsTaskService) CreateTask(roomID, userID string, input CreateTaskInp
 		IsActive:    false,
 	}
 
-	return s.taskRepo.Create(task)
+	createdTask, err := s.taskRepo.Create(task)
+	if err != nil {
+		return nil, err
+	}
+
+	s.expiryService.TouchActivity(roomID)
+
+	return createdTask, nil
 }
 
 func (s *roomsTaskService) ListTasks(roomID, userID string) ([]*roomsmodels.RoomTaskModel, error) {
@@ -109,7 +119,7 @@ func (s *roomsTaskService) GetTask(roomID, taskID, userID string) (*roomsmodels.
 }
 
 func (s *roomsTaskService) UpdateTask(roomID, taskID, userID string, input UpdateTaskInput) (*roomsmodels.RoomTaskModel, error) {
-	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
+	if _, err := s.ensureActiveRoomAdmin(roomID, userID); err != nil {
 		return nil, err
 	}
 
@@ -133,15 +143,28 @@ func (s *roomsTaskService) UpdateTask(roomID, taskID, userID string, input Updat
 		return task, nil
 	}
 
-	return s.taskRepo.Update(roomID, task)
+	updatedTask, err := s.taskRepo.Update(roomID, task)
+	if err != nil {
+		return nil, err
+	}
+
+	s.expiryService.TouchActivity(roomID)
+
+	return updatedTask, nil
 }
 
 func (s *roomsTaskService) DeleteTask(roomID, taskID, userID string) error {
-	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
+	if _, err := s.ensureActiveRoomAdmin(roomID, userID); err != nil {
 		return err
 	}
 
-	return s.taskRepo.Delete(roomID, taskID)
+	if err := s.taskRepo.Delete(roomID, taskID); err != nil {
+		return err
+	}
+
+	s.expiryService.TouchActivity(roomID)
+
+	return nil
 }
 
 func (s *roomsTaskService) applyVoteStateUpdate(
@@ -189,11 +212,21 @@ func (s *roomsTaskService) applyVoteStateUpdate(
 		task.Status = "SKIPPED"
 		task.IsActive = false
 		task.FinalEstimateValue = nil
-		return s.taskRepo.Update(roomID, task)
+		updatedTask, err := s.taskRepo.Update(roomID, task)
+		if err != nil {
+			return nil, err
+		}
+		s.expiryService.TouchActivity(roomID)
+		return updatedTask, nil
 	case status == "PENDING" || deactivateRequested:
 		task.Status = "PENDING"
 		task.IsActive = false
-		return s.taskRepo.Update(roomID, task)
+		updatedTask, err := s.taskRepo.Update(roomID, task)
+		if err != nil {
+			return nil, err
+		}
+		s.expiryService.TouchActivity(roomID)
+		return updatedTask, nil
 	default:
 		return task, nil
 	}
@@ -265,6 +298,18 @@ func (s *roomsTaskService) ensureRoomAdmin(roomID, userID string) (*roomsmodels.
 	}
 
 	if room.AdminUserID != userID {
+		return nil, apperrors.ErrForbidden
+	}
+
+	return room, nil
+}
+
+func (s *roomsTaskService) ensureActiveRoomAdmin(roomID, userID string) (*roomsmodels.RoomsModel, error) {
+	room, err := s.ensureRoomAdmin(roomID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if room.Status != "ACTIVE" {
 		return nil, apperrors.ErrForbidden
 	}
 

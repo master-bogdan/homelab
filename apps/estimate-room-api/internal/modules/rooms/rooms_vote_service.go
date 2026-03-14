@@ -43,6 +43,7 @@ type roomsVoteService struct {
 	voteRepo        roomsrepositories.RoomVoteRepository
 	roundRepo       roomsrepositories.RoomTaskRoundRepository
 	participantRepo roomsrepositories.RoomParticipantRepository
+	expiryService   RoomsExpiryService
 	logger          *slog.Logger
 }
 
@@ -52,6 +53,7 @@ func NewRoomsVoteService(
 	voteRepo roomsrepositories.RoomVoteRepository,
 	roundRepo roomsrepositories.RoomTaskRoundRepository,
 	participantRepo roomsrepositories.RoomParticipantRepository,
+	expiryService RoomsExpiryService,
 ) RoomsVoteService {
 	return &roomsVoteService{
 		roomsRepo:       roomsRepo,
@@ -59,12 +61,13 @@ func NewRoomsVoteService(
 		voteRepo:        voteRepo,
 		roundRepo:       roundRepo,
 		participantRepo: participantRepo,
+		expiryService:   expiryService,
 		logger:          logger.L().With(slog.String("service", "rooms-votes")),
 	}
 }
 
 func (s *roomsVoteService) SetCurrentTask(roomID, taskID, userID string, eligibleParticipantIDs []string) (*roomsmodels.RoomTaskModel, *roomsmodels.RoomTaskModel, *roomsmodels.RoomTaskRoundModel, error) {
-	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
+	if _, err := s.ensureActiveRoomAdmin(roomID, userID); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -78,6 +81,8 @@ func (s *roomsVoteService) SetCurrentTask(roomID, taskID, userID string, eligibl
 		return nil, nil, nil, err
 	}
 
+	s.expiryService.TouchActivity(roomID)
+
 	return task, previousTask, round, nil
 }
 
@@ -87,6 +92,11 @@ func (s *roomsVoteService) CastVote(roomID string, participant *roomsmodels.Room
 	}
 	if !isVotingParticipantRole(participant.Role) {
 		return nil, apperrors.ErrForbidden
+	}
+
+	room, err := s.ensureActiveRoom(roomID)
+	if err != nil {
+		return nil, err
 	}
 
 	task, err := s.taskRepo.FindCurrentVotingTask(roomID)
@@ -103,11 +113,6 @@ func (s *roomsVoteService) CastVote(roomID string, participant *roomsmodels.Room
 	}
 	if !containsParticipantID(round.EligibleParticipantIDs, participant.RoomParticipantID) {
 		return nil, apperrors.ErrForbidden
-	}
-
-	room, err := s.roomsRepo.FindByID(roomID)
-	if err != nil {
-		return nil, err
 	}
 
 	trimmedValue := strings.TrimSpace(value)
@@ -127,6 +132,8 @@ func (s *roomsVoteService) CastVote(roomID string, participant *roomsmodels.Room
 	votedParticipantIDs := filterParticipantIDs(uniqueSortedParticipantIDs(votes), round.EligibleParticipantIDs)
 	allVotesCast := len(round.EligibleParticipantIDs) > 0 && sameParticipantIDs(votedParticipantIDs, round.EligibleParticipantIDs)
 
+	s.expiryService.TouchActivity(roomID)
+
 	return &CastVoteResult{
 		Task:                   task,
 		Round:                  round,
@@ -137,7 +144,7 @@ func (s *roomsVoteService) CastVote(roomID string, participant *roomsmodels.Room
 }
 
 func (s *roomsVoteService) RevealCurrentRound(roomID, userID string) (*RevealVotesResult, error) {
-	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
+	if _, err := s.ensureActiveRoomAdmin(roomID, userID); err != nil {
 		return nil, err
 	}
 
@@ -166,6 +173,8 @@ func (s *roomsVoteService) RevealCurrentRound(roomID, userID string) (*RevealVot
 		}
 	}
 
+	s.expiryService.TouchActivity(roomID)
+
 	return &RevealVotesResult{
 		Task:     task,
 		Round:    round,
@@ -175,7 +184,7 @@ func (s *roomsVoteService) RevealCurrentRound(roomID, userID string) (*RevealVot
 }
 
 func (s *roomsVoteService) StartNextRound(roomID, userID string, eligibleParticipantIDs []string) (*roomsmodels.RoomTaskModel, *roomsmodels.RoomTaskRoundModel, error) {
-	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
+	if _, err := s.ensureActiveRoomAdmin(roomID, userID); err != nil {
 		return nil, nil, err
 	}
 
@@ -197,11 +206,13 @@ func (s *roomsVoteService) StartNextRound(roomID, userID string, eligiblePartici
 		return nil, nil, err
 	}
 
+	s.expiryService.TouchActivity(roomID)
+
 	return task, round, nil
 }
 
 func (s *roomsVoteService) FinalizeCurrentTask(roomID, userID, value string) (*roomsmodels.RoomTaskModel, error) {
-	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
+	if _, err := s.ensureActiveRoomAdmin(roomID, userID); err != nil {
 		return nil, err
 	}
 
@@ -214,7 +225,7 @@ func (s *roomsVoteService) FinalizeCurrentTask(roomID, userID, value string) (*r
 }
 
 func (s *roomsVoteService) FinalizeTask(roomID, taskID, userID, value string) (*roomsmodels.RoomTaskModel, error) {
-	if _, err := s.ensureRoomAdmin(roomID, userID); err != nil {
+	if _, err := s.ensureActiveRoomAdmin(roomID, userID); err != nil {
 		return nil, err
 	}
 
@@ -255,7 +266,14 @@ func (s *roomsVoteService) finalizeTask(roomID string, task *roomsmodels.RoomTas
 	task.Status = "ESTIMATED"
 	task.IsActive = false
 	task.FinalEstimateValue = &trimmedValue
-	return s.taskRepo.Update(roomID, task)
+	updatedTask, err := s.taskRepo.Update(roomID, task)
+	if err != nil {
+		return nil, err
+	}
+
+	s.expiryService.TouchActivity(roomID)
+
+	return updatedTask, nil
 }
 
 func (s *roomsVoteService) ensureRoomAdmin(roomID, userID string) (*roomsmodels.RoomsModel, error) {
@@ -275,6 +293,30 @@ func (s *roomsVoteService) ensureRoomAdmin(roomID, userID string) (*roomsmodels.
 		return nil, apperrors.ErrForbidden
 	}
 	if room.AdminUserID != userID {
+		return nil, apperrors.ErrForbidden
+	}
+
+	return room, nil
+}
+
+func (s *roomsVoteService) ensureActiveRoom(roomID string) (*roomsmodels.RoomsModel, error) {
+	room, err := s.roomsRepo.FindByID(roomID)
+	if err != nil {
+		return nil, err
+	}
+	if room.Status != "ACTIVE" {
+		return nil, apperrors.ErrForbidden
+	}
+
+	return room, nil
+}
+
+func (s *roomsVoteService) ensureActiveRoomAdmin(roomID, userID string) (*roomsmodels.RoomsModel, error) {
+	room, err := s.ensureRoomAdmin(roomID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if room.Status != "ACTIVE" {
 		return nil, apperrors.ErrForbidden
 	}
 

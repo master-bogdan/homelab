@@ -2,6 +2,7 @@
 package app
 
 import (
+	"context"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -33,7 +34,11 @@ type AppDeps struct {
 	WsServer           ws.PubSub
 }
 
-func (deps *AppDeps) SetupApp() {
+func (deps *AppDeps) SetupApp(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	deps.Router.Use(
 		logger.RequestIDMiddleware,
 		middleware.RealIP,
@@ -87,12 +92,16 @@ func (deps *AppDeps) SetupApp() {
 			AuthService: oauth2Module.AuthService,
 		})
 
-		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
+		roomsModule := rooms.NewRoomsModule(rooms.RoomsModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
 			WsService:   wsModule.Service,
 			AuthService: oauth2Module.AuthService,
 			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
 		})
+
+		if roomsModule != nil && roomsModule.ExpiryService != nil {
+			roomsModule.ExpiryService.Start(ctx)
+		}
 	})
 }

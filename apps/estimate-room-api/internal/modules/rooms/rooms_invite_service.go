@@ -23,6 +23,7 @@ type RoomsInviteService interface {
 type roomsInviteService struct {
 	roomsRepo       roomsrepositories.RoomsRepository
 	participantRepo roomsrepositories.RoomParticipantRepository
+	expiryService   RoomsExpiryService
 	tokenKey        []byte
 	logger          *slog.Logger
 }
@@ -55,11 +56,13 @@ type roomGuestTokenClaims struct {
 func NewRoomsInviteService(
 	roomsRepo roomsrepositories.RoomsRepository,
 	participantRepo roomsrepositories.RoomParticipantRepository,
+	expiryService RoomsExpiryService,
 	tokenKey string,
 ) RoomsInviteService {
 	return &roomsInviteService{
 		roomsRepo:       roomsRepo,
 		participantRepo: participantRepo,
+		expiryService:   expiryService,
 		tokenKey:        []byte(tokenKey),
 		logger:          logger.L().With(slog.String("service", "rooms-invites")),
 	}
@@ -139,6 +142,8 @@ func (s *roomsInviteService) joinRegisteredUser(room *roomsmodels.RoomsModel, us
 		}
 	}
 
+	s.expiryService.TouchActivity(room.RoomID)
+
 	fullRoom, err := s.roomsRepo.FindByID(room.RoomID)
 	if err != nil {
 		return nil, err
@@ -178,6 +183,8 @@ func (s *roomsInviteService) joinGuest(room *roomsmodels.RoomsModel, guestName s
 	if err != nil {
 		return nil, err
 	}
+
+	s.expiryService.TouchActivity(room.RoomID)
 
 	fullRoom, err := s.roomsRepo.FindByID(room.RoomID)
 	if err != nil {

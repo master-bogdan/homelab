@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"time"
 
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
@@ -15,6 +16,8 @@ type RoomsRepository interface {
 	Create(model *roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
 	FindByID(roomID string) (*roomsmodels.RoomsModel, error)
 	Update(roomID string, input UpdateRoomFields) (*roomsmodels.RoomsModel, error)
+	TouchActivity(roomID string) error
+	ExpireInactiveRooms(cutoff time.Time) ([]*roomsmodels.RoomsModel, error)
 }
 
 type roomsRepository struct {
@@ -92,7 +95,7 @@ func (r *roomsRepository) Update(roomID string, input UpdateRoomFields) (*roomsm
 
 	if input.Status != nil {
 		query = query.Set("status = ?", *input.Status)
-		if *input.Status == "FINISHED" {
+		if *input.Status == "FINISHED" || *input.Status == "EXPIRED" {
 			query = query.Set("finished_at = COALESCE(finished_at, NOW())")
 		} else {
 			query = query.Set("finished_at = NULL")
@@ -113,4 +116,36 @@ func (r *roomsRepository) Update(roomID string, input UpdateRoomFields) (*roomsm
 	}
 
 	return r.FindByID(roomID)
+}
+
+func (r *roomsRepository) TouchActivity(roomID string) error {
+	_, err := r.db.NewUpdate().
+		Model((*roomsmodels.RoomsModel)(nil)).
+		Set("last_activity_at = NOW()").
+		Where("room_id = ?", roomID).
+		Where("status = ?", "ACTIVE").
+		Exec(context.Background())
+
+	return err
+}
+
+func (r *roomsRepository) ExpireInactiveRooms(cutoff time.Time) ([]*roomsmodels.RoomsModel, error) {
+	rooms := make([]*roomsmodels.RoomsModel, 0)
+	err := r.db.NewRaw(`
+		UPDATE rooms
+		SET status = 'EXPIRED',
+		    finished_at = COALESCE(finished_at, NOW())
+		WHERE status = 'ACTIVE'
+		  AND last_activity_at <= ?
+		RETURNING *
+	`, cutoff).
+		Scan(context.Background(), &rooms)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return rooms, nil
+		}
+		return nil, err
+	}
+
+	return rooms, nil
 }

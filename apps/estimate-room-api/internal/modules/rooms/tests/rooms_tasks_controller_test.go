@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -398,6 +399,61 @@ func TestTasksUpdate_ActivatingTaskClearsPreviousActiveTask(t *testing.T) {
 	}
 	if !taskByID[secondTask.TaskID].IsActive || taskByID[secondTask.TaskID].Status != "VOTING" {
 		t.Fatalf("expected second task active VOTING, got active=%v status=%s", taskByID[secondTask.TaskID].IsActive, taskByID[secondTask.TaskID].Status)
+	}
+}
+
+func TestTasksUpdate_TouchesRoomActivity(t *testing.T) {
+	router, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	accessToken, userID := createAccessToken(t, db)
+	roomID := seedRoom(t, db, userID)
+
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+roomID+"/tasks/", bytes.NewReader([]byte(`{"title":"Activity task"}`)))
+	createReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	createRR := httptest.NewRecorder()
+	router.ServeHTTP(createRR, createReq)
+
+	if createRR.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on create, got %d: %s", createRR.Code, createRR.Body.String())
+	}
+
+	var createdTask roomsmodels.RoomTaskModel
+	if err := json.NewDecoder(createRR.Body).Decode(&createdTask); err != nil {
+		t.Fatalf("failed to decode created task: %v", err)
+	}
+
+	oldActivityAt := time.Now().Add(-1 * time.Hour).UTC()
+	if _, err := db.ExecContext(context.Background(), `
+		UPDATE rooms
+		SET last_activity_at = $2
+		WHERE room_id = $1
+	`, roomID, oldActivityAt); err != nil {
+		t.Fatalf("failed to set room activity time: %v", err)
+	}
+
+	updateReq := httptest.NewRequest(http.MethodPatch, "/api/v1/rooms/"+roomID+"/tasks/"+createdTask.TaskID, bytes.NewReader([]byte(`{"title":"Activity task updated"}`)))
+	updateReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	updateRR := httptest.NewRecorder()
+	router.ServeHTTP(updateRR, updateReq)
+
+	if updateRR.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK on update, got %d: %s", updateRR.Code, updateRR.Body.String())
+	}
+
+	room := new(roomsmodels.RoomsModel)
+	if err := db.NewSelect().
+		Model(room).
+		Where("r.room_id = ?", roomID).
+		Limit(1).
+		Scan(context.Background()); err != nil {
+		t.Fatalf("failed to load room: %v", err)
+	}
+
+	if !room.LastActivityAt.After(oldActivityAt) {
+		t.Fatalf("expected lastActivityAt to advance beyond %s, got %s", oldActivityAt, room.LastActivityAt)
 	}
 }
 

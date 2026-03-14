@@ -245,6 +245,7 @@ VALUES
 
 CREATE UNIQUE INDEX ON "votes" ("task_id", "participant_id", "round_number");
 CREATE UNIQUE INDEX "tasks_one_active_per_room_idx" ON "tasks" ("room_id") WHERE "is_active" = true;
+CREATE INDEX "rooms_active_last_activity_idx" ON "rooms" ("last_activity_at") WHERE "status" = 'ACTIVE';
 
 CREATE INDEX "idx_oauth2_auth_codes_code" ON "oauth2_auth_codes" ("code");
 

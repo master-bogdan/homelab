@@ -383,6 +383,109 @@ func TestRoomsVoting_LateJoinerDoesNotEnterCurrentRoundEligibility(t *testing.T)
 	}
 }
 
+func TestRoomsRealtime_JoinTouchesRoomActivity(t *testing.T) {
+	server, db := setupRoomsRealtimeTest(t)
+	defer server.Close()
+	defer db.Close()
+
+	adminToken, adminUserID := createAccessToken(t, db)
+	roomID := seedRoom(t, db, adminUserID)
+
+	oldActivityAt := time.Now().Add(-1 * time.Hour).UTC()
+	if _, err := db.ExecContext(context.Background(), `
+		UPDATE rooms
+		SET last_activity_at = $2
+		WHERE room_id = $1
+	`, roomID, oldActivityAt); err != nil {
+		t.Fatalf("failed to set room activity time: %v", err)
+	}
+
+	adminConn := connectWS(t, server.URL, adminToken)
+	defer adminConn.Close(websocket.StatusNormalClosure, "")
+
+	joinRoom(t, adminConn, roomID)
+
+	room := struct {
+		LastActivityAt time.Time `bun:"last_activity_at"`
+	}{}
+	if err := db.NewSelect().
+		TableExpr("rooms").
+		Column("last_activity_at").
+		Where("room_id = ?", roomID).
+		Limit(1).
+		Scan(context.Background(), &room.LastActivityAt); err != nil {
+		t.Fatalf("failed to load room activity time: %v", err)
+	}
+
+	if !room.LastActivityAt.After(oldActivityAt) {
+		t.Fatalf("expected room lastActivityAt to advance beyond %s, got %s", oldActivityAt, room.LastActivityAt)
+	}
+}
+
+func TestRoomsVoting_CastVoteTouchesRoomActivity(t *testing.T) {
+	server, db := setupRoomsRealtimeTest(t)
+	defer server.Close()
+	defer db.Close()
+
+	adminToken, adminUserID := createAccessToken(t, db)
+	roomID := seedRoom(t, db, adminUserID)
+	taskID := seedTask(t, db, roomID, "Realtime task")
+
+	memberToken, memberUserID := createAccessToken(t, db)
+	seedMemberParticipant(t, db, roomID, memberUserID)
+
+	adminConn := connectWS(t, server.URL, adminToken)
+	defer adminConn.Close(websocket.StatusNormalClosure, "")
+	memberConn := connectWS(t, server.URL, memberToken)
+	defer memberConn.Close(websocket.StatusNormalClosure, "")
+
+	joinRoom(t, adminConn, roomID)
+	joinRoom(t, memberConn, roomID)
+
+	writeEvent(t, adminConn, ws.Event{
+		Type:   rooms.RoomsTaskSetCurrent,
+		RoomID: roomID,
+		Payload: mustMarshalJSON(t, map[string]string{
+			"taskId": taskID,
+		}),
+	})
+	readUntilEvent(t, adminConn, rooms.RoomsTaskCurrentChanged)
+
+	oldActivityAt := time.Now().Add(-45 * time.Minute).UTC()
+	if _, err := db.ExecContext(context.Background(), `
+		UPDATE rooms
+		SET last_activity_at = $2
+		WHERE room_id = $1
+	`, roomID, oldActivityAt); err != nil {
+		t.Fatalf("failed to reset room activity time: %v", err)
+	}
+
+	writeEvent(t, memberConn, ws.Event{
+		Type:   rooms.RoomsVoteCast,
+		RoomID: roomID,
+		Payload: mustMarshalJSON(t, map[string]string{
+			"value": "3",
+		}),
+	})
+	readUntilEvent(t, adminConn, rooms.RoomsVoteStatusChanged)
+
+	room := struct {
+		LastActivityAt time.Time `bun:"last_activity_at"`
+	}{}
+	if err := db.NewSelect().
+		TableExpr("rooms").
+		Column("last_activity_at").
+		Where("room_id = ?", roomID).
+		Limit(1).
+		Scan(context.Background(), &room.LastActivityAt); err != nil {
+		t.Fatalf("failed to load room activity time: %v", err)
+	}
+
+	if !room.LastActivityAt.After(oldActivityAt) {
+		t.Fatalf("expected room lastActivityAt to advance beyond %s, got %s", oldActivityAt, room.LastActivityAt)
+	}
+}
+
 func mustMarshalJSON(t *testing.T, value any) json.RawMessage {
 	t.Helper()
 

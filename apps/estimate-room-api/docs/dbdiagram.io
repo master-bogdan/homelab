@@ -97,6 +97,10 @@ Table rooms {
   created_at         timestamptz [not null, default: `now()`]
   last_activity_at   timestamptz [not null, default: `now()`]
   finished_at        timestamptz
+
+  Indexes {
+    (last_activity_at) [name: 'rooms_active_last_activity_idx', note: 'partial index where status = ACTIVE']
+  }
 }
 
 Table room_participants {

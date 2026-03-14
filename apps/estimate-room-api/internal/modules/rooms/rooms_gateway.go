@@ -21,6 +21,7 @@ type roomsGateway struct {
 	voteRepo        roomsrepositories.RoomVoteRepository
 	roundRepo       roomsrepositories.RoomTaskRoundRepository
 	voteService     RoomsVoteService
+	expiryService   RoomsExpiryService
 }
 
 func NewRoomsGateway(
@@ -31,6 +32,7 @@ func NewRoomsGateway(
 	voteRepo roomsrepositories.RoomVoteRepository,
 	roundRepo roomsrepositories.RoomTaskRoundRepository,
 	voteService RoomsVoteService,
+	expiryService RoomsExpiryService,
 ) *roomsGateway {
 	return &roomsGateway{
 		wsService:       wsService,
@@ -40,6 +42,7 @@ func NewRoomsGateway(
 		voteRepo:        voteRepo,
 		roundRepo:       roundRepo,
 		voteService:     voteService,
+		expiryService:   expiryService,
 	}
 }
 
@@ -59,6 +62,7 @@ const (
 	RoomsVotesRevealed      = "ROOMS_VOTES_REVEALED"
 	RoomsRoundChanged       = "ROOMS_ROUND_CHANGED"
 	RoomsTaskFinalized      = "ROOMS_TASK_FINALIZED"
+	RoomsExpired            = "ROOMS_EXPIRED"
 	RoomsSnapshot           = "ROOMS_SNAPSHOT"
 )
 
@@ -201,6 +205,8 @@ func (g *roomsGateway) handleRoomJoin(client ws.ClientInfo, event ws.Event) {
 		logger.L().Error("room join failed", "err", err, "room_id", roomID, "conn_id", client.ConnID)
 		return
 	}
+
+	g.expiryService.TouchActivity(roomID)
 
 	if joinResult.Joined {
 		if err := g.broadcastPresence(roomID, RoomsParticipantJoined, roomPresencePayload{
@@ -497,6 +503,8 @@ func (g *roomsGateway) handleDisconnect(info ws.DisconnectInfo) {
 	if err := g.broadcastPresence(roomID, RoomsParticipantLeft, payload); err != nil {
 		logger.L().Error("failed to broadcast participant left", "err", err, "room_id", roomID)
 	}
+
+	g.expiryService.TouchActivity(roomID)
 }
 
 func (g *roomsGateway) resolveParticipant(client ws.ClientInfo, roomID string) (*roomsmodels.RoomParticipantModel, error) {

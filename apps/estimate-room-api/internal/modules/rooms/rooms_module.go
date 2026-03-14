@@ -15,6 +15,7 @@ type RoomsModule struct {
 	Service       RoomsService
 	TaskService   RoomsTaskService
 	VoteService   RoomsVoteService
+	ExpiryService RoomsExpiryService
 	InviteService RoomsInviteService
 }
 
@@ -32,12 +33,13 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	voteRepo := roomsrepositories.NewRoomVoteRepository(deps.DB)
 	roundRepo := roomsrepositories.NewRoomTaskRoundRepository(deps.DB)
 	participantRepo := roomsrepositories.NewRoomParticipantRepository(deps.DB)
+	expirySvc := NewRoomsExpiryService(roomsRepo, deps.WsService)
 	svc := NewRoomsService(roomsRepo, participantRepo)
-	voteSvc := NewRoomsVoteService(roomsRepo, taskRepo, voteRepo, roundRepo, participantRepo)
-	taskSvc := NewRoomsTaskService(roomsRepo, taskRepo, voteSvc, participantRepo)
-	inviteSvc := NewRoomsInviteService(roomsRepo, participantRepo, deps.TokenKey)
+	voteSvc := NewRoomsVoteService(roomsRepo, taskRepo, voteRepo, roundRepo, participantRepo, expirySvc)
+	taskSvc := NewRoomsTaskService(roomsRepo, taskRepo, voteSvc, participantRepo, expirySvc)
+	inviteSvc := NewRoomsInviteService(roomsRepo, participantRepo, expirySvc, deps.TokenKey)
 	ctrl := NewRoomsController(svc, taskSvc, inviteSvc, deps.AuthService)
-	gw := NewRoomsGateway(deps.WsService, roomsRepo, participantRepo, taskRepo, voteRepo, roundRepo, voteSvc)
+	gw := NewRoomsGateway(deps.WsService, roomsRepo, participantRepo, taskRepo, voteRepo, roundRepo, voteSvc, expirySvc)
 
 	deps.Router.Route("/rooms", func(r chi.Router) {
 		r.Post("/", ctrl.CreateRoom)
@@ -67,6 +69,7 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 		Service:       svc,
 		TaskService:   taskSvc,
 		VoteService:   voteSvc,
+		ExpiryService: expirySvc,
 		InviteService: inviteSvc,
 	}
 }

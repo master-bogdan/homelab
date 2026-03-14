@@ -86,7 +86,8 @@ func main() {
 		WsServer:           wsServer,
 	}
 
-	application.SetupApp()
+	backgroundCtx, cancelBackground := context.WithCancel(context.Background())
+	application.SetupApp(backgroundCtx)
 
 	addr := net.JoinHostPort(
 		strings.TrimSpace(cfg.Server.Host),
@@ -111,7 +112,7 @@ func main() {
 		}
 	}()
 
-	gracefulShutdown(srv, wsServer, application.DB, application.Redis, redisPubSubClient)
+	gracefulShutdown(srv, wsServer, application.DB, application.Redis, redisPubSubClient, cancelBackground)
 }
 
 func gracefulShutdown(
@@ -120,6 +121,7 @@ func gracefulShutdown(
 	db interface{ Close() error },
 	redis interface{ Close() error },
 	redisPubSub interface{ Close() error },
+	cancelBackground context.CancelFunc,
 ) {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -127,6 +129,9 @@ func gracefulShutdown(
 	<-quit
 	logger.L().Info("Shutting down server...")
 	IsGracefulShutdown.Store(true)
+	if cancelBackground != nil {
+		cancelBackground()
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
