@@ -1,6 +1,7 @@
 package rooms
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"log/slog"
@@ -15,7 +16,7 @@ import (
 )
 
 type RoomsService interface {
-	CreateRoom(model roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
+	CreateRoom(ctx context.Context, model roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
 	GetRoom(roomID string) (*roomsmodels.RoomsModel, error)
 	ValidateUserRoomAccess(roomID, userID string) error
 	UpdateRoom(roomID, userID string, input UpdateRoomInput) (*roomsmodels.RoomsModel, error)
@@ -38,7 +39,7 @@ func NewRoomsService(
 	}
 }
 
-func (s *roomsService) CreateRoom(model roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error) {
+func (s *roomsService) CreateRoom(ctx context.Context, model roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error) {
 	if model.Deck.IsZero() {
 		model.Deck = roomsmodels.DefaultRoomDeck()
 	}
@@ -59,11 +60,11 @@ func (s *roomsService) CreateRoom(model roomsmodels.RoomsModel) (*roomsmodels.Ro
 	}
 
 	timestamp := time.Now().String()
-	code := base64.StdEncoding.EncodeToString([]byte(model.Name + timestamp))
+	code := base64.RawURLEncoding.EncodeToString([]byte(model.Name + timestamp))
 
 	model.Code = code
 
-	room, err := s.roomsRepo.Create(&model)
+	room, err := s.roomsRepo.Create(ctx, &model)
 	if err != nil {
 		return nil, err
 	}

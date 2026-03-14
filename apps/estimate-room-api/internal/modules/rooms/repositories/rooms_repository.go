@@ -13,7 +13,7 @@ import (
 )
 
 type RoomsRepository interface {
-	Create(model *roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
+	Create(ctx context.Context, model *roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
 	FindByID(roomID string) (*roomsmodels.RoomsModel, error)
 	Update(roomID string, input UpdateRoomFields) (*roomsmodels.RoomsModel, error)
 	TouchActivity(roomID string) error
@@ -33,7 +33,11 @@ func NewRoomsRepository(db *bun.DB) *roomsRepository {
 	return &roomsRepository{db: db}
 }
 
-func (r *roomsRepository) Create(model *roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error) {
+func (r *roomsRepository) Create(ctx context.Context, model *roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	if model.TeamID != nil && strings.TrimSpace(*model.TeamID) == "" {
 		model.TeamID = nil
 	}
@@ -42,7 +46,7 @@ func (r *roomsRepository) Create(model *roomsmodels.RoomsModel) (*roomsmodels.Ro
 		Model(model).
 		Column("code", "name", "admin_user_id", "team_id", "deck").
 		Returning("*").
-		Exec(context.Background())
+		Exec(ctx)
 	if err != nil {
 		return nil, err
 	}

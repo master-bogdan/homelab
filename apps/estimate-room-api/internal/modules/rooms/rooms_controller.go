@@ -93,7 +93,7 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		AdminUserID: userID,
 	}
 
-	createdRoom, err := c.service.CreateRoom(room)
+	createdRoom, err := c.service.CreateRoom(r.Context(), room)
 	if err != nil {
 		c.writeError(w, r, apperrors.ErrBadRequest, "failed to create room", err)
 		return
