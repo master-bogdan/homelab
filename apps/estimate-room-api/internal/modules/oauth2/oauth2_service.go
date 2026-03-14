@@ -27,6 +27,8 @@ type UserService interface {
 	FindByID(userID string) (*usersmodels.UserModel, error)
 	FindByEmail(email string) (*usersmodels.UserModel, error)
 	FindByGithubID(githubID string) (*usersmodels.UserModel, error)
+	HasSoftDeletedEmail(email string) (bool, error)
+	HasSoftDeletedGithubID(githubID string) (bool, error)
 	Create(email, passwordHash string) (string, error)
 	CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error)
 	UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error
@@ -164,6 +166,15 @@ func (s *oauth2Service) AuthenticateUser(dto *oauth2dto.UserDTO) (string, error)
 	s.logger.Info("AuthenticateUser")
 	user, err := s.userService.FindByEmail(dto.Email)
 	if err != nil {
+		if errors.Is(err, apperrors.ErrUserNotFound) {
+			hasDeletedEmail, lookupErr := s.userService.HasSoftDeletedEmail(dto.Email)
+			if lookupErr != nil {
+				return "", lookupErr
+			}
+			if hasDeletedEmail {
+				return "", ErrInvalidCredentials
+			}
+		}
 		return "", err
 	}
 
@@ -214,6 +225,14 @@ func (s *oauth2Service) GetOrCreateUserFromGithub(profile oauth2utils.GithubProf
 		return "", err
 	}
 
+	hasDeletedGithubID, err := s.userService.HasSoftDeletedGithubID(profile.ID)
+	if err != nil {
+		return "", err
+	}
+	if hasDeletedGithubID {
+		return "", apperrors.ErrUserNotFound
+	}
+
 	if profile.Email != nil && *profile.Email != "" {
 		userByEmail, err := s.userService.FindByEmail(*profile.Email)
 		if err == nil {
@@ -224,6 +243,14 @@ func (s *oauth2Service) GetOrCreateUserFromGithub(profile oauth2utils.GithubProf
 		}
 		if !errors.Is(err, apperrors.ErrUserNotFound) {
 			return "", err
+		}
+
+		hasDeletedEmail, err := s.userService.HasSoftDeletedEmail(*profile.Email)
+		if err != nil {
+			return "", err
+		}
+		if hasDeletedEmail {
+			return "", apperrors.ErrUserNotFound
 		}
 	}
 

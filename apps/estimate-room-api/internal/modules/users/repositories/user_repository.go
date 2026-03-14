@@ -15,6 +15,8 @@ type UserRepository interface {
 	FindByID(userID string) (*usersmodels.UserModel, error)
 	FindByEmail(email string) (*usersmodels.UserModel, error)
 	FindByGithubID(githubID string) (*usersmodels.UserModel, error)
+	HasSoftDeletedEmail(email string) (bool, error)
+	HasSoftDeletedGithubID(githubID string) (bool, error)
 	Create(email, passwordHash string) (string, error)
 	CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error)
 	UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error
@@ -50,6 +52,7 @@ func (r *userRepository) FindByEmail(email string) (*usersmodels.UserModel, erro
 	err := r.db.NewSelect().
 		Model(user).
 		Where("u.email = ?", email).
+		Where("u.deleted_at IS NULL").
 		Limit(1).
 		Scan(context.Background())
 	if err != nil {
@@ -67,6 +70,7 @@ func (r *userRepository) FindByGithubID(githubID string) (*usersmodels.UserModel
 	err := r.db.NewSelect().
 		Model(user).
 		Where("u.github_id = ?", githubID).
+		Where("u.deleted_at IS NULL").
 		Limit(1).
 		Scan(context.Background())
 	if err != nil {
@@ -77,6 +81,22 @@ func (r *userRepository) FindByGithubID(githubID string) (*usersmodels.UserModel
 	}
 
 	return user, nil
+}
+
+func (r *userRepository) HasSoftDeletedEmail(email string) (bool, error) {
+	return r.hasSoftDeletedUser("u.email = ?", email)
+}
+
+func (r *userRepository) HasSoftDeletedGithubID(githubID string) (bool, error) {
+	return r.hasSoftDeletedUser("u.github_id = ?", githubID)
+}
+
+func (r *userRepository) hasSoftDeletedUser(whereClause string, value string) (bool, error) {
+	return r.db.NewSelect().
+		Model((*usersmodels.UserModel)(nil)).
+		Where(whereClause, value).
+		Where("u.deleted_at IS NOT NULL").
+		Exists(context.Background())
 }
 
 func (r *userRepository) Create(email, passwordHash string) (string, error) {
