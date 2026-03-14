@@ -18,9 +18,9 @@ UI_NAME_PATTERN         ?= ui
 UI_BUILD_OUTPUT_DIRS    ?= out build dist
 UI_PUBLIC_BUCKET        ?= public
 SEAWEEDFS_NAMESPACE     ?= $(ENV)-platform
-SEAWEED_PUBLIC_BASE_DEV      ?= http://storage.apps.192-168-76-2.sslip.io:30080
+SEAWEED_PUBLIC_BASE_DEV      ?= http://storage.apps.10-96-11-221.sslip.io:30080
 SEAWEED_PUBLIC_BASE_PROD     ?= https://storage.example.invalid
-SEAWEED_PUBLIC_BASE_STAGING ?= https://storage.apps.192-168-76-2.sslip.io
+SEAWEED_PUBLIC_BASE_STAGING ?= https://storage.apps.10-96-11-221.sslip.io
 ifeq ($(ENV),prod)
 SEAWEED_PUBLIC_BASE     ?= $(SEAWEED_PUBLIC_BASE_PROD)
 else ifeq ($(ENV),staging)

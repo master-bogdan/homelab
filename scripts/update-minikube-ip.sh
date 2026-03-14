@@ -11,15 +11,25 @@ if [[ "${ENV}" != "dev" && "${ENV}" != "staging" ]]; then
 fi
 
 if [[ -z "${MINIKUBE_IP}" ]]; then
-  if ! command -v minikube >/dev/null 2>&1; then
-    echo "minikube command is required (or provide MINIKUBE_IP)." >&2
-    exit 1
+  if command -v kubectl >/dev/null 2>&1; then
+    lb_ip="$(kubectl -n "${ENV}-networking" get svc "traefik-${ENV}" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
+    if [[ -n "${lb_ip}" ]]; then
+      MINIKUBE_IP="${lb_ip}"
+      echo "Using Traefik LoadBalancer IP ${MINIKUBE_IP} for ENV=${ENV}."
+    fi
   fi
-  MINIKUBE_IP="$(minikube ip --profile "${PROFILE}")"
+
+  if [[ -z "${MINIKUBE_IP}" ]]; then
+    if ! command -v minikube >/dev/null 2>&1; then
+      echo "minikube command is required (or provide MINIKUBE_IP)." >&2
+      exit 1
+    fi
+    MINIKUBE_IP="$(minikube ip --profile "${PROFILE}")"
+  fi
 fi
 
 if [[ -z "${MINIKUBE_IP}" ]]; then
-  echo "Unable to resolve Minikube IP for profile ${PROFILE}." >&2
+  echo "Unable to resolve a reachable IP for profile ${PROFILE}." >&2
   exit 1
 fi
 

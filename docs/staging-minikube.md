@@ -27,22 +27,25 @@ kubectl config use-context homelab-staging
 kubectl config current-context
 ```
 
-## 2) Update sslip.io hostnames for your Minikube IP
+## 2) Update sslip.io hostnames for the reachable staging IP
 
-Staging TLS certs and routes use `*.sslip.io` with the Minikube IP encoded as dashes.
+Staging TLS certs and routes use `*.sslip.io` with the reachable Traefik IP encoded as dashes.
 Run the helper target to rewrite all staging overlays + `Makefile` URLs in one step:
 
 ```bash
 make update-minikube-ip ENV=staging MINIKUBE_PROFILE=homelab-staging
 ```
 
-If you cannot query Minikube from your current shell/session, pass the IP directly:
+When `minikube tunnel` is running, the helper prefers the Traefik `LoadBalancer` IP. If that is not available, it falls back to `minikube ip`.
+
+If you want to pass the IP directly:
 
 ```bash
-ENV=staging PROFILE=homelab-staging MINIKUBE_IP=<minikube-ip> scripts/update-minikube-ip.sh
+ENV=staging PROFILE=homelab-staging MINIKUBE_IP=<reachable-ip> scripts/update-minikube-ip.sh
 ```
 
 Examples:
+- `MINIKUBE_IP=10.96.11.221`
 - `MINIKUBE_IP=192.168.76.2`
 - `MINIKUBE_IP=192.168.58.2`
 
@@ -72,6 +75,7 @@ kubectl -n staging-networking get svc traefik-staging
 ```
 
 The `EXTERNAL-IP` should be populated (not `<pending>`).
+If it is set, that is the IP your staging `sslip.io` hostnames should encode.
 
 ## 5) Deploy secrets stack (Vault + External Secrets)
 
@@ -260,7 +264,10 @@ kubectl get gateways -A
 Staging example URLs (HTTPS):
 
 ```bash
-IP=$(minikube ip --profile homelab-staging)
+IP=$(kubectl -n staging-networking get svc traefik-staging -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+if [ -z "$IP" ]; then
+  IP=$(minikube ip --profile homelab-staging)
+fi
 IP_DASH=${IP//./-}
 
 echo "https://auth.apps.${IP_DASH}.sslip.io"

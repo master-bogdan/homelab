@@ -8,4 +8,4 @@ spec:
       namespace: staging-networking
       sectionName: https
   hostnames:
-    - storage.apps.192-168-76-2.sslip.io
+    - storage.apps.10-96-11-221.sslip.io
