@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coder/websocket"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 )
 

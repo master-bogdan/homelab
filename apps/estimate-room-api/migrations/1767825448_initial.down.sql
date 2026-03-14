@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS user_achievements;
 DROP TABLE IF EXISTS user_stats;
 DROP TABLE IF EXISTS votes;
 DROP TABLE IF EXISTS task_rounds;
+DROP TABLE IF EXISTS invitations;
 DROP TABLE IF EXISTS tasks;
 DROP TABLE IF EXISTS room_participants;
 DROP TABLE IF EXISTS rooms;
@@ -21,6 +22,8 @@ DROP TABLE IF EXISTS users;
 
 DROP TYPE IF EXISTS task_status;
 DROP TYPE IF EXISTS round_status;
+DROP TYPE IF EXISTS invitation_status;
+DROP TYPE IF EXISTS invitation_kind;
 DROP TYPE IF EXISTS room_participant_role;
 DROP TYPE IF EXISTS room_status;
 DROP TYPE IF EXISTS team_member_role;

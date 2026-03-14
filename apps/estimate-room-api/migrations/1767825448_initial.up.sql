@@ -10,6 +10,19 @@ CREATE TYPE "team_member_role" AS ENUM (
   'MEMBER'
 );
 
+CREATE TYPE "invitation_kind" AS ENUM (
+  'TEAM_MEMBER',
+  'ROOM_EMAIL',
+  'ROOM_LINK'
+);
+
+CREATE TYPE "invitation_status" AS ENUM (
+  'ACTIVE',
+  'ACCEPTED',
+  'DECLINED',
+  'REVOKED'
+);
+
 CREATE TYPE "room_status" AS ENUM (
   'ACTIVE',
   'FINISHED',
@@ -84,7 +97,6 @@ CREATE TABLE "rooms" (
   "code" text UNIQUE NOT NULL,
   "name" text NOT NULL,
   "admin_user_id" text NOT NULL,
-  "team_id" text,
   "deck" jsonb NOT NULL,
   "status" room_status NOT NULL DEFAULT 'ACTIVE',
   "created_at" timestamptz NOT NULL DEFAULT (now()),
@@ -100,6 +112,43 @@ CREATE TABLE "room_participants" (
   "role" room_participant_role NOT NULL DEFAULT 'MEMBER',
   "joined_at" timestamptz NOT NULL DEFAULT (now()),
   "left_at" timestamptz
+);
+
+CREATE TABLE "invitations" (
+  "invitation_id" text PRIMARY KEY,
+  "kind" invitation_kind NOT NULL,
+  "status" invitation_status NOT NULL DEFAULT 'ACTIVE',
+  "team_id" text,
+  "room_id" text,
+  "invited_user_id" text,
+  "invited_email" text,
+  "created_by_user_id" text NOT NULL,
+  "token_id" text UNIQUE NOT NULL,
+  "accepted_at" timestamptz,
+  "declined_at" timestamptz,
+  "revoked_at" timestamptz,
+  "created_at" timestamptz NOT NULL DEFAULT (now()),
+  "updated_at" timestamptz NOT NULL DEFAULT (now()),
+  CHECK (
+    (
+      "kind" = 'TEAM_MEMBER' AND
+      "team_id" IS NOT NULL AND
+      "room_id" IS NULL AND
+      "invited_user_id" IS NOT NULL AND
+      "invited_email" IS NOT NULL
+    ) OR (
+      "kind" = 'ROOM_EMAIL' AND
+      "team_id" IS NULL AND
+      "room_id" IS NOT NULL AND
+      "invited_email" IS NOT NULL
+    ) OR (
+      "kind" = 'ROOM_LINK' AND
+      "team_id" IS NULL AND
+      "room_id" IS NOT NULL AND
+      "invited_user_id" IS NULL AND
+      "invited_email" IS NULL
+    )
+  )
 );
 
 CREATE TABLE "tasks" (
@@ -246,6 +295,9 @@ VALUES
 CREATE UNIQUE INDEX ON "votes" ("task_id", "participant_id", "round_number");
 CREATE UNIQUE INDEX "tasks_one_active_per_room_idx" ON "tasks" ("room_id") WHERE "is_active" = true;
 CREATE INDEX "rooms_active_last_activity_idx" ON "rooms" ("last_activity_at") WHERE "status" = 'ACTIVE';
+CREATE INDEX "invitations_room_id_idx" ON "invitations" ("room_id");
+CREATE INDEX "invitations_team_id_idx" ON "invitations" ("team_id");
+CREATE INDEX "invitations_active_invited_email_idx" ON "invitations" ("invited_email") WHERE "status" = 'ACTIVE' AND "invited_email" IS NOT NULL;
 
 CREATE INDEX "idx_oauth2_auth_codes_code" ON "oauth2_auth_codes" ("code");
 
@@ -256,6 +308,8 @@ CREATE INDEX "idx_oauth2_access_tokens_token" ON "oauth2_access_tokens" ("token"
 COMMENT ON COLUMN "rooms"."code" IS 'short unique string used in URLs';
 
 COMMENT ON COLUMN "room_participants"."user_id" IS 'nullable for guests';
+
+COMMENT ON COLUMN "invitations"."token_id" IS 'token reference embedded in signed invite claims';
 
 COMMENT ON COLUMN "votes"."value" IS 'must be in deck values';
 
@@ -275,11 +329,17 @@ ALTER TABLE "team_members" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user
 
 ALTER TABLE "rooms" ADD FOREIGN KEY ("admin_user_id") REFERENCES "users" ("user_id");
 
-ALTER TABLE "rooms" ADD FOREIGN KEY ("team_id") REFERENCES "teams" ("team_id");
-
 ALTER TABLE "room_participants" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("room_id");
 
 ALTER TABLE "room_participants" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
+
+ALTER TABLE "invitations" ADD FOREIGN KEY ("team_id") REFERENCES "teams" ("team_id");
+
+ALTER TABLE "invitations" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("room_id");
+
+ALTER TABLE "invitations" ADD FOREIGN KEY ("invited_user_id") REFERENCES "users" ("user_id");
+
+ALTER TABLE "invitations" ADD FOREIGN KEY ("created_by_user_id") REFERENCES "users" ("user_id");
 
 ALTER TABLE "tasks" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("room_id");
 

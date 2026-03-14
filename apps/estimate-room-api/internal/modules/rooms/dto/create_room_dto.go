@@ -4,9 +4,11 @@ package roomsdto
 import "github.com/go-playground/validator/v10"
 
 type CreateRoomDTO struct {
-	Name   string             `json:"name" validate:"required,min=1,max=30"`
-	TeamID string             `json:"teamId" validate:"omitempty"`
-	Deck   *CreateRoomDeckDTO `json:"deck" validate:"omitempty"`
+	Name            string             `json:"name" validate:"required,min=1,max=30"`
+	InviteTeamID    string             `json:"inviteTeamId" validate:"omitempty"`
+	InviteEmails    []string           `json:"inviteEmails" validate:"omitempty,max=200,dive,email,max=255"`
+	CreateShareLink bool               `json:"createShareLink"`
+	Deck            *CreateRoomDeckDTO `json:"deck" validate:"omitempty"`
 }
 
 type CreateRoomDeckDTO struct {
