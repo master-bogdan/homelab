@@ -137,6 +137,38 @@ func createRoomViaAPI(t *testing.T, router *chi.Mux, accessToken string) (string
 	return payload.Room.RoomID, payload.InviteToken
 }
 
+func TestCreateRoom_DoesNotExposeRawServiceErrors(t *testing.T) {
+	router, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	accessToken, _ := createAccessToken(t, db)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/", bytes.NewReader([]byte(`{
+		"name":"Invalid Deck Room",
+		"deck":{"name":"","kind":"","values":[]}
+	}`)))
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var httpErr apperrors.HttpError
+	if err := json.NewDecoder(rr.Body).Decode(&httpErr); err != nil {
+		t.Fatalf("failed to decode error response: %v", err)
+	}
+
+	if httpErr.Detail != "failed to create room" {
+		t.Fatalf("expected sanitized detail, got %q", httpErr.Detail)
+	}
+	if httpErr.Detail == "invalid deck" {
+		t.Fatal("expected raw service error to stay internal")
+	}
+}
+
 func TestTasksCRUD(t *testing.T) {
 	router, db := setupRoomsTasksTest(t)
 	defer db.Close()

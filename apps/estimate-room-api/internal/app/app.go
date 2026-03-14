@@ -52,6 +52,7 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 	))
 
 	githubScopes := strings.Fields(deps.Cfg.Github.Scopes)
+	wsOriginPatterns := splitConfigList(deps.Cfg.Server.WebSocketAllowedOrigins)
 
 	deps.Router.Route("/api/v1", func(r chi.Router) {
 		health.NewHealthModule(health.HealthModuleDeps{
@@ -80,10 +81,11 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		})
 
 		wsModule := ws.NewWsModule(ws.WsModuleDeps{
-			Router:      r,
-			AuthService: oauth2Module.AuthService,
-			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
-			Server:      deps.WsServer,
+			Router:         r,
+			AuthService:    oauth2Module.AuthService,
+			TokenKey:       deps.Cfg.Server.PasetoSymmetricKey,
+			Server:         deps.WsServer,
+			OriginPatterns: wsOriginPatterns,
 		})
 
 		users.NewUsersModule(users.UsersModuleDeps{
@@ -104,4 +106,19 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 			roomsModule.ExpiryService.Start(ctx)
 		}
 	})
+}
+
+func splitConfigList(value string) []string {
+	fields := strings.FieldsFunc(value, func(r rune) bool {
+		return r == ',' || r == ';' || r == ' ' || r == '\n' || r == '\t'
+	})
+
+	items := make([]string, 0, len(fields))
+	for _, field := range fields {
+		if trimmed := strings.TrimSpace(field); trimmed != "" {
+			items = append(items, trimmed)
+		}
+	}
+
+	return items
 }

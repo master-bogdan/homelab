@@ -8,11 +8,12 @@ type Config struct {
 		Env string
 	}
 	Server struct {
-		Port               string `env:"PORT"`
-		Host               string `env:"HOST"`
-		LogLevel           string `env:"LOG_LEVEL"`
-		PasetoSymmetricKey string `env:"PASETO_SYMMETRIC_KEY"`
-		Issuer             string `env:"ISSUER"`
+		Port                    string `env:"PORT"`
+		Host                    string `env:"HOST"`
+		LogLevel                string `env:"LOG_LEVEL"`
+		PasetoSymmetricKey      string `env:"PASETO_SYMMETRIC_KEY"`
+		Issuer                  string `env:"ISSUER"`
+		WebSocketAllowedOrigins string `env:"WS_ALLOWED_ORIGINS"`
 	}
 	DB struct {
 		DatabaseURL      string `env:"DATABASE_URL"`

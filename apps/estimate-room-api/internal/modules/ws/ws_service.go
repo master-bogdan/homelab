@@ -42,6 +42,7 @@ type Service struct {
 	mu              sync.RWMutex
 	server          PubSub
 	channel         string
+	originPatterns  []string
 	subscriptions   map[string][]EventHandler
 	disconnects     []DisconnectHandler
 }
@@ -57,6 +58,7 @@ func NewService(server PubSub, channel string) *Service {
 		unregister:      make(chan *Client),
 		server:          server,
 		channel:         channel,
+		originPatterns:  make([]string, 0),
 		subscriptions:   make(map[string][]EventHandler),
 		disconnects:     make([]DisconnectHandler, 0),
 	}
@@ -70,6 +72,16 @@ func NewService(server PubSub, channel string) *Service {
 	}
 
 	return s
+}
+
+func (s *Service) SetOriginPatterns(patterns []string) {
+	if s == nil {
+		return
+	}
+
+	s.mu.Lock()
+	s.originPatterns = append([]string(nil), patterns...)
+	s.mu.Unlock()
 }
 
 func clientInfo(client *Client) ClientInfo {
@@ -286,7 +298,7 @@ func (s *Service) Connect(w http.ResponseWriter, r *http.Request, identity Conne
 		return
 	}
 
-	conn, err := websocket.Accept(w, r, nil)
+	conn, err := websocket.Accept(w, r, s.acceptOptions())
 	if err != nil {
 		logger.L().Error("WebSocket accept error", "err", err)
 		return
@@ -310,6 +322,16 @@ func (s *Service) Connect(w http.ResponseWriter, r *http.Request, identity Conne
 	go s.writeHandler(client)
 	s.sendHello(client)
 	s.readHandler(client)
+}
+
+func (s *Service) acceptOptions() *websocket.AcceptOptions {
+	s.mu.RLock()
+	originPatterns := append([]string(nil), s.originPatterns...)
+	s.mu.RUnlock()
+
+	return &websocket.AcceptOptions{
+		OriginPatterns: originPatterns,
+	}
 }
 
 func (s *Service) readHandler(client *Client) {

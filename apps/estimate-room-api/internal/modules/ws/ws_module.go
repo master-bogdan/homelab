@@ -25,14 +25,16 @@ type WsModule struct {
 }
 
 type WsModuleDeps struct {
-	Router      chi.Router
-	AuthService oauth2.AuthService
-	TokenKey    string
-	Server      PubSub
+	Router         chi.Router
+	AuthService    oauth2.AuthService
+	TokenKey       string
+	Server         PubSub
+	OriginPatterns []string
 }
 
 func NewWsModule(deps WsModuleDeps) *WsModule {
 	service := NewService(deps.Server, defaultChannel)
+	service.SetOriginPatterns(deps.OriginPatterns)
 	tokenKey := []byte(deps.TokenKey)
 
 	deps.Router.Get("/ws", func(w http.ResponseWriter, r *http.Request) {

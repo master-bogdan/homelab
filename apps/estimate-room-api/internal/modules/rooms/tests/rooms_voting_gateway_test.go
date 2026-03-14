@@ -26,6 +26,8 @@ type testPubSub struct {
 	subscriptions map[string][]func([]byte)
 }
 
+const testWSOrigin = "http://frontend.test"
+
 func newTestPubSub() *testPubSub {
 	return &testPubSub{
 		subscriptions: make(map[string][]func([]byte)),
@@ -86,10 +88,11 @@ func setupRoomsRealtimeTest(t *testing.T) (*httptest.Server, *bun.DB) {
 
 	router.Route("/api/v1", func(r chi.Router) {
 		wsModule := ws.NewWsModule(ws.WsModuleDeps{
-			Router:      r,
-			AuthService: authService,
-			TokenKey:    testutils.TestTokenKey,
-			Server:      pubSub,
+			Router:         r,
+			AuthService:    authService,
+			TokenKey:       testutils.TestTokenKey,
+			Server:         pubSub,
+			OriginPatterns: []string{testWSOrigin},
 		})
 
 		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
@@ -144,6 +147,7 @@ func connectWS(t *testing.T, serverURL, accessToken string) *websocket.Conn {
 	conn, _, err := websocket.Dial(ctx, wsURL, &websocket.DialOptions{
 		HTTPHeader: http.Header{
 			"Authorization": []string{"Bearer " + accessToken},
+			"Origin":        []string{testWSOrigin},
 		},
 	})
 	if err != nil {
