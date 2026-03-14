@@ -3,8 +3,8 @@ package tests
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -137,11 +137,15 @@ func seedTask(t *testing.T, db *bun.DB, roomID, title string) string {
 func connectWS(t *testing.T, serverURL, accessToken string) *websocket.Conn {
 	t.Helper()
 
-	wsURL := "ws" + strings.TrimPrefix(serverURL, "http") + "/api/v1/ws?token=" + url.QueryEscape(accessToken)
+	wsURL := "ws" + strings.TrimPrefix(serverURL, "http") + "/api/v1/ws"
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	conn, _, err := websocket.Dial(ctx, wsURL, nil)
+	conn, _, err := websocket.Dial(ctx, wsURL, &websocket.DialOptions{
+		HTTPHeader: http.Header{
+			"Authorization": []string{"Bearer " + accessToken},
+		},
+	})
 	if err != nil {
 		t.Fatalf("failed to connect websocket: %v", err)
 	}

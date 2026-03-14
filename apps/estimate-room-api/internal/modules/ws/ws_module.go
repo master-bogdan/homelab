@@ -18,6 +18,8 @@ const defaultChannel = "app"
 const wsAccessTokenQueryParam = "token"
 const wsGuestAccessCookieName = "room_guest_token"
 
+var errQueryAccessTokenNotAllowed = errors.New("websocket access tokens in query params are not allowed")
+
 type WsModule struct {
 	Service *Service
 }
@@ -57,9 +59,11 @@ type guestTokenClaims struct {
 }
 
 func resolveIdentity(r *http.Request, authService oauth2.AuthService, tokenKey []byte) (ConnectIdentity, error) {
-	authRequest := requestWithQueryAccessToken(r)
+	if hasQueryAccessToken(r) {
+		return ConnectIdentity{}, errQueryAccessTokenNotAllowed
+	}
 
-	userID, authErr := authService.CheckAuth(authRequest)
+	userID, authErr := authService.CheckAuth(r)
 	if authErr == nil && strings.TrimSpace(userID) != "" {
 		return ConnectIdentity{
 			Type:   IdentityTypeUser,
@@ -96,20 +100,12 @@ func resolveIdentity(r *http.Request, authService oauth2.AuthService, tokenKey [
 	}, nil
 }
 
-func requestWithQueryAccessToken(r *http.Request) *http.Request {
-	if r == nil {
-		return nil
+func hasQueryAccessToken(r *http.Request) bool {
+	if r == nil || r.URL == nil {
+		return false
 	}
 
-	queryToken := strings.TrimSpace(r.URL.Query().Get(wsAccessTokenQueryParam))
-	if queryToken == "" {
-		return r
-	}
-
-	cloned := r.Clone(r.Context())
-	cloned.Header = cloned.Header.Clone()
-	cloned.Header.Set("Authorization", "Bearer "+queryToken)
-	return cloned
+	return strings.TrimSpace(r.URL.Query().Get(wsAccessTokenQueryParam)) != ""
 }
 
 func readGuestTokenFromCookie(r *http.Request) string {
