@@ -50,21 +50,18 @@ func main() {
 		logger.L().Error("failed to connect to database", "err", err)
 		os.Exit(1)
 	}
-	defer db.Close()
 
 	redisClient, err := redis.Connect(cfg.DB.RedisURL)
 	if err != nil {
 		logger.L().Error("failed to connect to cache database", "err", err)
 		os.Exit(1)
 	}
-	defer redisClient.Close()
 
 	redisPubSubClient, err := redis.Connect(cfg.DB.RedisURL)
 	if err != nil {
 		logger.L().Error("failed to connect to cache database", "err", err)
 		os.Exit(1)
 	}
-	defer redisPubSubClient.Close()
 
 	wsServer, err := wsserver.NewServer(wsserver.ServerDeps{
 		PubClient: redisClient,

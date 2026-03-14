@@ -8,6 +8,7 @@ import (
 	"time"
 
 	stdErrors "errors"
+
 	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
@@ -52,7 +53,7 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 	err := query.Validate()
 	if err != nil {
 		c.logger.Error(err.Error())
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: "invalid params"}))
 		return
 	}
 
