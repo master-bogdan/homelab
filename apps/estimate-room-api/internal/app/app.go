@@ -16,6 +16,7 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/teams"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
@@ -89,6 +90,12 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		})
 
 		users.NewUsersModule(users.UsersModuleDeps{
+			Router:      r,
+			DB:          deps.DB,
+			AuthService: oauth2Module.AuthService,
+		})
+
+		teams.NewTeamsModule(teams.TeamsModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
 			AuthService: oauth2Module.AuthService,
