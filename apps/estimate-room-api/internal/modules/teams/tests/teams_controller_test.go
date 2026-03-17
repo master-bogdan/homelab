@@ -10,9 +10,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	invitesmodule "github.com/master-bogdan/estimate-room-api/internal/modules/invites"
+	invitesdto "github.com/master-bogdan/estimate-room-api/internal/modules/invites/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	teams "github.com/master-bogdan/estimate-room-api/internal/modules/teams"
 	teamsdto "github.com/master-bogdan/estimate-room-api/internal/modules/teams/dto"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
+	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
 	"github.com/uptrace/bun"
@@ -26,12 +30,23 @@ func setupTeamsTest(t *testing.T) (*chi.Mux, *bun.DB) {
 
 	router := chi.NewRouter()
 	authService := oauth2.NewAuthServiceFromDB(testutils.TestTokenKey, db)
+	userRepo := usersrepositories.NewUserRepository(db)
+	userService := users.NewUsersService(userRepo)
 
 	router.Route("/api/v1", func(r chi.Router) {
-		teams.NewTeamsModule(teams.TeamsModuleDeps{
+		invitesModule := invitesmodule.NewInvitesModule(invitesmodule.InvitesModuleDeps{
 			Router:      r,
 			DB:          db,
 			AuthService: authService,
+			TokenKey:    testutils.TestTokenKey,
+		})
+
+		teams.NewTeamsModule(teams.TeamsModuleDeps{
+			Router:         r,
+			DB:             db,
+			AuthService:    authService,
+			UserService:    userService,
+			InvitesService: invitesModule.Service,
 		})
 	})
 
@@ -274,5 +289,80 @@ func TestRemoveMember_NonOwnerIsForbidden(t *testing.T) {
 	}
 	if httpErr.Status != http.StatusForbidden {
 		t.Fatalf("expected error status 403, got %d", httpErr.Status)
+	}
+}
+
+func TestCreateInvites_OwnerCanInviteRegisteredUsers(t *testing.T) {
+	router, db := setupTeamsTest(t)
+	defer db.Close()
+
+	ownerToken, ownerUserID := createTeamsAccessToken(t, db, "owner@example.com")
+	_, _ = createTeamsAccessToken(t, db, "member@example.com")
+	teamID := seedTeam(t, db, ownerUserID, "Invites Team")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/teams/"+teamID+"/invites", bytes.NewReader([]byte(`{"emails":["member@example.com"]}`)))
+	req.Header.Set("Authorization", "Bearer "+ownerToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var response []invitesdto.InvitationWithTokenResponse
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(response) != 1 {
+		t.Fatalf("expected 1 invitation, got %d", len(response))
+	}
+	if response[0].Kind != "TEAM_MEMBER" {
+		t.Fatalf("expected TEAM_MEMBER kind, got %s", response[0].Kind)
+	}
+	if response[0].Status != "ACTIVE" {
+		t.Fatalf("expected ACTIVE status, got %s", response[0].Status)
+	}
+	if response[0].Token == "" {
+		t.Fatal("expected invitation token")
+	}
+}
+
+func TestCreateInvites_RejectsUnknownEmail(t *testing.T) {
+	router, db := setupTeamsTest(t)
+	defer db.Close()
+
+	ownerToken, ownerUserID := createTeamsAccessToken(t, db, "owner@example.com")
+	teamID := seedTeam(t, db, ownerUserID, "Unknown Invite Team")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/teams/"+teamID+"/invites", bytes.NewReader([]byte(`{"emails":["unknown@example.com"]}`)))
+	req.Header.Set("Authorization", "Bearer "+ownerToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestCreateInvites_NonOwnerIsForbidden(t *testing.T) {
+	router, db := setupTeamsTest(t)
+	defer db.Close()
+
+	_, ownerUserID := createTeamsAccessToken(t, db, "owner@example.com")
+	memberToken, memberUserID := createTeamsAccessToken(t, db, "member@example.com")
+	_, _ = createTeamsAccessToken(t, db, "invitee@example.com")
+	teamID := seedTeam(t, db, ownerUserID, "Owner Only Team")
+	seedTeamMember(t, db, teamID, memberUserID, "MEMBER")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/teams/"+teamID+"/invites", bytes.NewReader([]byte(`{"emails":["invitee@example.com"]}`)))
+	req.Header.Set("Authorization", "Bearer "+memberToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden, got %d: %s", rr.Code, rr.Body.String())
 	}
 }

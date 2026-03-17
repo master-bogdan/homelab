@@ -14,6 +14,7 @@ type InvitationRepository interface {
 	Create(ctx context.Context, model *invitesmodels.InvitationModel) (*invitesmodels.InvitationModel, error)
 	FindByID(invitationID string) (*invitesmodels.InvitationModel, error)
 	FindByTokenID(tokenID string) (*invitesmodels.InvitationModel, error)
+	FindActiveTeamMemberInvitation(teamID, invitedUserID string) (*invitesmodels.InvitationModel, error)
 	Accept(invitationID string) (*invitesmodels.InvitationModel, error)
 	Decline(invitationID string) (*invitesmodels.InvitationModel, error)
 	Revoke(invitationID string) (*invitesmodels.InvitationModel, error)
@@ -77,6 +78,29 @@ func (r *invitationRepository) FindByTokenID(tokenID string) (*invitesmodels.Inv
 	err := r.db.NewSelect().
 		Model(invitation).
 		Where("i.token_id = ?", tokenID).
+		Limit(1).
+		Scan(context.Background())
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, apperrors.ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	return invitation, nil
+}
+
+func (r *invitationRepository) FindActiveTeamMemberInvitation(
+	teamID, invitedUserID string,
+) (*invitesmodels.InvitationModel, error) {
+	invitation := new(invitesmodels.InvitationModel)
+	err := r.db.NewSelect().
+		Model(invitation).
+		Where("i.kind = ?", invitesmodels.InvitationKindTeamMember).
+		Where("i.status = ?", invitesmodels.InvitationStatusActive).
+		Where("i.team_id = ?", teamID).
+		Where("i.invited_user_id = ?", invitedUserID).
 		Limit(1).
 		Scan(context.Background())
 	if err != nil {

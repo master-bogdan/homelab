@@ -103,22 +103,9 @@ func (s *teamsService) GetTeam(teamID, userID string) (*teamsmodels.TeamModel, e
 }
 
 func (s *teamsService) RemoveMember(teamID, actorUserID, targetUserID string) error {
-	team, err := s.teamRepo.FindByID(teamID)
+	team, err := ensureTeamOwner(s.teamRepo, s.memberRepo, teamID, actorUserID)
 	if err != nil {
 		return err
-	}
-
-	actorMember, err := s.memberRepo.FindByTeamAndUser(teamID, actorUserID)
-	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return apperrors.ErrForbidden
-		}
-
-		return err
-	}
-
-	if actorMember.Role != teamsmodels.TeamMemberRoleOwner || team.OwnerUserID != actorUserID {
-		return apperrors.ErrForbidden
 	}
 
 	targetMember, err := s.memberRepo.FindByTeamAndUser(teamID, targetUserID)

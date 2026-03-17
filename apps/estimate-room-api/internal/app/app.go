@@ -13,6 +13,7 @@ import (
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
@@ -95,10 +96,19 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 			AuthService: oauth2Module.AuthService,
 		})
 
-		teams.NewTeamsModule(teams.TeamsModuleDeps{
+		invitesModule := invites.NewInvitesModule(invites.InvitesModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
 			AuthService: oauth2Module.AuthService,
+			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
+		})
+
+		teams.NewTeamsModule(teams.TeamsModuleDeps{
+			Router:         r,
+			DB:             deps.DB,
+			AuthService:    oauth2Module.AuthService,
+			UserService:    userService,
+			InvitesService: invitesModule.Service,
 		})
 
 		roomsModule := rooms.NewRoomsModule(rooms.RoomsModuleDeps{

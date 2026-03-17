@@ -38,7 +38,7 @@ func setupInvitesTest(t *testing.T) (*bun.DB, invites.InvitesService, invitesrep
 	}
 
 	repo := invitesrepositories.NewInvitationRepository(db)
-	svc := invites.NewInvitesService(repo, testutils.TestTokenKey)
+	svc := invites.NewInvitesService(db, repo, testutils.TestTokenKey)
 
 	return db, svc, repo
 }
@@ -181,7 +181,7 @@ func TestAcceptInvitation_TransitionsToAccepted(t *testing.T) {
 		t.Fatalf("failed to create room email invite: %v", err)
 	}
 
-	acceptedInvitation, err := svc.AcceptInvitation(token)
+	acceptedInvitation, err := svc.AcceptInvitation(context.Background(), token, "")
 	if err != nil {
 		t.Fatalf("failed to accept invitation: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestAcceptInvitation_TransitionsToAccepted(t *testing.T) {
 		t.Fatalf("expected stored status ACCEPTED, got %s", storedInvitation.Status)
 	}
 
-	_, err = svc.AcceptInvitation(token)
+	_, err = svc.AcceptInvitation(context.Background(), token, "")
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("expected conflict on second accept, got %v", err)
 	}
@@ -226,7 +226,7 @@ func TestDeclineInvitation_TransitionsToDeclined(t *testing.T) {
 		t.Fatalf("failed to create invitation: %v", err)
 	}
 
-	declinedInvitation, err := svc.DeclineInvitation(token)
+	declinedInvitation, err := svc.DeclineInvitation(context.Background(), token, "")
 	if err != nil {
 		t.Fatalf("failed to decline invitation: %v", err)
 	}
@@ -257,7 +257,7 @@ func TestRevokeInvitation_TransitionsToRevoked(t *testing.T) {
 		t.Fatalf("failed to create invitation: %v", err)
 	}
 
-	revokedInvitation, err := svc.RevokeInvitation(invitation.InvitationID)
+	revokedInvitation, err := svc.RevokeInvitation(context.Background(), invitation.InvitationID, "")
 	if err != nil {
 		t.Fatalf("failed to revoke invitation: %v", err)
 	}
