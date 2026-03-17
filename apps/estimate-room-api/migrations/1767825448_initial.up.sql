@@ -97,6 +97,7 @@ CREATE TABLE "rooms" (
   "code" text UNIQUE NOT NULL,
   "name" text NOT NULL,
   "admin_user_id" text NOT NULL,
+  "team_id" text,
   "deck" jsonb NOT NULL,
   "status" room_status NOT NULL DEFAULT 'ACTIVE',
   "created_at" timestamptz NOT NULL DEFAULT (now()),
@@ -199,6 +200,18 @@ CREATE TABLE "user_achievements" (
   PRIMARY KEY ("user_id", "achievement_key")
 );
 
+CREATE TABLE "user_session_rewards" (
+  "room_id" text NOT NULL,
+  "user_id" text NOT NULL,
+  "is_admin" boolean NOT NULL DEFAULT false,
+  "sessions_participated_delta" int NOT NULL DEFAULT 0,
+  "sessions_admined_delta" int NOT NULL DEFAULT 0,
+  "tasks_estimated_delta" int NOT NULL DEFAULT 0,
+  "xp_gained" int NOT NULL DEFAULT 0,
+  "created_at" timestamptz NOT NULL DEFAULT (now()),
+  PRIMARY KEY ("room_id", "user_id")
+);
+
 CREATE TABLE "team_stats" (
   "team_id" text PRIMARY KEY,
   "sessions_total" int NOT NULL DEFAULT 0,
@@ -295,12 +308,14 @@ VALUES
 CREATE UNIQUE INDEX ON "votes" ("task_id", "participant_id", "round_number");
 CREATE UNIQUE INDEX "tasks_one_active_per_room_idx" ON "tasks" ("room_id") WHERE "is_active" = true;
 CREATE INDEX "rooms_active_last_activity_idx" ON "rooms" ("last_activity_at") WHERE "status" = 'ACTIVE';
+CREATE INDEX "rooms_team_id_idx" ON "rooms" ("team_id");
 CREATE INDEX "invitations_room_id_idx" ON "invitations" ("room_id");
 CREATE INDEX "invitations_team_id_idx" ON "invitations" ("team_id");
 CREATE UNIQUE INDEX "invitations_active_team_member_unique_idx"
   ON "invitations" ("team_id", "invited_user_id")
   WHERE "kind" = 'TEAM_MEMBER' AND "status" = 'ACTIVE';
 CREATE INDEX "invitations_active_invited_email_idx" ON "invitations" ("invited_email") WHERE "status" = 'ACTIVE' AND "invited_email" IS NOT NULL;
+CREATE INDEX "user_session_rewards_user_id_idx" ON "user_session_rewards" ("user_id");
 
 CREATE INDEX "idx_oauth2_auth_codes_code" ON "oauth2_auth_codes" ("code");
 
@@ -332,6 +347,8 @@ ALTER TABLE "team_members" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user
 
 ALTER TABLE "rooms" ADD FOREIGN KEY ("admin_user_id") REFERENCES "users" ("user_id");
 
+ALTER TABLE "rooms" ADD FOREIGN KEY ("team_id") REFERENCES "teams" ("team_id");
+
 ALTER TABLE "room_participants" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("room_id");
 
 ALTER TABLE "room_participants" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
@@ -355,6 +372,10 @@ ALTER TABLE "votes" ADD FOREIGN KEY ("participant_id") REFERENCES "room_particip
 ALTER TABLE "user_stats" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 
 ALTER TABLE "user_achievements" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
+
+ALTER TABLE "user_session_rewards" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("room_id");
+
+ALTER TABLE "user_session_rewards" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");
 
 ALTER TABLE "team_stats" ADD FOREIGN KEY ("team_id") REFERENCES "teams" ("team_id");
 

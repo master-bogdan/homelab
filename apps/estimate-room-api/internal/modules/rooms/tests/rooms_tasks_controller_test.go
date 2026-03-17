@@ -321,6 +321,9 @@ func TestCreateRoom_DoesNotCreateShareLinkUnlessRequested(t *testing.T) {
 	accessToken, _ := createAccessToken(t, db)
 
 	response := createRoomViaAPI(t, router, accessToken, `{"name":"No Share Link Room"}`)
+	if response.Room.TeamID != nil {
+		t.Fatalf("expected personal room to have nil team id, got %#v", response.Room.TeamID)
+	}
 	if response.InviteToken != "" {
 		t.Fatalf("expected no inviteToken, got %q", response.InviteToken)
 	}
@@ -360,6 +363,9 @@ func TestCreateRoom_FansOutTeamMembersAndExplicitEmails(t *testing.T) {
 		"createShareLink":true
 	}`)
 
+	if response.Room.TeamID == nil || *response.Room.TeamID != teamID {
+		t.Fatalf("expected room team id %s, got %#v", teamID, response.Room.TeamID)
+	}
 	if response.ShareLink == nil || response.InviteToken == "" {
 		t.Fatalf("expected share link in create response, got %#v", response.ShareLink)
 	}
@@ -425,6 +431,19 @@ func TestCreateRoom_FansOutTeamMembersAndExplicitEmails(t *testing.T) {
 	}
 	if roomEmailInviteCount != 2 {
 		t.Fatalf("expected 2 persisted room email invites, got %d", roomEmailInviteCount)
+	}
+
+	var persistedTeamID *string
+	err = db.NewSelect().
+		TableExpr("rooms AS r").
+		Column("r.team_id").
+		Where("r.room_id = ?", response.Room.RoomID).
+		Scan(context.Background(), &persistedTeamID)
+	if err != nil {
+		t.Fatalf("failed to load room team id: %v", err)
+	}
+	if persistedTeamID == nil || *persistedTeamID != teamID {
+		t.Fatalf("expected persisted team id %s, got %#v", teamID, persistedTeamID)
 	}
 }
 

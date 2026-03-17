@@ -118,6 +118,9 @@ func (s *roomsService) CreateRoom(ctx context.Context, input CreateRoomInput) (*
 	if err != nil {
 		return nil, err
 	}
+	if teamID := normalizeOptionalStringValue(input.InviteTeamID); teamID != "" {
+		model.TeamID = &teamID
+	}
 
 	timestamp := time.Now().String()
 	code := base64.RawURLEncoding.EncodeToString([]byte(model.Name + timestamp))
