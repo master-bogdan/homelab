@@ -488,15 +488,65 @@ func (s *invitesService) acceptRoomLinkInvitation(
 	}
 
 	normalizedActorUserID := strings.TrimSpace(actorUserID)
-	if normalizedActorUserID != "" {
-		return s.joinRegisteredRoomParticipant(room, invitation, normalizedActorUserID)
+	trimmedGuestName := ""
+	if normalizedActorUserID == "" {
+		if guestName == nil {
+			return nil, apperrors.ErrBadRequest
+		}
+
+		trimmedGuestName = strings.TrimSpace(*guestName)
+		if trimmedGuestName == "" {
+			return nil, apperrors.ErrBadRequest
+		}
 	}
 
-	if guestName == nil || strings.TrimSpace(*guestName) == "" {
-		return nil, apperrors.ErrBadRequest
+	var activeInvitation *invitesmodels.InvitationModel
+	var participant *roomsmodels.RoomParticipantModel
+	var guestToken string
+	err = s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		invitationRepo := invitesrepositories.NewInvitationRepository(tx)
+		participantRepo := roomsrepositories.NewRoomParticipantRepository(tx)
+
+		activeInvitation, err = invitationRepo.FindByIDForUpdate(ctx, invitation.InvitationID)
+		if err != nil {
+			return err
+		}
+		if activeInvitation.Status != invitesmodels.InvitationStatusActive {
+			return apperrors.ErrConflict
+		}
+
+		if normalizedActorUserID != "" {
+			participant, err = s.joinRegisteredRoomParticipant(participantRepo, room.RoomID, normalizedActorUserID)
+			return err
+		}
+
+		participant, err = s.joinGuestRoomParticipant(participantRepo, room.RoomID, trimmedGuestName)
+		if err != nil {
+			return err
+		}
+
+		guestToken, err = s.generateGuestToken(room.RoomID, participant.RoomParticipantID)
+		return err
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	return s.joinGuestRoomParticipant(ctx, room, invitation, *guestName)
+	if err := s.roomsRepo.TouchActivity(room.RoomID); err != nil {
+		return nil, err
+	}
+
+	fullRoom, err := s.roomsRepo.FindByID(room.RoomID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AcceptInvitationResult{
+		Invitation:  activeInvitation,
+		Room:        fullRoom,
+		Participant: participant,
+		GuestToken:  guestToken,
+	}, nil
 }
 
 func (s *invitesService) acceptTeamMemberInvitation(
@@ -550,19 +600,18 @@ func (s *invitesService) acceptTeamMemberInvitation(
 }
 
 func (s *invitesService) joinRegisteredRoomParticipant(
-	room *roomsmodels.RoomsModel,
-	invitation *invitesmodels.InvitationModel,
-	actorUserID string,
-) (*AcceptInvitationResult, error) {
-	participant, err := s.participantRepo.FindActiveByUserID(room.RoomID, actorUserID)
+	participantRepo roomsrepositories.RoomParticipantRepository,
+	roomID, actorUserID string,
+) (*roomsmodels.RoomParticipantModel, error) {
+	participant, err := participantRepo.FindActiveByUserID(roomID, actorUserID)
 	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 		return nil, err
 	}
 
 	if participant == nil {
-		participant, err = s.participantRepo.Create(&roomsmodels.RoomParticipantModel{
+		participant, err = participantRepo.Create(&roomsmodels.RoomParticipantModel{
 			RoomParticipantID: uuid.NewString(),
-			RoomID:            room.RoomID,
+			RoomID:            roomID,
 			UserID:            &actorUserID,
 			Role:              roomsmodels.RoomParticipantRoleMember,
 		})
@@ -571,34 +620,20 @@ func (s *invitesService) joinRegisteredRoomParticipant(
 		}
 	}
 
-	if err := s.roomsRepo.TouchActivity(room.RoomID); err != nil {
-		return nil, err
-	}
-
-	fullRoom, err := s.roomsRepo.FindByID(room.RoomID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &AcceptInvitationResult{
-		Invitation:  invitation,
-		Room:        fullRoom,
-		Participant: participant,
-	}, nil
+	return participant, nil
 }
 
 func (s *invitesService) joinGuestRoomParticipant(
-	ctx context.Context,
-	room *roomsmodels.RoomsModel,
-	invitation *invitesmodels.InvitationModel,
+	participantRepo roomsrepositories.RoomParticipantRepository,
+	roomID string,
 	guestName string,
-) (*AcceptInvitationResult, error) {
+) (*roomsmodels.RoomParticipantModel, error) {
 	trimmedGuestName := strings.TrimSpace(guestName)
 	if trimmedGuestName == "" {
 		return nil, apperrors.ErrBadRequest
 	}
 
-	participant, err := s.participantRepo.FindActiveByGuestName(room.RoomID, trimmedGuestName)
+	participant, err := participantRepo.FindActiveByGuestName(roomID, trimmedGuestName)
 	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 		return nil, err
 	}
@@ -606,9 +641,9 @@ func (s *invitesService) joinGuestRoomParticipant(
 		return nil, apperrors.ErrConflict
 	}
 
-	participant, err = s.participantRepo.Create(&roomsmodels.RoomParticipantModel{
+	participant, err = participantRepo.Create(&roomsmodels.RoomParticipantModel{
 		RoomParticipantID: uuid.NewString(),
-		RoomID:            room.RoomID,
+		RoomID:            roomID,
 		GuestName:         &trimmedGuestName,
 		Role:              roomsmodels.RoomParticipantRoleGuest,
 	})
@@ -616,26 +651,7 @@ func (s *invitesService) joinGuestRoomParticipant(
 		return nil, err
 	}
 
-	guestToken, err := s.generateGuestToken(room.RoomID, participant.RoomParticipantID)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.roomsRepo.TouchActivity(room.RoomID); err != nil {
-		return nil, err
-	}
-
-	fullRoom, err := s.roomsRepo.FindByID(room.RoomID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &AcceptInvitationResult{
-		Invitation:  invitation,
-		Room:        fullRoom,
-		Participant: participant,
-		GuestToken:  guestToken,
-	}, nil
+	return participant, nil
 }
 
 func (s *invitesService) ensureTeamMemberInviteActor(

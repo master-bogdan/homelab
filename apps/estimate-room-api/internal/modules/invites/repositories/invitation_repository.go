@@ -13,6 +13,7 @@ import (
 type InvitationRepository interface {
 	Create(ctx context.Context, model *invitesmodels.InvitationModel) (*invitesmodels.InvitationModel, error)
 	FindByID(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error)
+	FindByIDForUpdate(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error)
 	FindByTokenID(ctx context.Context, tokenID string) (*invitesmodels.InvitationModel, error)
 	FindActiveTeamMemberInvitation(ctx context.Context, teamID, invitedUserID string) (*invitesmodels.InvitationModel, error)
 	Accept(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error)
@@ -56,16 +57,32 @@ func (r *invitationRepository) Create(ctx context.Context, model *invitesmodels.
 }
 
 func (r *invitationRepository) FindByID(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error) {
+	return r.findByID(ctx, invitationID, false)
+}
+
+func (r *invitationRepository) FindByIDForUpdate(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error) {
+	return r.findByID(ctx, invitationID, true)
+}
+
+func (r *invitationRepository) findByID(
+	ctx context.Context,
+	invitationID string,
+	forUpdate bool,
+) (*invitesmodels.InvitationModel, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
 	invitation := new(invitesmodels.InvitationModel)
-	err := r.db.NewSelect().
+	query := r.db.NewSelect().
 		Model(invitation).
 		Where("i.invitation_id = ?", invitationID).
-		Limit(1).
-		Scan(ctx)
+		Limit(1)
+	if forUpdate {
+		query = query.For("UPDATE")
+	}
+
+	err := query.Scan(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperrors.ErrNotFound
