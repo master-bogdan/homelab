@@ -39,7 +39,7 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	memberRepo := teamsrepositories.NewTeamMemberRepository(deps.DB)
 	userRepo := usersrepositories.NewUserRepository(deps.DB)
 	expirySvc := NewRoomsExpiryService(roomsRepo, deps.WsService)
-	svc := NewRoomsService(roomsRepo, participantRepo, teamRepo, memberRepo, userRepo, deps.InvitesService)
+	svc := NewRoomsService(deps.DB, roomsRepo, participantRepo, teamRepo, memberRepo, userRepo, deps.InvitesService)
 	voteSvc := NewRoomsVoteService(roomsRepo, taskRepo, voteRepo, roundRepo, participantRepo, expirySvc)
 	taskSvc := NewRoomsTaskService(roomsRepo, taskRepo, voteSvc, participantRepo, expirySvc)
 	ctrl := NewRoomsController(svc, taskSvc, deps.InvitesService, deps.AuthService)

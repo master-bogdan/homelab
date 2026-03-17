@@ -4,7 +4,6 @@ package teams
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
-	invitesrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/invites/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	teamsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/teams/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
@@ -28,9 +27,8 @@ type TeamsModuleDeps struct {
 func NewTeamsModule(deps TeamsModuleDeps) *TeamsModule {
 	teamRepo := teamsrepositories.NewTeamRepository(deps.DB)
 	memberRepo := teamsrepositories.NewTeamMemberRepository(deps.DB)
-	invitationRepo := invitesrepositories.NewInvitationRepository(deps.DB)
 	svc := NewTeamsService(deps.DB, teamRepo, memberRepo)
-	inviteSvc := NewTeamsInviteService(teamRepo, memberRepo, invitationRepo, deps.UserService, deps.InvitesService)
+	inviteSvc := NewTeamsInviteService(deps.DB, teamRepo, memberRepo, deps.UserService, deps.InvitesService)
 	ctrl := NewTeamsController(svc, inviteSvc, deps.AuthService)
 
 	deps.Router.Route("/teams", func(r chi.Router) {

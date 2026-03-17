@@ -12,6 +12,8 @@ import (
 	"github.com/google/uuid"
 	invitesmodule "github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	invitesdto "github.com/master-bogdan/estimate-room-api/internal/modules/invites/dto"
+	invitesmodels "github.com/master-bogdan/estimate-room-api/internal/modules/invites/models"
+	invitesrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/invites/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	teams "github.com/master-bogdan/estimate-room-api/internal/modules/teams"
 	teamsdto "github.com/master-bogdan/estimate-room-api/internal/modules/teams/dto"
@@ -103,6 +105,10 @@ func seedTeamMember(t *testing.T, db *bun.DB, teamID, userID, role string) {
 	if err != nil {
 		t.Fatalf("failed to insert team member: %v", err)
 	}
+}
+
+func stringPtr(value string) *string {
+	return &value
 }
 
 func TestCreateTeam_CreatesOwnerMembership(t *testing.T) {
@@ -343,6 +349,74 @@ func TestCreateInvites_RejectsUnknownEmail(t *testing.T) {
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 Bad Request, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestCreateInvites_RollsBackBatchWhenActiveInviteAlreadyExists(t *testing.T) {
+	router, db := setupTeamsTest(t)
+	defer db.Close()
+
+	ownerToken, ownerUserID := createTeamsAccessToken(t, db, "owner@example.com")
+	_, firstUserID := createTeamsAccessToken(t, db, "first@example.com")
+	_, secondUserID := createTeamsAccessToken(t, db, "second@example.com")
+	teamID := seedTeam(t, db, ownerUserID, "Atomic Invites Team")
+
+	invitesService := invitesmodule.NewInvitesService(
+		db,
+		invitesrepositories.NewInvitationRepository(db),
+		testutils.TestTokenKey,
+	)
+	_, _, err := invitesService.CreateInvitation(context.Background(), invitesmodule.CreateInvitationInput{
+		Kind:            invitesmodels.InvitationKindTeamMember,
+		TeamID:          &teamID,
+		InvitedUserID:   &secondUserID,
+		InvitedEmail:    stringPtr("second@example.com"),
+		CreatedByUserID: ownerUserID,
+	})
+	if err != nil {
+		t.Fatalf("failed to seed existing invitation: %v", err)
+	}
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v1/teams/"+teamID+"/invites",
+		bytes.NewReader([]byte(`{"emails":["first@example.com","second@example.com"]}`)),
+	)
+	req.Header.Set("Authorization", "Bearer "+ownerToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("expected 409 Conflict, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var firstInviteCount int
+	err = db.NewSelect().
+		Table("invitations").
+		ColumnExpr("COUNT(*)").
+		Where("team_id = ?", teamID).
+		Where("invited_user_id = ?", firstUserID).
+		Scan(context.Background(), &firstInviteCount)
+	if err != nil {
+		t.Fatalf("failed to count first-user invitations: %v", err)
+	}
+	if firstInviteCount != 0 {
+		t.Fatalf("expected zero invitations for first user after rollback, got %d", firstInviteCount)
+	}
+
+	var secondInviteCount int
+	err = db.NewSelect().
+		Table("invitations").
+		ColumnExpr("COUNT(*)").
+		Where("team_id = ?", teamID).
+		Where("invited_user_id = ?", secondUserID).
+		Scan(context.Background(), &secondInviteCount)
+	if err != nil {
+		t.Fatalf("failed to count second-user invitations: %v", err)
+	}
+	if secondInviteCount != 1 {
+		t.Fatalf("expected only the pre-existing invitation for second user, got %d", secondInviteCount)
 	}
 }
 

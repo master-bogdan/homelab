@@ -7,10 +7,10 @@ import (
 
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	invitesmodels "github.com/master-bogdan/estimate-room-api/internal/modules/invites/models"
-	invitesrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/invites/repositories"
 	teamsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/teams/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
+	"github.com/uptrace/bun"
 )
 
 type CreatedTeamInvite struct {
@@ -23,24 +23,24 @@ type TeamsInviteService interface {
 }
 
 type teamsInviteService struct {
+	db             *bun.DB
 	teamRepo       teamsrepositories.TeamRepository
 	memberRepo     teamsrepositories.TeamMemberRepository
-	invitationRepo invitesrepositories.InvitationRepository
 	userService    users.UsersService
 	invitesService invites.InvitesService
 }
 
 func NewTeamsInviteService(
+	db *bun.DB,
 	teamRepo teamsrepositories.TeamRepository,
 	memberRepo teamsrepositories.TeamMemberRepository,
-	invitationRepo invitesrepositories.InvitationRepository,
 	userService users.UsersService,
 	invitesService invites.InvitesService,
 ) TeamsInviteService {
 	return &teamsInviteService{
+		db:             db,
 		teamRepo:       teamRepo,
 		memberRepo:     memberRepo,
-		invitationRepo: invitationRepo,
 		userService:    userService,
 		invitesService: invitesService,
 	}
@@ -51,17 +51,17 @@ func (s *teamsInviteService) CreateInvites(
 	teamID, actorUserID string,
 	emails []string,
 ) ([]CreatedTeamInvite, error) {
-	_, err := ensureTeamOwner(s.teamRepo, s.memberRepo, teamID, actorUserID)
-	if err != nil {
-		return nil, err
-	}
-
 	normalizedEmails := normalizeInviteEmails(emails)
 	if len(normalizedEmails) == 0 {
 		return nil, apperrors.ErrBadRequest
 	}
 
-	createdInvites := make([]CreatedTeamInvite, 0, len(normalizedEmails))
+	type inviteTarget struct {
+		userID string
+		email  string
+	}
+
+	targets := make([]inviteTarget, 0, len(normalizedEmails))
 	for _, email := range normalizedEmails {
 		user, err := s.userService.FindByEmail(email)
 		if err != nil {
@@ -72,37 +72,54 @@ func (s *teamsInviteService) CreateInvites(
 			return nil, err
 		}
 
-		_, err = s.memberRepo.FindByTeamAndUser(teamID, user.UserID)
-		switch {
-		case err == nil:
-			return nil, apperrors.ErrConflict
-		case err != nil && !errors.Is(err, apperrors.ErrNotFound):
-			return nil, err
-		}
-
-		_, err = s.invitationRepo.FindActiveTeamMemberInvitation(teamID, user.UserID)
-		switch {
-		case err == nil:
-			return nil, apperrors.ErrConflict
-		case err != nil && !errors.Is(err, apperrors.ErrNotFound):
-			return nil, err
-		}
-
-		invitation, token, err := s.invitesService.CreateInvitation(ctx, invites.CreateInvitationInput{
-			Kind:            invitesmodels.InvitationKindTeamMember,
-			TeamID:          &teamID,
-			InvitedUserID:   &user.UserID,
-			InvitedEmail:    user.Email,
-			CreatedByUserID: actorUserID,
+		targets = append(targets, inviteTarget{
+			userID: user.UserID,
+			email:  email,
 		})
-		if err != nil {
-			return nil, err
+	}
+
+	createdInvites := make([]CreatedTeamInvite, 0, len(targets))
+	err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		teamRepo := teamsrepositories.NewTeamRepository(tx)
+		memberRepo := teamsrepositories.NewTeamMemberRepository(tx)
+
+		if _, err := ensureTeamOwner(teamRepo, memberRepo, teamID, actorUserID); err != nil {
+			return err
 		}
 
-		createdInvites = append(createdInvites, CreatedTeamInvite{
-			Invitation: invitation,
-			Token:      token,
-		})
+		for _, target := range targets {
+			_, err := memberRepo.FindByTeamAndUser(teamID, target.userID)
+			switch {
+			case err == nil:
+				return apperrors.ErrConflict
+			case err != nil && !errors.Is(err, apperrors.ErrNotFound):
+				return err
+			}
+
+			invitedUserID := target.userID
+			invitedEmail := target.email
+
+			invitation, token, err := s.invitesService.CreateInvitationWithDB(ctx, tx, invites.CreateInvitationInput{
+				Kind:            invitesmodels.InvitationKindTeamMember,
+				TeamID:          &teamID,
+				InvitedUserID:   &invitedUserID,
+				InvitedEmail:    &invitedEmail,
+				CreatedByUserID: actorUserID,
+			})
+			if err != nil {
+				return err
+			}
+
+			createdInvites = append(createdInvites, CreatedTeamInvite{
+				Invitation: invitation,
+				Token:      token,
+			})
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return createdInvites, nil

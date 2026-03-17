@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	invitesdto "github.com/master-bogdan/estimate-room-api/internal/modules/invites/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
+	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
 	roomsdto "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/dto"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
@@ -199,6 +201,53 @@ func createRoomViaAPI(
 	return payload
 }
 
+type stubRoomsService struct {
+	createRoom func(ctx context.Context, input rooms.CreateRoomInput) (*rooms.CreateRoomResult, error)
+}
+
+func (s *stubRoomsService) CreateRoom(
+	ctx context.Context,
+	input rooms.CreateRoomInput,
+) (*rooms.CreateRoomResult, error) {
+	return s.createRoom(ctx, input)
+}
+
+func (s *stubRoomsService) GetRoom(roomID string) (*roomsmodels.RoomsModel, error) {
+	return nil, nil
+}
+
+func (s *stubRoomsService) ValidateUserRoomAccess(roomID, userID string) error {
+	return nil
+}
+
+func (s *stubRoomsService) UpdateRoom(
+	roomID, userID string,
+	input rooms.UpdateRoomInput,
+) (*roomsmodels.RoomsModel, error) {
+	return nil, nil
+}
+
+type stubAuthService struct {
+	userID string
+	err    error
+}
+
+func (s *stubAuthService) CheckAuth(r *http.Request) (string, error) {
+	return s.userID, s.err
+}
+
+func (s *stubAuthService) CreateOidcSession(model *oauth2models.OidcSessionModel) (string, error) {
+	return "", nil
+}
+
+func (s *stubAuthService) GetOidcSessionByID(sessionID string) (*oauth2models.OidcSessionModel, error) {
+	return nil, nil
+}
+
+func (s *stubAuthService) CreateAccessToken(ctx context.Context, model *oauth2models.Oauth2AccessTokenModel) error {
+	return nil
+}
+
 func TestCreateRoom_DoesNotExposeRawServiceErrors(t *testing.T) {
 	router, db := setupRoomsTasksTest(t)
 	defer db.Close()
@@ -214,8 +263,8 @@ func TestCreateRoom_DoesNotExposeRawServiceErrors(t *testing.T) {
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusForbidden {
-		t.Fatalf("expected 403 Forbidden, got %d: %s", rr.Code, rr.Body.String())
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d: %s", rr.Code, rr.Body.String())
 	}
 
 	var httpErr apperrors.HttpError
@@ -228,6 +277,40 @@ func TestCreateRoom_DoesNotExposeRawServiceErrors(t *testing.T) {
 	}
 	if httpErr.Detail == "invalid deck" {
 		t.Fatal("expected raw service error to stay internal")
+	}
+}
+
+func TestCreateRoom_ReturnsInternalForUnexpectedServiceErrors(t *testing.T) {
+	router := chi.NewRouter()
+	controller := rooms.NewRoomsController(
+		&stubRoomsService{
+			createRoom: func(ctx context.Context, input rooms.CreateRoomInput) (*rooms.CreateRoomResult, error) {
+				return nil, errors.New("boom")
+			},
+		},
+		nil,
+		nil,
+		&stubAuthService{userID: uuid.NewString()},
+	)
+	router.Post("/rooms", controller.CreateRoom)
+
+	req := httptest.NewRequest(http.MethodPost, "/rooms", bytes.NewReader([]byte(`{"name":"Room"}`)))
+	req.Header.Set("Authorization", "Bearer token")
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500 Internal Server Error, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var httpErr apperrors.HttpError
+	if err := json.NewDecoder(rr.Body).Decode(&httpErr); err != nil {
+		t.Fatalf("failed to decode error response: %v", err)
+	}
+
+	if httpErr.Detail != "failed to create room" {
+		t.Fatalf("expected sanitized detail, got %q", httpErr.Detail)
 	}
 }
 

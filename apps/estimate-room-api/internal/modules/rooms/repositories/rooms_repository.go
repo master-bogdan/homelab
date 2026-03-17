@@ -20,7 +20,7 @@ type RoomsRepository interface {
 }
 
 type roomsRepository struct {
-	db *bun.DB
+	db bun.IDB
 }
 
 type UpdateRoomFields struct {
@@ -28,7 +28,7 @@ type UpdateRoomFields struct {
 	Status *string
 }
 
-func NewRoomsRepository(db *bun.DB) *roomsRepository {
+func NewRoomsRepository(db bun.IDB) *roomsRepository {
 	return &roomsRepository{db: db}
 }
 

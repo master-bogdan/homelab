@@ -39,7 +39,7 @@ func NewInvitesController(service InvitesService, authService oauth2.AuthService
 func (c *invitesController) PreviewInvitation(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 
-	invitation, err := c.service.PreviewInvitation(token)
+	invitation, err := c.service.PreviewInvitation(r.Context(), token)
 	if err != nil {
 		c.writeInviteError(w, r, err)
 		return

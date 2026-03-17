@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
 	invitesmodels "github.com/master-bogdan/estimate-room-api/internal/modules/invites/models"
 	invitesrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/invites/repositories"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
@@ -17,6 +18,7 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/driver/pgdriver"
 )
 
 type CreateInvitationInput struct {
@@ -57,8 +59,9 @@ const (
 
 type InvitesService interface {
 	CreateInvitation(ctx context.Context, input CreateInvitationInput) (*invitesmodels.InvitationModel, string, error)
+	CreateInvitationWithDB(ctx context.Context, db bun.IDB, input CreateInvitationInput) (*invitesmodels.InvitationModel, string, error)
 	ParseInvitationToken(token string) (*InvitationTokenClaims, error)
-	PreviewInvitation(token string) (*invitesmodels.InvitationModel, error)
+	PreviewInvitation(ctx context.Context, token string) (*invitesmodels.InvitationModel, error)
 	AcceptInvitation(ctx context.Context, token, actorUserID string, guestName *string) (*AcceptInvitationResult, error)
 	DeclineInvitation(ctx context.Context, token, actorUserID string) (*invitesmodels.InvitationModel, error)
 	RevokeInvitation(ctx context.Context, invitationID, actorUserID string) (*invitesmodels.InvitationModel, error)
@@ -97,6 +100,26 @@ func (s *invitesService) CreateInvitation(
 	ctx context.Context,
 	input CreateInvitationInput,
 ) (*invitesmodels.InvitationModel, string, error) {
+	return s.createInvitation(ctx, s.invitationRepo, input)
+}
+
+func (s *invitesService) CreateInvitationWithDB(
+	ctx context.Context,
+	db bun.IDB,
+	input CreateInvitationInput,
+) (*invitesmodels.InvitationModel, string, error) {
+	if db == nil {
+		return nil, "", apperrors.ErrInternal
+	}
+
+	return s.createInvitation(ctx, invitesrepositories.NewInvitationRepository(db), input)
+}
+
+func (s *invitesService) createInvitation(
+	ctx context.Context,
+	repo invitesrepositories.InvitationRepository,
+	input CreateInvitationInput,
+) (*invitesmodels.InvitationModel, string, error) {
 	normalizedInput, err := normalizeCreateInvitationInput(input)
 	if err != nil {
 		return nil, "", err
@@ -119,8 +142,12 @@ func (s *invitesService) CreateInvitation(
 		return nil, "", err
 	}
 
-	createdInvitation, err := s.invitationRepo.Create(ctx, invitation)
+	createdInvitation, err := repo.Create(ctx, invitation)
 	if err != nil {
+		if isActiveTeamMemberInvitationConflict(err) {
+			return nil, "", apperrors.ErrConflict
+		}
+
 		return nil, "", err
 	}
 
@@ -145,13 +172,13 @@ func (s *invitesService) ParseInvitationToken(token string) (*InvitationTokenCla
 	return claims, nil
 }
 
-func (s *invitesService) PreviewInvitation(token string) (*invitesmodels.InvitationModel, error) {
+func (s *invitesService) PreviewInvitation(ctx context.Context, token string) (*invitesmodels.InvitationModel, error) {
 	claims, err := s.ParseInvitationToken(token)
 	if err != nil {
 		return nil, err
 	}
 
-	invitation, err := s.invitationRepo.FindByTokenID(claims.TokenID)
+	invitation, err := s.invitationRepo.FindByTokenID(ctx, claims.TokenID)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +195,7 @@ func (s *invitesService) AcceptInvitation(
 	token, actorUserID string,
 	guestName *string,
 ) (*AcceptInvitationResult, error) {
-	invitation, err := s.PreviewInvitation(token)
+	invitation, err := s.PreviewInvitation(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +225,7 @@ func (s *invitesService) DeclineInvitation(
 	ctx context.Context,
 	token, actorUserID string,
 ) (*invitesmodels.InvitationModel, error) {
-	invitation, err := s.PreviewInvitation(token)
+	invitation, err := s.PreviewInvitation(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -221,14 +248,14 @@ func (s *invitesService) DeclineInvitation(
 		return nil, apperrors.ErrBadRequest
 	}
 
-	return s.invitationRepo.Decline(invitation.InvitationID)
+	return s.invitationRepo.Decline(ctx, invitation.InvitationID)
 }
 
 func (s *invitesService) RevokeInvitation(
 	ctx context.Context,
 	invitationID, actorUserID string,
 ) (*invitesmodels.InvitationModel, error) {
-	invitation, err := s.invitationRepo.FindByID(strings.TrimSpace(invitationID))
+	invitation, err := s.invitationRepo.FindByID(ctx, strings.TrimSpace(invitationID))
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +275,7 @@ func (s *invitesService) RevokeInvitation(
 		}
 	}
 
-	return s.invitationRepo.Revoke(invitation.InvitationID)
+	return s.invitationRepo.Revoke(ctx, invitation.InvitationID)
 }
 
 func (s *invitesService) ValidateGuestRoomAccess(roomID, guestToken string) (*roomsmodels.RoomParticipantModel, error) {
@@ -405,7 +432,7 @@ func (s *invitesService) acceptRoomEmailInvitation(
 		participant, err = participantRepo.FindActiveByUserID(room.RoomID, actorUserID)
 		switch {
 		case err == nil:
-			_, err = invitationRepo.Accept(invitation.InvitationID)
+			_, err = invitationRepo.Accept(ctx, invitation.InvitationID)
 			return err
 		case err != nil && !errors.Is(err, apperrors.ErrNotFound):
 			return err
@@ -421,7 +448,7 @@ func (s *invitesService) acceptRoomEmailInvitation(
 			return err
 		}
 
-		_, err = invitationRepo.Accept(invitation.InvitationID)
+		_, err = invitationRepo.Accept(ctx, invitation.InvitationID)
 		return err
 	})
 	if err != nil {
@@ -437,7 +464,7 @@ func (s *invitesService) acceptRoomEmailInvitation(
 		return nil, err
 	}
 
-	acceptedInvitation, err := s.invitationRepo.FindByID(invitation.InvitationID)
+	acceptedInvitation, err := s.invitationRepo.FindByID(ctx, invitation.InvitationID)
 	if err != nil {
 		return nil, err
 	}
@@ -497,7 +524,7 @@ func (s *invitesService) acceptTeamMemberInvitation(
 		_, err := memberRepo.FindByTeamAndUser(*invitation.TeamID, actorUserID)
 		switch {
 		case err == nil:
-			_, err = invitationRepo.Accept(invitation.InvitationID)
+			_, err = invitationRepo.Accept(ctx, invitation.InvitationID)
 			return err
 		case err != nil && !errors.Is(err, apperrors.ErrNotFound):
 			return err
@@ -512,14 +539,14 @@ func (s *invitesService) acceptTeamMemberInvitation(
 			return err
 		}
 
-		_, err = invitationRepo.Accept(invitation.InvitationID)
+		_, err = invitationRepo.Accept(ctx, invitation.InvitationID)
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return s.invitationRepo.FindByID(invitation.InvitationID)
+	return s.invitationRepo.FindByID(ctx, invitation.InvitationID)
 }
 
 func (s *invitesService) joinRegisteredRoomParticipant(
@@ -741,4 +768,17 @@ func (s *invitesService) generateGuestToken(roomID, participantID string) (strin
 
 func (s *invitesService) parseGuestToken(token string) (*roomGuestTokenClaims, error) {
 	return utils.ParseToken[roomGuestTokenClaims](s.tokenKey, token)
+}
+
+func isActiveTeamMemberInvitationConflict(err error) bool {
+	var pgErr pgdriver.Error
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+
+	if pgErr.Field('C') != pgerrcode.UniqueViolation {
+		return false
+	}
+
+	return pgErr.Field('n') == "invitations_active_team_member_unique_idx"
 }

@@ -96,9 +96,9 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		case stdErrors.Is(err, apperrors.ErrNotFound):
 			c.writeError(w, r, apperrors.ErrNotFound, err.Error(), err)
 		case stdErrors.Is(err, apperrors.ErrBadRequest):
-			c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
-		default:
 			c.writeError(w, r, apperrors.ErrBadRequest, "failed to create room", err)
+		default:
+			c.writeError(w, r, apperrors.ErrInternal, "failed to create room", err)
 		}
 		return
 	}

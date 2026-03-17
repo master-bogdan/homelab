@@ -12,12 +12,12 @@ import (
 
 type InvitationRepository interface {
 	Create(ctx context.Context, model *invitesmodels.InvitationModel) (*invitesmodels.InvitationModel, error)
-	FindByID(invitationID string) (*invitesmodels.InvitationModel, error)
-	FindByTokenID(tokenID string) (*invitesmodels.InvitationModel, error)
-	FindActiveTeamMemberInvitation(teamID, invitedUserID string) (*invitesmodels.InvitationModel, error)
-	Accept(invitationID string) (*invitesmodels.InvitationModel, error)
-	Decline(invitationID string) (*invitesmodels.InvitationModel, error)
-	Revoke(invitationID string) (*invitesmodels.InvitationModel, error)
+	FindByID(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error)
+	FindByTokenID(ctx context.Context, tokenID string) (*invitesmodels.InvitationModel, error)
+	FindActiveTeamMemberInvitation(ctx context.Context, teamID, invitedUserID string) (*invitesmodels.InvitationModel, error)
+	Accept(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error)
+	Decline(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error)
+	Revoke(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error)
 }
 
 type invitationRepository struct {
@@ -55,13 +55,17 @@ func (r *invitationRepository) Create(ctx context.Context, model *invitesmodels.
 	return model, nil
 }
 
-func (r *invitationRepository) FindByID(invitationID string) (*invitesmodels.InvitationModel, error) {
+func (r *invitationRepository) FindByID(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	invitation := new(invitesmodels.InvitationModel)
 	err := r.db.NewSelect().
 		Model(invitation).
 		Where("i.invitation_id = ?", invitationID).
 		Limit(1).
-		Scan(context.Background())
+		Scan(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperrors.ErrNotFound
@@ -73,13 +77,17 @@ func (r *invitationRepository) FindByID(invitationID string) (*invitesmodels.Inv
 	return invitation, nil
 }
 
-func (r *invitationRepository) FindByTokenID(tokenID string) (*invitesmodels.InvitationModel, error) {
+func (r *invitationRepository) FindByTokenID(ctx context.Context, tokenID string) (*invitesmodels.InvitationModel, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	invitation := new(invitesmodels.InvitationModel)
 	err := r.db.NewSelect().
 		Model(invitation).
 		Where("i.token_id = ?", tokenID).
 		Limit(1).
-		Scan(context.Background())
+		Scan(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperrors.ErrNotFound
@@ -92,8 +100,13 @@ func (r *invitationRepository) FindByTokenID(tokenID string) (*invitesmodels.Inv
 }
 
 func (r *invitationRepository) FindActiveTeamMemberInvitation(
+	ctx context.Context,
 	teamID, invitedUserID string,
 ) (*invitesmodels.InvitationModel, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	invitation := new(invitesmodels.InvitationModel)
 	err := r.db.NewSelect().
 		Model(invitation).
@@ -102,7 +115,7 @@ func (r *invitationRepository) FindActiveTeamMemberInvitation(
 		Where("i.team_id = ?", teamID).
 		Where("i.invited_user_id = ?", invitedUserID).
 		Limit(1).
-		Scan(context.Background())
+		Scan(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperrors.ErrNotFound
@@ -114,23 +127,28 @@ func (r *invitationRepository) FindActiveTeamMemberInvitation(
 	return invitation, nil
 }
 
-func (r *invitationRepository) Accept(invitationID string) (*invitesmodels.InvitationModel, error) {
-	return r.transition(invitationID, invitesmodels.InvitationStatusAccepted, "accepted_at")
+func (r *invitationRepository) Accept(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error) {
+	return r.transition(ctx, invitationID, invitesmodels.InvitationStatusAccepted, "accepted_at")
 }
 
-func (r *invitationRepository) Decline(invitationID string) (*invitesmodels.InvitationModel, error) {
-	return r.transition(invitationID, invitesmodels.InvitationStatusDeclined, "declined_at")
+func (r *invitationRepository) Decline(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error) {
+	return r.transition(ctx, invitationID, invitesmodels.InvitationStatusDeclined, "declined_at")
 }
 
-func (r *invitationRepository) Revoke(invitationID string) (*invitesmodels.InvitationModel, error) {
-	return r.transition(invitationID, invitesmodels.InvitationStatusRevoked, "revoked_at")
+func (r *invitationRepository) Revoke(ctx context.Context, invitationID string) (*invitesmodels.InvitationModel, error) {
+	return r.transition(ctx, invitationID, invitesmodels.InvitationStatusRevoked, "revoked_at")
 }
 
 func (r *invitationRepository) transition(
+	ctx context.Context,
 	invitationID string,
 	status invitesmodels.InvitationStatus,
 	timestampColumn string,
 ) (*invitesmodels.InvitationModel, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	result, err := r.db.NewUpdate().
 		Model((*invitesmodels.InvitationModel)(nil)).
 		Set("status = ?", status).
@@ -138,7 +156,7 @@ func (r *invitationRepository) transition(
 		Set(timestampColumn+" = NOW()").
 		Where("invitation_id = ?", invitationID).
 		Where("status = ?", invitesmodels.InvitationStatusActive).
-		Exec(context.Background())
+		Exec(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -151,5 +169,5 @@ func (r *invitationRepository) transition(
 		return nil, apperrors.ErrConflict
 	}
 
-	return r.FindByID(invitationID)
+	return r.FindByID(ctx, invitationID)
 }

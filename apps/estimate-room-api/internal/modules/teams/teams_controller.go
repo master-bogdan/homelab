@@ -165,6 +165,8 @@ func (c *teamsController) writeTeamError(w http.ResponseWriter, r *http.Request,
 		c.writeError(w, r, apperrors.ErrForbidden, err.Error(), err)
 	case stdErrors.Is(err, apperrors.ErrNotFound):
 		c.writeError(w, r, apperrors.ErrNotFound, err.Error(), err)
+	case stdErrors.Is(err, apperrors.ErrConflict):
+		c.writeError(w, r, apperrors.ErrConflict, err.Error(), err)
 	default:
 		c.writeError(w, r, apperrors.ErrInternal, "", err)
 	}

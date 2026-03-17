@@ -128,7 +128,7 @@ func TestCreateInvitation_PersistsAndParsesTeamMemberInvite(t *testing.T) {
 		t.Fatalf("expected team id %s, got %#v", teamID, claims.TeamID)
 	}
 
-	storedInvitation, err := repo.FindByTokenID(claims.TokenID)
+	storedInvitation, err := repo.FindByTokenID(context.Background(), claims.TokenID)
 	if err != nil {
 		t.Fatalf("failed to load invitation by token id: %v", err)
 	}
@@ -136,7 +136,7 @@ func TestCreateInvitation_PersistsAndParsesTeamMemberInvite(t *testing.T) {
 		t.Fatalf("expected stored invitation id %s, got %s", invitation.InvitationID, storedInvitation.InvitationID)
 	}
 
-	preview, err := svc.PreviewInvitation(token)
+	preview, err := svc.PreviewInvitation(context.Background(), token)
 	if err != nil {
 		t.Fatalf("failed to preview invitation: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestAcceptInvitation_TransitionsToAccepted(t *testing.T) {
 		t.Fatalf("expected room %s in result, got %#v", roomID, acceptedResult.Room)
 	}
 
-	storedInvitation, err := repo.FindByID(invitation.InvitationID)
+	storedInvitation, err := repo.FindByID(context.Background(), invitation.InvitationID)
 	if err != nil {
 		t.Fatalf("failed to reload invitation: %v", err)
 	}
@@ -297,8 +297,90 @@ func TestPreviewInvitation_RejectsTamperedToken(t *testing.T) {
 	}
 
 	tamperedToken := token[:len(token)-1] + "x"
-	_, err = svc.PreviewInvitation(tamperedToken)
+	_, err = svc.PreviewInvitation(context.Background(), tamperedToken)
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("expected not found for tampered token, got %v", err)
+	}
+}
+
+func TestCreateInvitation_RejectsDuplicateActiveTeamMemberInvitation(t *testing.T) {
+	db, svc, _ := setupInvitesTest(t)
+	defer db.Close()
+
+	ownerUserID := testutils.SeedUser(t, db, "owner@example.com", "password123")
+	invitedUserID := testutils.SeedUser(t, db, "member@example.com", "password123")
+	teamID := seedInviteTeam(t, db, ownerUserID, "duplicates")
+
+	_, _, err := svc.CreateInvitation(context.Background(), invites.CreateInvitationInput{
+		Kind:            invitesmodels.InvitationKindTeamMember,
+		TeamID:          &teamID,
+		InvitedUserID:   &invitedUserID,
+		InvitedEmail:    stringPtr("member@example.com"),
+		CreatedByUserID: ownerUserID,
+	})
+	if err != nil {
+		t.Fatalf("failed to create first invitation: %v", err)
+	}
+
+	_, _, err = svc.CreateInvitation(context.Background(), invites.CreateInvitationInput{
+		Kind:            invitesmodels.InvitationKindTeamMember,
+		TeamID:          &teamID,
+		InvitedUserID:   &invitedUserID,
+		InvitedEmail:    stringPtr("member@example.com"),
+		CreatedByUserID: ownerUserID,
+	})
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("expected conflict for duplicate active invite, got %v", err)
+	}
+}
+
+func TestInvitationRepository_UsesCallerContext(t *testing.T) {
+	db, svc, repo := setupInvitesTest(t)
+	defer db.Close()
+
+	adminUserID := testutils.SeedUser(t, db, "admin@example.com", "password123")
+	roomID := seedInviteRoom(t, db, adminUserID, "room-context", "room-code-context")
+
+	invitation, _, err := svc.CreateInvitation(context.Background(), invites.CreateInvitationInput{
+		Kind:            invitesmodels.InvitationKindRoomLink,
+		RoomID:          &roomID,
+		CreatedByUserID: adminUserID,
+	})
+	if err != nil {
+		t.Fatalf("failed to create invitation: %v", err)
+	}
+
+	canceledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if _, err := repo.FindByID(canceledCtx, invitation.InvitationID); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context canceled from FindByID, got %v", err)
+	}
+	if _, err := repo.Revoke(canceledCtx, invitation.InvitationID); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context canceled from Revoke, got %v", err)
+	}
+}
+
+func TestPreviewInvitation_UsesCallerContext(t *testing.T) {
+	db, svc, _ := setupInvitesTest(t)
+	defer db.Close()
+
+	adminUserID := testutils.SeedUser(t, db, "admin@example.com", "password123")
+	roomID := seedInviteRoom(t, db, adminUserID, "room-preview-context", "room-code-preview-context")
+
+	_, token, err := svc.CreateInvitation(context.Background(), invites.CreateInvitationInput{
+		Kind:            invitesmodels.InvitationKindRoomLink,
+		RoomID:          &roomID,
+		CreatedByUserID: adminUserID,
+	})
+	if err != nil {
+		t.Fatalf("failed to create invitation: %v", err)
+	}
+
+	canceledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if _, err := svc.PreviewInvitation(canceledCtx, token); !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context canceled from PreviewInvitation, got %v", err)
 	}
 }

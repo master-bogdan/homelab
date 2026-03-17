@@ -297,6 +297,9 @@ CREATE UNIQUE INDEX "tasks_one_active_per_room_idx" ON "tasks" ("room_id") WHERE
 CREATE INDEX "rooms_active_last_activity_idx" ON "rooms" ("last_activity_at") WHERE "status" = 'ACTIVE';
 CREATE INDEX "invitations_room_id_idx" ON "invitations" ("room_id");
 CREATE INDEX "invitations_team_id_idx" ON "invitations" ("team_id");
+CREATE UNIQUE INDEX "invitations_active_team_member_unique_idx"
+  ON "invitations" ("team_id", "invited_user_id")
+  WHERE "kind" = 'TEAM_MEMBER' AND "status" = 'ACTIVE';
 CREATE INDEX "invitations_active_invited_email_idx" ON "invitations" ("invited_email") WHERE "status" = 'ACTIVE' AND "invited_email" IS NOT NULL;
 
 CREATE INDEX "idx_oauth2_auth_codes_code" ON "oauth2_auth_codes" ("code");

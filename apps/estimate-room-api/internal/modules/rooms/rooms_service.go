@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
+	"github.com/uptrace/bun"
 )
 
 type RoomsService interface {
@@ -55,6 +57,7 @@ type CreateRoomResult struct {
 }
 
 type roomsService struct {
+	db              *bun.DB
 	roomsRepo       roomsrepositories.RoomsRepository
 	participantRepo roomsrepositories.RoomParticipantRepository
 	teamRepo        teamsrepositories.TeamRepository
@@ -65,6 +68,7 @@ type roomsService struct {
 }
 
 func NewRoomsService(
+	db *bun.DB,
 	roomsRepo roomsrepositories.RoomsRepository,
 	participantRepo roomsrepositories.RoomParticipantRepository,
 	teamRepo teamsrepositories.TeamRepository,
@@ -73,6 +77,7 @@ func NewRoomsService(
 	invitesService invites.InvitesService,
 ) RoomsService {
 	return &roomsService{
+		db:              db,
 		roomsRepo:       roomsRepo,
 		participantRepo: participantRepo,
 		teamRepo:        teamRepo,
@@ -106,7 +111,7 @@ func (s *roomsService) CreateRoom(ctx context.Context, input CreateRoomInput) (*
 	model.Deck.Values = values
 
 	if !model.Deck.IsValid() {
-		return nil, errors.New("invalid deck")
+		return nil, fmt.Errorf("%w: invalid deck", apperrors.ErrBadRequest)
 	}
 
 	invitePlan, err := s.planRoomInvitations(input.AdminUserID, input.InviteTeamID, input.InviteEmails)
@@ -119,59 +124,69 @@ func (s *roomsService) CreateRoom(ctx context.Context, input CreateRoomInput) (*
 
 	model.Code = code
 
-	room, err := s.roomsRepo.Create(ctx, &model)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = s.participantRepo.Create(&roomsmodels.RoomParticipantModel{
-		RoomParticipantID: uuid.NewString(),
-		RoomID:            room.RoomID,
-		UserID:            &room.AdminUserID,
-		Role:              roomsmodels.RoomParticipantRoleAdmin,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	result := &CreateRoomResult{
-		Room:              room,
 		EmailInvitations:  make([]CreatedRoomInvitation, 0, len(invitePlan.Emails)),
 		SkippedRecipients: invitePlan.SkippedRecipients,
 	}
+	err = s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		roomRepo := roomsrepositories.NewRoomsRepository(tx)
+		participantRepo := roomsrepositories.NewRoomParticipantRepository(tx)
 
-	for _, email := range invitePlan.Emails {
-		emailCopy := email
-		invitation, token, err := s.invitesService.CreateInvitation(ctx, invites.CreateInvitationInput{
-			Kind:            invitesmodels.InvitationKindRoomEmail,
-			RoomID:          &room.RoomID,
-			InvitedEmail:    &emailCopy,
-			CreatedByUserID: input.AdminUserID,
+		room, err := roomRepo.Create(ctx, &model)
+		if err != nil {
+			return err
+		}
+
+		_, err = participantRepo.Create(&roomsmodels.RoomParticipantModel{
+			RoomParticipantID: uuid.NewString(),
+			RoomID:            room.RoomID,
+			UserID:            &room.AdminUserID,
+			Role:              roomsmodels.RoomParticipantRoleAdmin,
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		result.EmailInvitations = append(result.EmailInvitations, CreatedRoomInvitation{
-			Invitation: invitation,
-			Token:      token,
-		})
-	}
+		result.Room = room
 
-	if input.CreateShareLink {
-		invitation, token, err := s.invitesService.CreateInvitation(ctx, invites.CreateInvitationInput{
-			Kind:            invitesmodels.InvitationKindRoomLink,
-			RoomID:          &room.RoomID,
-			CreatedByUserID: input.AdminUserID,
-		})
-		if err != nil {
-			return nil, err
+		for _, email := range invitePlan.Emails {
+			emailCopy := email
+			invitation, token, err := s.invitesService.CreateInvitationWithDB(ctx, tx, invites.CreateInvitationInput{
+				Kind:            invitesmodels.InvitationKindRoomEmail,
+				RoomID:          &room.RoomID,
+				InvitedEmail:    &emailCopy,
+				CreatedByUserID: input.AdminUserID,
+			})
+			if err != nil {
+				return err
+			}
+
+			result.EmailInvitations = append(result.EmailInvitations, CreatedRoomInvitation{
+				Invitation: invitation,
+				Token:      token,
+			})
 		}
 
-		result.ShareLink = &CreatedRoomInvitation{
-			Invitation: invitation,
-			Token:      token,
+		if input.CreateShareLink {
+			invitation, token, err := s.invitesService.CreateInvitationWithDB(ctx, tx, invites.CreateInvitationInput{
+				Kind:            invitesmodels.InvitationKindRoomLink,
+				RoomID:          &room.RoomID,
+				CreatedByUserID: input.AdminUserID,
+			})
+			if err != nil {
+				return err
+			}
+
+			result.ShareLink = &CreatedRoomInvitation{
+				Invitation: invitation,
+				Token:      token,
+			}
 		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil
