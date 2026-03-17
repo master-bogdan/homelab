@@ -12,8 +12,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
+	invitesdto "github.com/master-bogdan/estimate-room-api/internal/modules/invites/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
+	roomsdto "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/dto"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
@@ -31,6 +33,8 @@ func setupRoomsTasksTest(t *testing.T) (*chi.Mux, *bun.DB) {
 			invitations,
 			votes,
 			tasks,
+			team_members,
+			teams,
 			room_participants,
 			rooms,
 			oauth2_access_tokens,
@@ -115,10 +119,65 @@ func createAccessTokenForEmail(t *testing.T, db *bun.DB, email string) (string, 
 	return tokens.AccessToken, userID
 }
 
-func createRoomViaAPI(t *testing.T, router *chi.Mux, accessToken string) (string, string) {
+func seedTeamForRoomTest(t *testing.T, db *bun.DB, ownerUserID, name string) string {
 	t.Helper()
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/", bytes.NewReader([]byte(`{"name":"Invite Room"}`)))
+	teamID := uuid.NewString()
+	_, err := db.ExecContext(context.Background(), `
+		INSERT INTO teams (team_id, name, owner_user_id)
+		VALUES ($1, $2, $3)
+	`, teamID, name, ownerUserID)
+	if err != nil {
+		t.Fatalf("failed to insert team: %v", err)
+	}
+
+	_, err = db.ExecContext(context.Background(), `
+		INSERT INTO team_members (team_id, user_id, role)
+		VALUES ($1, $2, 'OWNER')
+	`, teamID, ownerUserID)
+	if err != nil {
+		t.Fatalf("failed to insert team owner: %v", err)
+	}
+
+	return teamID
+}
+
+func seedTeamMemberForRoomTest(t *testing.T, db *bun.DB, teamID, userID, role string) {
+	t.Helper()
+
+	_, err := db.ExecContext(context.Background(), `
+		INSERT INTO team_members (team_id, user_id, role)
+		VALUES ($1, $2, $3)
+	`, teamID, userID, role)
+	if err != nil {
+		t.Fatalf("failed to insert team member: %v", err)
+	}
+}
+
+func seedUserWithoutEmailForRoomTest(t *testing.T, db *bun.DB) string {
+	t.Helper()
+
+	userID := uuid.NewString()
+	_, err := db.ExecContext(context.Background(), `
+		INSERT INTO users (user_id, display_name)
+		VALUES ($1, $2)
+	`, userID, "No Email")
+	if err != nil {
+		t.Fatalf("failed to insert no-email user: %v", err)
+	}
+
+	return userID
+}
+
+func createRoomViaAPI(
+	t *testing.T,
+	router *chi.Mux,
+	accessToken string,
+	requestBody string,
+) roomsdto.CreateRoomResponse {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/", bytes.NewReader([]byte(requestBody)))
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	rr := httptest.NewRecorder()
@@ -128,22 +187,16 @@ func createRoomViaAPI(t *testing.T, router *chi.Mux, accessToken string) (string
 		t.Fatalf("expected 200 OK when creating room, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	var payload struct {
-		Room        roomsmodels.RoomsModel `json:"room"`
-		InviteToken string                 `json:"inviteToken"`
-	}
+	var payload roomsdto.CreateRoomResponse
 	if err := json.NewDecoder(rr.Body).Decode(&payload); err != nil {
 		t.Fatalf("failed to decode create room response: %v", err)
 	}
 
-	if payload.Room.RoomID == "" {
+	if payload.Room == nil || payload.Room.RoomID == "" {
 		t.Fatal("expected room id in create room response")
 	}
-	if payload.InviteToken == "" {
-		t.Fatal("expected invite token in response")
-	}
 
-	return payload.Room.RoomID, payload.InviteToken
+	return payload
 }
 
 func TestCreateRoom_DoesNotExposeRawServiceErrors(t *testing.T) {
@@ -161,8 +214,8 @@ func TestCreateRoom_DoesNotExposeRawServiceErrors(t *testing.T) {
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 Bad Request, got %d: %s", rr.Code, rr.Body.String())
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 Forbidden, got %d: %s", rr.Code, rr.Body.String())
 	}
 
 	var httpErr apperrors.HttpError
@@ -175,6 +228,155 @@ func TestCreateRoom_DoesNotExposeRawServiceErrors(t *testing.T) {
 	}
 	if httpErr.Detail == "invalid deck" {
 		t.Fatal("expected raw service error to stay internal")
+	}
+}
+
+func TestCreateRoom_DoesNotCreateShareLinkUnlessRequested(t *testing.T) {
+	router, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	accessToken, _ := createAccessToken(t, db)
+
+	response := createRoomViaAPI(t, router, accessToken, `{"name":"No Share Link Room"}`)
+	if response.InviteToken != "" {
+		t.Fatalf("expected no inviteToken, got %q", response.InviteToken)
+	}
+	if response.ShareLink != nil {
+		t.Fatalf("expected no share link, got %#v", response.ShareLink)
+	}
+
+	var invitationCount int
+	err := db.NewSelect().
+		Table("invitations").
+		ColumnExpr("COUNT(*)").
+		Where("room_id = ?", response.Room.RoomID).
+		Scan(context.Background(), &invitationCount)
+	if err != nil {
+		t.Fatalf("failed to count invitations: %v", err)
+	}
+	if invitationCount != 0 {
+		t.Fatalf("expected no invitations, got %d", invitationCount)
+	}
+}
+
+func TestCreateRoom_FansOutTeamMembersAndExplicitEmails(t *testing.T) {
+	router, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	ownerToken, ownerUserID := createAccessTokenForEmail(t, db, "owner@example.com")
+	_, memberUserID := createAccessTokenForEmail(t, db, "member@example.com")
+	noEmailUserID := seedUserWithoutEmailForRoomTest(t, db)
+	teamID := seedTeamForRoomTest(t, db, ownerUserID, "Platform Team")
+	seedTeamMemberForRoomTest(t, db, teamID, memberUserID, "MEMBER")
+	seedTeamMemberForRoomTest(t, db, teamID, noEmailUserID, "MEMBER")
+
+	response := createRoomViaAPI(t, router, ownerToken, `{
+		"name":"Fanout Room",
+		"inviteTeamId":"`+teamID+`",
+		"inviteEmails":["member@example.com","owner@example.com","outside@example.com"],
+		"createShareLink":true
+	}`)
+
+	if response.ShareLink == nil || response.InviteToken == "" {
+		t.Fatalf("expected share link in create response, got %#v", response.ShareLink)
+	}
+	if len(response.EmailInvites) != 2 {
+		t.Fatalf("expected 2 email invites, got %d", len(response.EmailInvites))
+	}
+
+	emailInvites := make(map[string]invitesdto.InvitationWithTokenResponse, len(response.EmailInvites))
+	for _, invite := range response.EmailInvites {
+		if invite.Kind != "ROOM_EMAIL" {
+			t.Fatalf("expected ROOM_EMAIL invite kind, got %s", invite.Kind)
+		}
+		if invite.RoomID == nil || *invite.RoomID != response.Room.RoomID {
+			t.Fatalf("expected room id %s, got %#v", response.Room.RoomID, invite.RoomID)
+		}
+		if invite.InvitedEmail == nil {
+			t.Fatalf("expected invited email, got %#v", invite)
+		}
+		emailInvites[*invite.InvitedEmail] = invite
+	}
+
+	if _, exists := emailInvites["member@example.com"]; !exists {
+		t.Fatalf("expected member@example.com invite, got %#v", emailInvites)
+	}
+	if _, exists := emailInvites["outside@example.com"]; !exists {
+		t.Fatalf("expected outside@example.com invite, got %#v", emailInvites)
+	}
+	if _, exists := emailInvites["owner@example.com"]; exists {
+		t.Fatalf("did not expect self invite, got %#v", emailInvites)
+	}
+
+	if len(response.SkippedRecipients) != 2 {
+		t.Fatalf("expected 2 skipped recipients, got %#v", response.SkippedRecipients)
+	}
+
+	reasonsByUserID := make(map[string]string, len(response.SkippedRecipients))
+	reasonsByEmail := make(map[string]string, len(response.SkippedRecipients))
+	for _, skipped := range response.SkippedRecipients {
+		if skipped.UserID != nil {
+			reasonsByUserID[*skipped.UserID] = skipped.Reason
+		}
+		if skipped.Email != nil {
+			reasonsByEmail[*skipped.Email] = skipped.Reason
+		}
+	}
+
+	if reasonsByUserID[noEmailUserID] != "missing_email" {
+		t.Fatalf("expected missing_email skip for no-email user, got %#v", response.SkippedRecipients)
+	}
+	if reasonsByEmail["owner@example.com"] != "self" {
+		t.Fatalf("expected self skip for owner email, got %#v", response.SkippedRecipients)
+	}
+
+	var roomEmailInviteCount int
+	err := db.NewSelect().
+		Table("invitations").
+		ColumnExpr("COUNT(*)").
+		Where("room_id = ?", response.Room.RoomID).
+		Where("kind = 'ROOM_EMAIL'").
+		Scan(context.Background(), &roomEmailInviteCount)
+	if err != nil {
+		t.Fatalf("failed to count room email invites: %v", err)
+	}
+	if roomEmailInviteCount != 2 {
+		t.Fatalf("expected 2 persisted room email invites, got %d", roomEmailInviteCount)
+	}
+}
+
+func TestCreateRoom_RejectsInviteTeamIdForNonOwner(t *testing.T) {
+	router, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	_, ownerUserID := createAccessTokenForEmail(t, db, "owner@example.com")
+	memberToken, memberUserID := createAccessTokenForEmail(t, db, "member@example.com")
+	teamID := seedTeamForRoomTest(t, db, ownerUserID, "Restricted Team")
+	seedTeamMemberForRoomTest(t, db, teamID, memberUserID, "MEMBER")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/", bytes.NewReader([]byte(`{
+		"name":"Forbidden Fanout",
+		"inviteTeamId":"`+teamID+`"
+	}`)))
+	req.Header.Set("Authorization", "Bearer "+memberToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var roomCount int
+	err := db.NewSelect().
+		Table("rooms").
+		ColumnExpr("COUNT(*)").
+		Scan(context.Background(), &roomCount)
+	if err != nil {
+		t.Fatalf("failed to count rooms: %v", err)
+	}
+	if roomCount != 0 {
+		t.Fatalf("expected no room to be created, found %d", roomCount)
 	}
 }
 
@@ -523,7 +725,9 @@ func TestInviteFlow_AuthenticatedUserJoinsAsMember(t *testing.T) {
 	defer db.Close()
 
 	adminToken, _ := createAccessToken(t, db)
-	roomID, inviteToken := createRoomViaAPI(t, router, adminToken)
+	createResponse := createRoomViaAPI(t, router, adminToken, `{"name":"Invite Room","createShareLink":true}`)
+	roomID := createResponse.Room.RoomID
+	inviteToken := createResponse.InviteToken
 
 	memberToken, memberUserID := createAccessToken(t, db)
 	joinReq := httptest.NewRequest(http.MethodPost, "/api/v1/invites/"+inviteToken+"/accept", nil)
@@ -564,7 +768,9 @@ func TestInviteFlow_GuestJoinsAndCanReadRoom(t *testing.T) {
 	defer db.Close()
 
 	adminToken, _ := createAccessToken(t, db)
-	roomID, inviteToken := createRoomViaAPI(t, router, adminToken)
+	createResponse := createRoomViaAPI(t, router, adminToken, `{"name":"Invite Room","createShareLink":true}`)
+	roomID := createResponse.Room.RoomID
+	inviteToken := createResponse.InviteToken
 
 	joinReq := httptest.NewRequest(http.MethodPost, "/api/v1/invites/"+inviteToken+"/accept", bytes.NewReader([]byte(`{"guestName":"Guest One"}`)))
 	joinRR := httptest.NewRecorder()

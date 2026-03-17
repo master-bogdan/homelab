@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
-	invitesmodels "github.com/master-bogdan/estimate-room-api/internal/modules/invites/models"
+	invitesdto "github.com/master-bogdan/estimate-room-api/internal/modules/invites/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	roomsdto "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/dto"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
@@ -81,33 +81,53 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	room := roomsmodels.RoomsModel{
-		Name:        dto.Name,
-		Deck:        deck,
-		AdminUserID: userID,
-	}
-
-	createdRoom, err := c.service.CreateRoom(r.Context(), room)
+	createdRoom, err := c.service.CreateRoom(r.Context(), CreateRoomInput{
+		Name:            dto.Name,
+		Deck:            deck,
+		AdminUserID:     userID,
+		InviteTeamID:    stringPointerOrNil(dto.InviteTeamID),
+		InviteEmails:    dto.InviteEmails,
+		CreateShareLink: dto.CreateShareLink,
+	})
 	if err != nil {
-		c.writeError(w, r, apperrors.ErrBadRequest, "failed to create room", err)
+		switch {
+		case stdErrors.Is(err, apperrors.ErrForbidden):
+			c.writeError(w, r, apperrors.ErrForbidden, err.Error(), err)
+		case stdErrors.Is(err, apperrors.ErrNotFound):
+			c.writeError(w, r, apperrors.ErrNotFound, err.Error(), err)
+		case stdErrors.Is(err, apperrors.ErrBadRequest):
+			c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
+		default:
+			c.writeError(w, r, apperrors.ErrBadRequest, "failed to create room", err)
+		}
 		return
 	}
 
-	inviteInvitation, inviteToken, err := c.inviteService.CreateInvitation(r.Context(), invites.CreateInvitationInput{
-		Kind:            invitesmodels.InvitationKindRoomLink,
-		RoomID:          &createdRoom.RoomID,
-		CreatedByUserID: userID,
-	})
-	if err != nil {
-		c.writeError(w, r, apperrors.ErrInternal, "", err)
-		return
+	response := roomsdto.CreateRoomResponse{
+		Room:              createdRoom.Room,
+		EmailInvites:      make([]invitesdto.InvitationWithTokenResponse, 0, len(createdRoom.EmailInvitations)),
+		SkippedRecipients: make([]roomsdto.CreateRoomSkippedRecipientResponse, 0, len(createdRoom.SkippedRecipients)),
 	}
-	_ = inviteInvitation
 
-	httputils.WriteResponse(w, map[string]any{
-		"room":        createdRoom,
-		"inviteToken": inviteToken,
-	})
+	for _, invite := range createdRoom.EmailInvitations {
+		response.EmailInvites = append(response.EmailInvites, invitesdto.NewInvitationWithTokenResponse(invite.Invitation, invite.Token))
+	}
+
+	if createdRoom.ShareLink != nil {
+		shareLink := invitesdto.NewInvitationWithTokenResponse(createdRoom.ShareLink.Invitation, createdRoom.ShareLink.Token)
+		response.ShareLink = &shareLink
+		response.InviteToken = createdRoom.ShareLink.Token
+	}
+
+	for _, skipped := range createdRoom.SkippedRecipients {
+		response.SkippedRecipients = append(response.SkippedRecipients, roomsdto.CreateRoomSkippedRecipientResponse{
+			UserID: skipped.UserID,
+			Email:  skipped.Email,
+			Reason: skipped.Reason,
+		})
+	}
+
+	httputils.WriteResponse(w, response)
 }
 
 func (c *roomsController) GetRoom(w http.ResponseWriter, r *http.Request) {
@@ -376,4 +396,13 @@ func (c *roomsController) ensureRoomReadable(r *http.Request, roomID string) err
 
 	_, err = c.inviteService.ValidateGuestRoomAccess(roomID, cookie.Value)
 	return err
+}
+
+func stringPointerOrNil(value string) *string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+
+	return &trimmed
 }

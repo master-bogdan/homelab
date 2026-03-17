@@ -6,6 +6,8 @@ import (
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
+	teamsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/teams/repositories"
+	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	"github.com/uptrace/bun"
 )
@@ -33,8 +35,11 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	voteRepo := roomsrepositories.NewRoomVoteRepository(deps.DB)
 	roundRepo := roomsrepositories.NewRoomTaskRoundRepository(deps.DB)
 	participantRepo := roomsrepositories.NewRoomParticipantRepository(deps.DB)
+	teamRepo := teamsrepositories.NewTeamRepository(deps.DB)
+	memberRepo := teamsrepositories.NewTeamMemberRepository(deps.DB)
+	userRepo := usersrepositories.NewUserRepository(deps.DB)
 	expirySvc := NewRoomsExpiryService(roomsRepo, deps.WsService)
-	svc := NewRoomsService(roomsRepo, participantRepo)
+	svc := NewRoomsService(roomsRepo, participantRepo, teamRepo, memberRepo, userRepo, deps.InvitesService)
 	voteSvc := NewRoomsVoteService(roomsRepo, taskRepo, voteRepo, roundRepo, participantRepo, expirySvc)
 	taskSvc := NewRoomsTaskService(roomsRepo, taskRepo, voteSvc, participantRepo, expirySvc)
 	ctrl := NewRoomsController(svc, taskSvc, deps.InvitesService, deps.AuthService)
