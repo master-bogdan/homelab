@@ -4,12 +4,16 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	invitesmodels "github.com/master-bogdan/estimate-room-api/internal/modules/invites/models"
 	invitesrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/invites/repositories"
+	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
+	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
 	teamsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/teams/models"
 	teamsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/teams/repositories"
+	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 	"github.com/uptrace/bun"
@@ -32,21 +36,44 @@ type InvitationTokenClaims struct {
 	RoomID       *string                      `json:"roomId,omitempty"`
 }
 
+type roomGuestTokenClaims struct {
+	RoomID        string                          `json:"roomId"`
+	ParticipantID string                          `json:"participantId"`
+	Role          roomsmodels.RoomParticipantRole `json:"role"`
+	ExpiresAt     time.Time                       `json:"expiresAt"`
+}
+
+type AcceptInvitationResult struct {
+	Invitation  *invitesmodels.InvitationModel
+	Room        *roomsmodels.RoomsModel
+	Participant *roomsmodels.RoomParticipantModel
+	GuestToken  string
+}
+
+const (
+	GuestAccessCookieName = "room_guest_token"
+	guestTokenTTL         = 30 * 24 * time.Hour
+)
+
 type InvitesService interface {
 	CreateInvitation(ctx context.Context, input CreateInvitationInput) (*invitesmodels.InvitationModel, string, error)
 	ParseInvitationToken(token string) (*InvitationTokenClaims, error)
 	PreviewInvitation(token string) (*invitesmodels.InvitationModel, error)
-	AcceptInvitation(ctx context.Context, token, actorUserID string) (*invitesmodels.InvitationModel, error)
+	AcceptInvitation(ctx context.Context, token, actorUserID string, guestName *string) (*AcceptInvitationResult, error)
 	DeclineInvitation(ctx context.Context, token, actorUserID string) (*invitesmodels.InvitationModel, error)
 	RevokeInvitation(ctx context.Context, invitationID, actorUserID string) (*invitesmodels.InvitationModel, error)
+	ValidateGuestRoomAccess(roomID, guestToken string) (*roomsmodels.RoomParticipantModel, error)
 }
 
 type invitesService struct {
-	db             *bun.DB
-	invitationRepo invitesrepositories.InvitationRepository
-	teamRepo       teamsrepositories.TeamRepository
-	memberRepo     teamsrepositories.TeamMemberRepository
-	tokenKey       []byte
+	db              *bun.DB
+	invitationRepo  invitesrepositories.InvitationRepository
+	roomsRepo       roomsrepositories.RoomsRepository
+	participantRepo roomsrepositories.RoomParticipantRepository
+	teamRepo        teamsrepositories.TeamRepository
+	memberRepo      teamsrepositories.TeamMemberRepository
+	userRepo        usersrepositories.UserRepository
+	tokenKey        []byte
 }
 
 func NewInvitesService(
@@ -55,11 +82,14 @@ func NewInvitesService(
 	tokenKey string,
 ) InvitesService {
 	return &invitesService{
-		db:             db,
-		invitationRepo: invitationRepo,
-		teamRepo:       teamsrepositories.NewTeamRepository(db),
-		memberRepo:     teamsrepositories.NewTeamMemberRepository(db),
-		tokenKey:       []byte(tokenKey),
+		db:              db,
+		invitationRepo:  invitationRepo,
+		roomsRepo:       roomsrepositories.NewRoomsRepository(db),
+		participantRepo: roomsrepositories.NewRoomParticipantRepository(db),
+		teamRepo:        teamsrepositories.NewTeamRepository(db),
+		memberRepo:      teamsrepositories.NewTeamMemberRepository(db),
+		userRepo:        usersrepositories.NewUserRepository(db),
+		tokenKey:        []byte(tokenKey),
 	}
 }
 
@@ -136,7 +166,8 @@ func (s *invitesService) PreviewInvitation(token string) (*invitesmodels.Invitat
 func (s *invitesService) AcceptInvitation(
 	ctx context.Context,
 	token, actorUserID string,
-) (*invitesmodels.InvitationModel, error) {
+	guestName *string,
+) (*AcceptInvitationResult, error) {
 	invitation, err := s.PreviewInvitation(token)
 	if err != nil {
 		return nil, err
@@ -146,11 +177,21 @@ func (s *invitesService) AcceptInvitation(
 		return nil, apperrors.ErrConflict
 	}
 
-	if invitation.Kind == invitesmodels.InvitationKindTeamMember {
-		return s.acceptTeamMemberInvitation(ctx, invitation, actorUserID)
-	}
+	switch invitation.Kind {
+	case invitesmodels.InvitationKindTeamMember:
+		acceptedInvitation, err := s.acceptTeamMemberInvitation(ctx, invitation, actorUserID)
+		if err != nil {
+			return nil, err
+		}
 
-	return s.invitationRepo.Accept(invitation.InvitationID)
+		return &AcceptInvitationResult{Invitation: acceptedInvitation}, nil
+	case invitesmodels.InvitationKindRoomEmail:
+		return s.acceptRoomEmailInvitation(ctx, invitation, actorUserID)
+	case invitesmodels.InvitationKindRoomLink:
+		return s.acceptRoomLinkInvitation(ctx, invitation, actorUserID, guestName)
+	default:
+		return nil, apperrors.ErrBadRequest
+	}
 }
 
 func (s *invitesService) DeclineInvitation(
@@ -170,6 +211,14 @@ func (s *invitesService) DeclineInvitation(
 		if err := s.ensureTeamMemberInviteActor(invitation, actorUserID); err != nil {
 			return nil, err
 		}
+	}
+	if invitation.Kind == invitesmodels.InvitationKindRoomEmail {
+		if err := s.ensureRoomEmailInviteActor(invitation, actorUserID); err != nil {
+			return nil, err
+		}
+	}
+	if invitation.Kind == invitesmodels.InvitationKindRoomLink {
+		return nil, apperrors.ErrBadRequest
 	}
 
 	return s.invitationRepo.Decline(invitation.InvitationID)
@@ -193,8 +242,43 @@ func (s *invitesService) RevokeInvitation(
 			return nil, err
 		}
 	}
+	if invitation.Kind == invitesmodels.InvitationKindRoomEmail || invitation.Kind == invitesmodels.InvitationKindRoomLink {
+		if _, err := s.ensureRoomAdmin(invitation, actorUserID); err != nil {
+			return nil, err
+		}
+	}
 
 	return s.invitationRepo.Revoke(invitation.InvitationID)
+}
+
+func (s *invitesService) ValidateGuestRoomAccess(roomID, guestToken string) (*roomsmodels.RoomParticipantModel, error) {
+	claims, err := s.parseGuestToken(strings.TrimSpace(guestToken))
+	if err != nil {
+		return nil, apperrors.ErrUnauthorized
+	}
+
+	if claims.RoomID != roomID || claims.Role != roomsmodels.RoomParticipantRoleGuest {
+		return nil, apperrors.ErrForbidden
+	}
+
+	if !claims.ExpiresAt.IsZero() && claims.ExpiresAt.Before(time.Now()) {
+		return nil, apperrors.ErrUnauthorized
+	}
+
+	participant, err := s.participantRepo.FindActiveByID(roomID, claims.ParticipantID)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil, apperrors.ErrForbidden
+		}
+
+		return nil, err
+	}
+
+	if participant.Role != roomsmodels.RoomParticipantRoleGuest {
+		return nil, apperrors.ErrForbidden
+	}
+
+	return participant, nil
 }
 
 func (s *invitesService) generateInvitationToken(invitation *invitesmodels.InvitationModel) (string, error) {
@@ -299,6 +383,95 @@ func sameOptionalString(left, right *string) bool {
 	}
 }
 
+func (s *invitesService) acceptRoomEmailInvitation(
+	ctx context.Context,
+	invitation *invitesmodels.InvitationModel,
+	actorUserID string,
+) (*AcceptInvitationResult, error) {
+	if err := s.ensureRoomEmailInviteActor(invitation, actorUserID); err != nil {
+		return nil, err
+	}
+
+	room, err := s.loadActiveRoomFromInvitation(invitation)
+	if err != nil {
+		return nil, err
+	}
+
+	var participant *roomsmodels.RoomParticipantModel
+	err = s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		participantRepo := roomsrepositories.NewRoomParticipantRepository(tx)
+		invitationRepo := invitesrepositories.NewInvitationRepository(tx)
+
+		participant, err = participantRepo.FindActiveByUserID(room.RoomID, actorUserID)
+		switch {
+		case err == nil:
+			_, err = invitationRepo.Accept(invitation.InvitationID)
+			return err
+		case err != nil && !errors.Is(err, apperrors.ErrNotFound):
+			return err
+		}
+
+		participant, err = participantRepo.Create(&roomsmodels.RoomParticipantModel{
+			RoomParticipantID: uuid.NewString(),
+			RoomID:            room.RoomID,
+			UserID:            &actorUserID,
+			Role:              roomsmodels.RoomParticipantRoleMember,
+		})
+		if err != nil {
+			return err
+		}
+
+		_, err = invitationRepo.Accept(invitation.InvitationID)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.roomsRepo.TouchActivity(room.RoomID); err != nil {
+		return nil, err
+	}
+
+	fullRoom, err := s.roomsRepo.FindByID(room.RoomID)
+	if err != nil {
+		return nil, err
+	}
+
+	acceptedInvitation, err := s.invitationRepo.FindByID(invitation.InvitationID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AcceptInvitationResult{
+		Invitation:  acceptedInvitation,
+		Room:        fullRoom,
+		Participant: participant,
+	}, nil
+}
+
+func (s *invitesService) acceptRoomLinkInvitation(
+	ctx context.Context,
+	invitation *invitesmodels.InvitationModel,
+	actorUserID string,
+	guestName *string,
+) (*AcceptInvitationResult, error) {
+	room, err := s.loadActiveRoomFromInvitation(invitation)
+	if err != nil {
+		return nil, err
+	}
+
+	normalizedActorUserID := strings.TrimSpace(actorUserID)
+	if normalizedActorUserID != "" {
+		return s.joinRegisteredRoomParticipant(room, invitation, normalizedActorUserID)
+	}
+
+	if guestName == nil || strings.TrimSpace(*guestName) == "" {
+		return nil, apperrors.ErrBadRequest
+	}
+
+	return s.joinGuestRoomParticipant(ctx, room, invitation, *guestName)
+}
+
 func (s *invitesService) acceptTeamMemberInvitation(
 	ctx context.Context,
 	invitation *invitesmodels.InvitationModel,
@@ -349,6 +522,95 @@ func (s *invitesService) acceptTeamMemberInvitation(
 	return s.invitationRepo.FindByID(invitation.InvitationID)
 }
 
+func (s *invitesService) joinRegisteredRoomParticipant(
+	room *roomsmodels.RoomsModel,
+	invitation *invitesmodels.InvitationModel,
+	actorUserID string,
+) (*AcceptInvitationResult, error) {
+	participant, err := s.participantRepo.FindActiveByUserID(room.RoomID, actorUserID)
+	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+		return nil, err
+	}
+
+	if participant == nil {
+		participant, err = s.participantRepo.Create(&roomsmodels.RoomParticipantModel{
+			RoomParticipantID: uuid.NewString(),
+			RoomID:            room.RoomID,
+			UserID:            &actorUserID,
+			Role:              roomsmodels.RoomParticipantRoleMember,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := s.roomsRepo.TouchActivity(room.RoomID); err != nil {
+		return nil, err
+	}
+
+	fullRoom, err := s.roomsRepo.FindByID(room.RoomID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AcceptInvitationResult{
+		Invitation:  invitation,
+		Room:        fullRoom,
+		Participant: participant,
+	}, nil
+}
+
+func (s *invitesService) joinGuestRoomParticipant(
+	ctx context.Context,
+	room *roomsmodels.RoomsModel,
+	invitation *invitesmodels.InvitationModel,
+	guestName string,
+) (*AcceptInvitationResult, error) {
+	trimmedGuestName := strings.TrimSpace(guestName)
+	if trimmedGuestName == "" {
+		return nil, apperrors.ErrBadRequest
+	}
+
+	participant, err := s.participantRepo.FindActiveByGuestName(room.RoomID, trimmedGuestName)
+	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+		return nil, err
+	}
+	if participant != nil {
+		return nil, apperrors.ErrConflict
+	}
+
+	participant, err = s.participantRepo.Create(&roomsmodels.RoomParticipantModel{
+		RoomParticipantID: uuid.NewString(),
+		RoomID:            room.RoomID,
+		GuestName:         &trimmedGuestName,
+		Role:              roomsmodels.RoomParticipantRoleGuest,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	guestToken, err := s.generateGuestToken(room.RoomID, participant.RoomParticipantID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.roomsRepo.TouchActivity(room.RoomID); err != nil {
+		return nil, err
+	}
+
+	fullRoom, err := s.roomsRepo.FindByID(room.RoomID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AcceptInvitationResult{
+		Invitation:  invitation,
+		Room:        fullRoom,
+		Participant: participant,
+		GuestToken:  guestToken,
+	}, nil
+}
+
 func (s *invitesService) ensureTeamMemberInviteActor(
 	invitation *invitesmodels.InvitationModel,
 	actorUserID string,
@@ -359,6 +621,31 @@ func (s *invitesService) ensureTeamMemberInviteActor(
 	}
 
 	if invitation.InvitedUserID == nil || *invitation.InvitedUserID != normalizedActorUserID {
+		return apperrors.ErrForbidden
+	}
+
+	return nil
+}
+
+func (s *invitesService) ensureRoomEmailInviteActor(
+	invitation *invitesmodels.InvitationModel,
+	actorUserID string,
+) error {
+	normalizedActorUserID := strings.TrimSpace(actorUserID)
+	if normalizedActorUserID == "" {
+		return apperrors.ErrUnauthorized
+	}
+
+	user, err := s.userRepo.FindByID(normalizedActorUserID)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrUserNotFound) {
+			return apperrors.ErrUnauthorized
+		}
+
+		return err
+	}
+
+	if invitation.InvitedEmail == nil || user.Email == nil || !strings.EqualFold(*invitation.InvitedEmail, *user.Email) {
 		return apperrors.ErrForbidden
 	}
 
@@ -397,4 +684,61 @@ func (s *invitesService) ensureTeamOwner(
 	}
 
 	return team, nil
+}
+
+func (s *invitesService) ensureRoomAdmin(
+	invitation *invitesmodels.InvitationModel,
+	actorUserID string,
+) (*roomsmodels.RoomsModel, error) {
+	normalizedActorUserID := strings.TrimSpace(actorUserID)
+	if normalizedActorUserID == "" {
+		return nil, apperrors.ErrUnauthorized
+	}
+
+	if invitation.RoomID == nil {
+		return nil, apperrors.ErrBadRequest
+	}
+
+	room, err := s.roomsRepo.FindByID(*invitation.RoomID)
+	if err != nil {
+		return nil, err
+	}
+
+	if room.AdminUserID != normalizedActorUserID {
+		return nil, apperrors.ErrForbidden
+	}
+
+	return room, nil
+}
+
+func (s *invitesService) loadActiveRoomFromInvitation(
+	invitation *invitesmodels.InvitationModel,
+) (*roomsmodels.RoomsModel, error) {
+	if invitation.RoomID == nil {
+		return nil, apperrors.ErrBadRequest
+	}
+
+	room, err := s.roomsRepo.FindByID(*invitation.RoomID)
+	if err != nil {
+		return nil, err
+	}
+
+	if room.Status != "ACTIVE" {
+		return nil, apperrors.ErrForbidden
+	}
+
+	return room, nil
+}
+
+func (s *invitesService) generateGuestToken(roomID, participantID string) (string, error) {
+	return utils.GenerateToken(s.tokenKey, roomGuestTokenClaims{
+		RoomID:        roomID,
+		ParticipantID: participantID,
+		Role:          roomsmodels.RoomParticipantRoleGuest,
+		ExpiresAt:     time.Now().Add(guestTokenTTL),
+	})
+}
+
+func (s *invitesService) parseGuestToken(token string) (*roomGuestTokenClaims, error) {
+	return utils.ParseToken[roomGuestTokenClaims](s.tokenKey, token)
 }

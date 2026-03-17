@@ -1,12 +1,14 @@
 package invites
 
 import (
+	"encoding/json"
 	stdErrors "errors"
+	"io"
 	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/invites/dto"
+	invitesdto "github.com/master-bogdan/estimate-room-api/internal/modules/invites/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/httputils"
@@ -50,13 +52,44 @@ func (c *invitesController) AcceptInvitation(w http.ResponseWriter, r *http.Requ
 	token := chi.URLParam(r, "token")
 	userID, _ := c.optionalUserID(r)
 
-	invitation, err := c.service.AcceptInvitation(r.Context(), token, userID)
+	dto := invitesdto.AcceptInvitationDTO{}
+	if r.Body != nil {
+		if err := json.NewDecoder(r.Body).Decode(&dto); err != nil && !stdErrors.Is(err, io.EOF) {
+			c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
+			return
+		}
+	}
+	if err := dto.Validate(); err != nil {
+		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
+		return
+	}
+
+	result, err := c.service.AcceptInvitation(r.Context(), token, userID, dto.GuestName)
 	if err != nil {
 		c.writeInviteError(w, r, err)
 		return
 	}
 
-	httputils.WriteResponse(w, invitesdto.NewInvitationResponse(invitation))
+	if result.GuestToken != "" {
+		http.SetCookie(w, &http.Cookie{
+			Name:     GuestAccessCookieName,
+			Value:    result.GuestToken,
+			HttpOnly: true,
+			Secure:   r.TLS != nil,
+			Path:     "/api/v1/rooms/",
+			SameSite: http.SameSiteLaxMode,
+		})
+	}
+
+	if result.Room != nil {
+		httputils.WriteResponse(w, map[string]any{
+			"room":        result.Room,
+			"participant": result.Participant,
+		})
+		return
+	}
+
+	httputils.WriteResponse(w, invitesdto.NewInvitationResponse(result.Invitation))
 }
 
 func (c *invitesController) DeclineInvitation(w http.ResponseWriter, r *http.Request) {

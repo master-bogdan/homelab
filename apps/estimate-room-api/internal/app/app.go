@@ -112,11 +112,11 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		})
 
 		roomsModule := rooms.NewRoomsModule(rooms.RoomsModuleDeps{
-			Router:      r,
-			DB:          deps.DB,
-			WsService:   wsModule.Service,
-			AuthService: oauth2Module.AuthService,
-			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
+			Router:         r,
+			DB:             deps.DB,
+			WsService:      wsModule.Service,
+			AuthService:    oauth2Module.AuthService,
+			InvitesService: invitesModule.Service,
 		})
 
 		if roomsModule != nil && roomsModule.ExpiryService != nil {

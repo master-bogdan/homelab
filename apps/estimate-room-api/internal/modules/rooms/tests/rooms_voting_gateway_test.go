@@ -14,6 +14,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
@@ -65,6 +66,7 @@ func setupRoomsRealtimeTest(t *testing.T) (*httptest.Server, *bun.DB) {
 
 	_, err := db.ExecContext(context.Background(), `
 		TRUNCATE TABLE
+			invitations,
 			votes,
 			task_rounds,
 			tasks,
@@ -94,13 +96,19 @@ func setupRoomsRealtimeTest(t *testing.T) (*httptest.Server, *bun.DB) {
 			Server:         pubSub,
 			OriginPatterns: []string{testWSOrigin},
 		})
-
-		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
+		invitesModule := invites.NewInvitesModule(invites.InvitesModuleDeps{
 			Router:      r,
 			DB:          db,
-			WsService:   wsModule.Service,
 			AuthService: authService,
 			TokenKey:    testutils.TestTokenKey,
+		})
+
+		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
+			Router:         r,
+			DB:             db,
+			WsService:      wsModule.Service,
+			AuthService:    authService,
+			InvitesService: invitesModule.Service,
 		})
 	})
 

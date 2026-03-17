@@ -21,10 +21,10 @@ type RoomParticipantRepository interface {
 }
 
 type roomParticipantRepository struct {
-	db *bun.DB
+	db bun.IDB
 }
 
-func NewRoomParticipantRepository(db *bun.DB) RoomParticipantRepository {
+func NewRoomParticipantRepository(db bun.IDB) RoomParticipantRepository {
 	return &roomParticipantRepository{db: db}
 }
 

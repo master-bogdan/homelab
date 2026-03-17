@@ -169,6 +169,7 @@ func TestAcceptInvitation_TransitionsToAccepted(t *testing.T) {
 	defer db.Close()
 
 	adminUserID := testutils.SeedUser(t, db, "admin@example.com", "password123")
+	inviteeUserID := testutils.SeedUser(t, db, "invitee@example.com", "password123")
 	roomID := seedInviteRoom(t, db, adminUserID, "room-accept", "room-code-accept")
 
 	invitation, token, err := svc.CreateInvitation(context.Background(), invites.CreateInvitationInput{
@@ -181,18 +182,27 @@ func TestAcceptInvitation_TransitionsToAccepted(t *testing.T) {
 		t.Fatalf("failed to create room email invite: %v", err)
 	}
 
-	acceptedInvitation, err := svc.AcceptInvitation(context.Background(), token, "")
+	acceptedResult, err := svc.AcceptInvitation(context.Background(), token, inviteeUserID, nil)
 	if err != nil {
 		t.Fatalf("failed to accept invitation: %v", err)
 	}
-	if acceptedInvitation.Status != invitesmodels.InvitationStatusAccepted {
-		t.Fatalf("expected ACCEPTED status, got %s", acceptedInvitation.Status)
+	if acceptedResult.Invitation == nil {
+		t.Fatal("expected accepted invitation result")
 	}
-	if acceptedInvitation.AcceptedAt == nil {
+	if acceptedResult.Invitation.Status != invitesmodels.InvitationStatusAccepted {
+		t.Fatalf("expected ACCEPTED status, got %s", acceptedResult.Invitation.Status)
+	}
+	if acceptedResult.Invitation.AcceptedAt == nil {
 		t.Fatal("expected acceptedAt to be set")
 	}
-	if acceptedInvitation.DeclinedAt != nil || acceptedInvitation.RevokedAt != nil {
+	if acceptedResult.Invitation.DeclinedAt != nil || acceptedResult.Invitation.RevokedAt != nil {
 		t.Fatal("expected only acceptedAt to be set")
+	}
+	if acceptedResult.Participant == nil || acceptedResult.Participant.UserID == nil || *acceptedResult.Participant.UserID != inviteeUserID {
+		t.Fatalf("expected member participant for user %s, got %#v", inviteeUserID, acceptedResult.Participant)
+	}
+	if acceptedResult.Room == nil || acceptedResult.Room.RoomID != roomID {
+		t.Fatalf("expected room %s in result, got %#v", roomID, acceptedResult.Room)
 	}
 
 	storedInvitation, err := repo.FindByID(invitation.InvitationID)
@@ -203,7 +213,7 @@ func TestAcceptInvitation_TransitionsToAccepted(t *testing.T) {
 		t.Fatalf("expected stored status ACCEPTED, got %s", storedInvitation.Status)
 	}
 
-	_, err = svc.AcceptInvitation(context.Background(), token, "")
+	_, err = svc.AcceptInvitation(context.Background(), token, inviteeUserID, nil)
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("expected conflict on second accept, got %v", err)
 	}
@@ -214,6 +224,7 @@ func TestDeclineInvitation_TransitionsToDeclined(t *testing.T) {
 	defer db.Close()
 
 	adminUserID := testutils.SeedUser(t, db, "admin@example.com", "password123")
+	inviteeUserID := testutils.SeedUser(t, db, "invitee@example.com", "password123")
 	roomID := seedInviteRoom(t, db, adminUserID, "room-decline", "room-code-decline")
 
 	invitation, token, err := svc.CreateInvitation(context.Background(), invites.CreateInvitationInput{
@@ -226,7 +237,7 @@ func TestDeclineInvitation_TransitionsToDeclined(t *testing.T) {
 		t.Fatalf("failed to create invitation: %v", err)
 	}
 
-	declinedInvitation, err := svc.DeclineInvitation(context.Background(), token, "")
+	declinedInvitation, err := svc.DeclineInvitation(context.Background(), token, inviteeUserID)
 	if err != nil {
 		t.Fatalf("failed to decline invitation: %v", err)
 	}
@@ -257,7 +268,7 @@ func TestRevokeInvitation_TransitionsToRevoked(t *testing.T) {
 		t.Fatalf("failed to create invitation: %v", err)
 	}
 
-	revokedInvitation, err := svc.RevokeInvitation(context.Background(), invitation.InvitationID, "")
+	revokedInvitation, err := svc.RevokeInvitation(context.Background(), invitation.InvitationID, adminUserID)
 	if err != nil {
 		t.Fatalf("failed to revoke invitation: %v", err)
 	}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/rooms"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
@@ -27,6 +28,7 @@ func setupRoomsTasksTest(t *testing.T) (*chi.Mux, *bun.DB) {
 
 	_, err := db.ExecContext(context.Background(), `
 		TRUNCATE TABLE
+			invitations,
 			votes,
 			tasks,
 			room_participants,
@@ -48,12 +50,19 @@ func setupRoomsTasksTest(t *testing.T) (*chi.Mux, *bun.DB) {
 	wsService := ws.NewService(nil, "test-room-events")
 
 	router.Route("/api/v1", func(r chi.Router) {
-		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
+		invitesModule := invites.NewInvitesModule(invites.InvitesModuleDeps{
 			Router:      r,
 			DB:          db,
-			WsService:   wsService,
 			AuthService: authService,
 			TokenKey:    testutils.TestTokenKey,
+		})
+
+		rooms.NewRoomsModule(rooms.RoomsModuleDeps{
+			Router:         r,
+			DB:             db,
+			WsService:      wsService,
+			AuthService:    authService,
+			InvitesService: invitesModule.Service,
 		})
 	})
 
@@ -517,7 +526,7 @@ func TestInviteFlow_AuthenticatedUserJoinsAsMember(t *testing.T) {
 	roomID, inviteToken := createRoomViaAPI(t, router, adminToken)
 
 	memberToken, memberUserID := createAccessToken(t, db)
-	joinReq := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+roomID+"/invites/"+inviteToken, nil)
+	joinReq := httptest.NewRequest(http.MethodPost, "/api/v1/invites/"+inviteToken+"/accept", nil)
 	joinReq.Header.Set("Authorization", "Bearer "+memberToken)
 
 	joinRR := httptest.NewRecorder()
@@ -557,7 +566,7 @@ func TestInviteFlow_GuestJoinsAndCanReadRoom(t *testing.T) {
 	adminToken, _ := createAccessToken(t, db)
 	roomID, inviteToken := createRoomViaAPI(t, router, adminToken)
 
-	joinReq := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+roomID+"/invites/"+inviteToken, bytes.NewReader([]byte(`{"guestName":"Guest One"}`)))
+	joinReq := httptest.NewRequest(http.MethodPost, "/api/v1/invites/"+inviteToken+"/accept", bytes.NewReader([]byte(`{"guestName":"Guest One"}`)))
 	joinRR := httptest.NewRecorder()
 	router.ServeHTTP(joinRR, joinReq)
 
