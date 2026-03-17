@@ -233,9 +233,19 @@ func (s *roomsService) UpdateRoom(roomID, userID string, input UpdateRoomInput) 
 		}
 		input.Name = &name
 	}
+	if input.Status != nil {
+		status := strings.TrimSpace(*input.Status)
+		input.Status = &status
+	}
 
 	if roomPatchIsNoop(room, input) {
 		return room, nil
+	}
+	if isTerminalRoomStatus(room.Status) {
+		return nil, fmt.Errorf("%w: terminal rooms cannot be updated", apperrors.ErrBadRequest)
+	}
+	if input.Status != nil && *input.Status == "EXPIRED" {
+		return nil, fmt.Errorf("%w: room expiry is system managed", apperrors.ErrBadRequest)
 	}
 
 	return s.roomsRepo.Update(roomID, roomsrepositories.UpdateRoomFields{
@@ -252,6 +262,10 @@ func roomPatchIsNoop(room *roomsmodels.RoomsModel, input UpdateRoomInput) bool {
 		return false
 	}
 	return true
+}
+
+func isTerminalRoomStatus(status string) bool {
+	return status == "FINISHED" || status == "EXPIRED"
 }
 
 type roomInvitationPlan struct {

@@ -94,10 +94,8 @@ func (r *roomsRepository) Update(roomID string, input UpdateRoomFields) (*roomsm
 
 	if input.Status != nil {
 		query = query.Set("status = ?", *input.Status)
-		if *input.Status == "FINISHED" || *input.Status == "EXPIRED" {
+		if isTerminalRoomStatus(*input.Status) {
 			query = query.Set("finished_at = COALESCE(finished_at, NOW())")
-		} else {
-			query = query.Set("finished_at = NULL")
 		}
 	}
 
@@ -147,4 +145,8 @@ func (r *roomsRepository) ExpireInactiveRooms(cutoff time.Time) ([]*roomsmodels.
 	}
 
 	return rooms, nil
+}
+
+func isTerminalRoomStatus(status string) bool {
+	return status == "FINISHED" || status == "EXPIRED"
 }

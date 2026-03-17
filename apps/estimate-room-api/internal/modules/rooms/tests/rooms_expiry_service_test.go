@@ -163,3 +163,53 @@ func TestRoomsExpiry_TouchActivityUpdatesOnlyActiveRooms(t *testing.T) {
 		t.Fatalf("expected expired room to stay EXPIRED, got %s", expiredRoom.Status)
 	}
 }
+
+func TestRoomsExpiry_IgnoreFinishedRooms(t *testing.T) {
+	_, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	_, finishedAdminUserID := createAccessToken(t, db)
+	finishedRoomID := seedRoom(t, db, finishedAdminUserID)
+	_, staleActiveAdminUserID := createAccessToken(t, db)
+	staleActiveRoomID := seedRoom(t, db, staleActiveAdminUserID)
+
+	oldActivityAt := time.Now().Add(-45 * time.Minute).UTC()
+	if _, err := db.ExecContext(context.Background(), `
+		UPDATE rooms
+		SET status = 'FINISHED', finished_at = NOW(), last_activity_at = $2
+		WHERE room_id = $1
+	`, finishedRoomID, oldActivityAt); err != nil {
+		t.Fatalf("failed to mark finished room: %v", err)
+	}
+	if _, err := db.ExecContext(context.Background(), `
+		UPDATE rooms
+		SET last_activity_at = $2
+		WHERE room_id = $1
+	`, staleActiveRoomID, oldActivityAt); err != nil {
+		t.Fatalf("failed to mark active room stale: %v", err)
+	}
+
+	expiryService := rooms.NewRoomsExpiryService(roomsrepositories.NewRoomsRepository(db), nil)
+	expiredRooms, err := expiryService.ExpireInactiveRooms(time.Now().Add(-30 * time.Minute))
+	if err != nil {
+		t.Fatalf("failed to expire inactive rooms: %v", err)
+	}
+	if len(expiredRooms) != 1 {
+		t.Fatalf("expected only the active stale room to expire, got %d", len(expiredRooms))
+	}
+	if expiredRooms[0].RoomID != staleActiveRoomID {
+		t.Fatalf("expected stale active room %s to expire, got %s", staleActiveRoomID, expiredRooms[0].RoomID)
+	}
+
+	roomsRepo := roomsrepositories.NewRoomsRepository(db)
+	finishedRoom, err := roomsRepo.FindByID(finishedRoomID)
+	if err != nil {
+		t.Fatalf("failed to load finished room: %v", err)
+	}
+	if finishedRoom.Status != "FINISHED" {
+		t.Fatalf("expected finished room to stay FINISHED, got %s", finishedRoom.Status)
+	}
+	if finishedRoom.FinishedAt == nil {
+		t.Fatal("expected finished room to keep finishedAt")
+	}
+}
