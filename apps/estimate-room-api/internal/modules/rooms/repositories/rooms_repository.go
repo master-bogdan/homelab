@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 	"time"
 
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
@@ -21,7 +20,7 @@ type RoomsRepository interface {
 }
 
 type roomsRepository struct {
-	db *bun.DB
+	db bun.IDB
 }
 
 type UpdateRoomFields struct {
@@ -29,7 +28,7 @@ type UpdateRoomFields struct {
 	Status *string
 }
 
-func NewRoomsRepository(db *bun.DB) *roomsRepository {
+func NewRoomsRepository(db bun.IDB) *roomsRepository {
 	return &roomsRepository{db: db}
 }
 
@@ -38,13 +37,9 @@ func (r *roomsRepository) Create(ctx context.Context, model *roomsmodels.RoomsMo
 		ctx = context.Background()
 	}
 
-	if model.TeamID != nil && strings.TrimSpace(*model.TeamID) == "" {
-		model.TeamID = nil
-	}
-
 	_, err := r.db.NewInsert().
 		Model(model).
-		Column("code", "name", "admin_user_id", "team_id", "deck").
+		Column("code", "name", "admin_user_id", "deck").
 		Returning("*").
 		Exec(ctx)
 	if err != nil {

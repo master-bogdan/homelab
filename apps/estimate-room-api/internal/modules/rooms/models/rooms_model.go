@@ -13,7 +13,6 @@ type RoomsModel struct {
 	Code           string     `bun:"code"`
 	Name           string     `bun:"name"`
 	AdminUserID    string     `bun:"admin_user_id"`
-	TeamID         *string    `bun:"team_id"`
 	Deck           RoomDeck   `bun:"deck,type:jsonb"`
 	Status         string     `bun:"status"`
 	CreatedAt      time.Time  `bun:"created_at"`

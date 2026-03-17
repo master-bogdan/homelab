@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-		"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
@@ -53,7 +53,7 @@ func setupTest(t *testing.T) (*chi.Mux, *bun.DB, string, string, string, string)
 	return router, db, clientID, userID, sessionID, redirectURI
 }
 
-func TestAuthorize_WithValidSession_ReturnsCode_E2E(t *testing.T) {
+func TestAuthorize_WithValidSession_ReturnsCode_Integration(t *testing.T) {
 	router, db, clientID, _, sessionID, redirectURI := setupTest(t)
 	defer db.Close()
 
@@ -80,7 +80,7 @@ func TestAuthorize_WithValidSession_ReturnsCode_E2E(t *testing.T) {
 	}
 }
 
-func TestAuthorize_WithoutSession_RedirectsToLogin_E2E(t *testing.T) {
+func TestAuthorize_WithoutSession_RedirectsToLogin_Integration(t *testing.T) {
 	router, db, clientID, _, _, redirectURI := setupTest(t)
 	defer db.Close()
 
@@ -106,7 +106,7 @@ func TestAuthorize_WithoutSession_RedirectsToLogin_E2E(t *testing.T) {
 	}
 }
 
-func TestLogin_ValidUser_RedirectsWithCode_E2E(t *testing.T) {
+func TestLogin_ValidUser_RedirectsWithCode_Integration(t *testing.T) {
 	router, db, clientID, _, _, redirectURI := setupTest(t)
 	defer db.Close()
 
@@ -138,7 +138,7 @@ func TestLogin_ValidUser_RedirectsWithCode_E2E(t *testing.T) {
 	}
 }
 
-func TestShowLoginForm_ReturnsHtml_E2E(t *testing.T) {
+func TestShowLoginForm_ReturnsHtml_Integration(t *testing.T) {
 	router, db, clientID, _, _, redirectURI := setupTest(t)
 	defer db.Close()
 
@@ -169,7 +169,7 @@ func generateCodeChallenge(verifier string) string {
 	return base64.RawURLEncoding.EncodeToString(hash[:])
 }
 
-func TestToken_AuthorizationCodeFlow_ReturnsTokens_E2E(t *testing.T) {
+func TestToken_AuthorizationCodeFlow_ReturnsTokens_Integration(t *testing.T) {
 	router, db, clientID, _, sessionID, redirectURI := setupTest(t)
 	defer db.Close()
 
@@ -241,7 +241,7 @@ func TestToken_AuthorizationCodeFlow_ReturnsTokens_E2E(t *testing.T) {
 	}
 }
 
-func TestAuthorize_InvalidQueryParams_ReturnsBadRequest_E2E(t *testing.T) {
+func TestAuthorize_InvalidQueryParams_ReturnsBadRequest_Integration(t *testing.T) {
 	router, db, _, _, _, _ := setupTest(t)
 	defer db.Close()
 
@@ -254,7 +254,7 @@ func TestAuthorize_InvalidQueryParams_ReturnsBadRequest_E2E(t *testing.T) {
 	}
 }
 
-func TestLogin_InvalidJsonBody_ReturnsBadRequest_E2E(t *testing.T) {
+func TestLogin_InvalidJsonBody_ReturnsBadRequest_Integration(t *testing.T) {
 	router, db, _, _, _, _ := setupTest(t)
 	defer db.Close()
 
@@ -268,7 +268,7 @@ func TestLogin_InvalidJsonBody_ReturnsBadRequest_E2E(t *testing.T) {
 	}
 }
 
-func TestGetTokens_UnsupportedGrantType_ReturnsBadRequest_E2E(t *testing.T) {
+func TestGetTokens_UnsupportedGrantType_ReturnsBadRequest_Integration(t *testing.T) {
 	router, db, _, _, _, _ := setupTest(t)
 	defer db.Close()
 
@@ -285,7 +285,7 @@ func TestGetTokens_UnsupportedGrantType_ReturnsBadRequest_E2E(t *testing.T) {
 	}
 }
 
-func TestAuthorize_InvalidRedirectURI_ReturnsBadRequest_E2E(t *testing.T) {
+func TestAuthorize_InvalidRedirectURI_ReturnsBadRequest_Integration(t *testing.T) {
 	router, db, clientID, _, _, _ := setupTest(t)
 	defer db.Close()
 
@@ -306,7 +306,7 @@ func TestAuthorize_InvalidRedirectURI_ReturnsBadRequest_E2E(t *testing.T) {
 	}
 }
 
-func TestLogin_MissingRequiredField_ReturnsBadRequest_E2E(t *testing.T) {
+func TestLogin_MissingRequiredField_ReturnsBadRequest_Integration(t *testing.T) {
 	router, db, clientID, _, _, redirectURI := setupTest(t)
 	defer db.Close()
 

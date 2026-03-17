@@ -3,12 +3,13 @@ package rooms
 import (
 	"encoding/json"
 	stdErrors "errors"
-	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
+	invitesdto "github.com/master-bogdan/estimate-room-api/internal/modules/invites/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	roomsdto "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/dto"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
@@ -20,7 +21,6 @@ import (
 type RoomsController interface {
 	CreateRoom(w http.ResponseWriter, r *http.Request)
 	GetRoom(w http.ResponseWriter, r *http.Request)
-	JoinInvite(w http.ResponseWriter, r *http.Request)
 	UpdateRoom(w http.ResponseWriter, r *http.Request)
 	CreateTask(w http.ResponseWriter, r *http.Request)
 	ListTasks(w http.ResponseWriter, r *http.Request)
@@ -32,7 +32,7 @@ type RoomsController interface {
 type roomsController struct {
 	service       RoomsService
 	taskService   RoomsTaskService
-	inviteService RoomsInviteService
+	inviteService invites.InvitesService
 	authService   oauth2.AuthService
 	logger        *slog.Logger
 }
@@ -40,7 +40,7 @@ type roomsController struct {
 func NewRoomsController(
 	service RoomsService,
 	taskService RoomsTaskService,
-	inviteService RoomsInviteService,
+	inviteService invites.InvitesService,
 	authService oauth2.AuthService,
 ) RoomsController {
 	return &roomsController{
@@ -72,11 +72,6 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var teamID *string
-	if trimmedTeamID := strings.TrimSpace(dto.TeamID); trimmedTeamID != "" {
-		teamID = &trimmedTeamID
-	}
-
 	deck := roomsmodels.RoomDeck{}
 	if dto.Deck != nil {
 		deck = roomsmodels.RoomDeck{
@@ -86,29 +81,53 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	room := roomsmodels.RoomsModel{
-		Name:        dto.Name,
-		TeamID:      teamID,
-		Deck:        deck,
-		AdminUserID: userID,
-	}
-
-	createdRoom, err := c.service.CreateRoom(r.Context(), room)
-	if err != nil {
-		c.writeError(w, r, apperrors.ErrBadRequest, "failed to create room", err)
-		return
-	}
-
-	inviteToken, err := c.inviteService.GenerateInviteToken(createdRoom.RoomID, createdRoom.Code)
-	if err != nil {
-		c.writeError(w, r, apperrors.ErrInternal, "", err)
-		return
-	}
-
-	httputils.WriteResponse(w, map[string]any{
-		"room":        createdRoom,
-		"inviteToken": inviteToken,
+	createdRoom, err := c.service.CreateRoom(r.Context(), CreateRoomInput{
+		Name:            dto.Name,
+		Deck:            deck,
+		AdminUserID:     userID,
+		InviteTeamID:    stringPointerOrNil(dto.InviteTeamID),
+		InviteEmails:    dto.InviteEmails,
+		CreateShareLink: dto.CreateShareLink,
 	})
+	if err != nil {
+		switch {
+		case stdErrors.Is(err, apperrors.ErrForbidden):
+			c.writeError(w, r, apperrors.ErrForbidden, err.Error(), err)
+		case stdErrors.Is(err, apperrors.ErrNotFound):
+			c.writeError(w, r, apperrors.ErrNotFound, err.Error(), err)
+		case stdErrors.Is(err, apperrors.ErrBadRequest):
+			c.writeError(w, r, apperrors.ErrBadRequest, "failed to create room", err)
+		default:
+			c.writeError(w, r, apperrors.ErrInternal, "failed to create room", err)
+		}
+		return
+	}
+
+	response := roomsdto.CreateRoomResponse{
+		Room:              createdRoom.Room,
+		EmailInvites:      make([]invitesdto.InvitationWithTokenResponse, 0, len(createdRoom.EmailInvitations)),
+		SkippedRecipients: make([]roomsdto.CreateRoomSkippedRecipientResponse, 0, len(createdRoom.SkippedRecipients)),
+	}
+
+	for _, invite := range createdRoom.EmailInvitations {
+		response.EmailInvites = append(response.EmailInvites, invitesdto.NewInvitationWithTokenResponse(invite.Invitation, invite.Token))
+	}
+
+	if createdRoom.ShareLink != nil {
+		shareLink := invitesdto.NewInvitationWithTokenResponse(createdRoom.ShareLink.Invitation, createdRoom.ShareLink.Token)
+		response.ShareLink = &shareLink
+		response.InviteToken = createdRoom.ShareLink.Token
+	}
+
+	for _, skipped := range createdRoom.SkippedRecipients {
+		response.SkippedRecipients = append(response.SkippedRecipients, roomsdto.CreateRoomSkippedRecipientResponse{
+			UserID: skipped.UserID,
+			Email:  skipped.Email,
+			Reason: skipped.Reason,
+		})
+	}
+
+	httputils.WriteResponse(w, response)
 }
 
 func (c *roomsController) GetRoom(w http.ResponseWriter, r *http.Request) {
@@ -126,53 +145,6 @@ func (c *roomsController) GetRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputils.WriteResponse(w, room)
-}
-
-func (c *roomsController) JoinInvite(w http.ResponseWriter, r *http.Request) {
-	roomID := chi.URLParam(r, "id")
-	token := chi.URLParam(r, "token")
-
-	dto := roomsdto.JoinRoomInviteDTO{}
-	if r.Body != nil {
-		if err := json.NewDecoder(r.Body).Decode(&dto); err != nil && !stdErrors.Is(err, io.EOF) {
-			c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
-			return
-		}
-	}
-
-	if err := dto.Validate(); err != nil {
-		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
-		return
-	}
-
-	userID, isAuthenticated := c.optionalUserID(r)
-
-	var joinUserID *string
-	if isAuthenticated {
-		joinUserID = &userID
-	} else if dto.GuestName == nil {
-		c.writeError(w, r, apperrors.ErrBadRequest, "guestName is required for guest join", nil)
-		return
-	}
-
-	result, err := c.inviteService.Join(roomID, token, joinUserID, dto.GuestName)
-	if err != nil {
-		c.writeInviteError(w, r, err)
-		return
-	}
-
-	if result.GuestToken != "" {
-		http.SetCookie(w, &http.Cookie{
-			Name:     guestAccessCookieName,
-			Value:    result.GuestToken,
-			HttpOnly: true,
-			Secure:   r.TLS != nil,
-			Path:     "/api/v1/rooms/",
-			SameSite: http.SameSiteLaxMode,
-		})
-	}
-
-	httputils.WriteResponse(w, result)
 }
 
 func (c *roomsController) UpdateRoom(w http.ResponseWriter, r *http.Request) {
@@ -380,23 +352,6 @@ func (c *roomsController) writeRoomError(w http.ResponseWriter, r *http.Request,
 	}
 }
 
-func (c *roomsController) writeInviteError(w http.ResponseWriter, r *http.Request, err error) {
-	switch {
-	case stdErrors.Is(err, apperrors.ErrBadRequest):
-		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
-	case stdErrors.Is(err, apperrors.ErrUnauthorized):
-		c.writeError(w, r, apperrors.ErrUnauthorized, err.Error(), err)
-	case stdErrors.Is(err, apperrors.ErrNotFound):
-		c.writeError(w, r, apperrors.ErrNotFound, err.Error(), err)
-	case stdErrors.Is(err, apperrors.ErrConflict):
-		c.writeError(w, r, apperrors.ErrConflict, err.Error(), err)
-	case stdErrors.Is(err, apperrors.ErrForbidden):
-		c.writeError(w, r, apperrors.ErrForbidden, err.Error(), err)
-	default:
-		c.writeError(w, r, apperrors.ErrInternal, "", err)
-	}
-}
-
 func (c *roomsController) writeTaskError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case stdErrors.Is(err, apperrors.ErrNotFound):
@@ -434,11 +389,20 @@ func (c *roomsController) ensureRoomReadable(r *http.Request, roomID string) err
 		return c.service.ValidateUserRoomAccess(roomID, userID)
 	}
 
-	cookie, err := r.Cookie(guestAccessCookieName)
+	cookie, err := r.Cookie(invites.GuestAccessCookieName)
 	if err != nil {
 		return apperrors.ErrUnauthorized
 	}
 
 	_, err = c.inviteService.ValidateGuestRoomAccess(roomID, cookie.Value)
 	return err
+}
+
+func stringPointerOrNil(value string) *string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+
+	return &trimmed
 }

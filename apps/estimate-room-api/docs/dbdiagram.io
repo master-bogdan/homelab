@@ -13,6 +13,19 @@ Enum team_member_role {
   MEMBER
 }
 
+Enum invitation_kind {
+  TEAM_MEMBER
+  ROOM_EMAIL
+  ROOM_LINK
+}
+
+Enum invitation_status {
+  ACTIVE
+  ACCEPTED
+  DECLINED
+  REVOKED
+}
+
 Enum room_status {
   ACTIVE
   FINISHED
@@ -91,7 +104,6 @@ Table rooms {
   code               text        [not null, unique, note: 'short unique string used in URLs']
   name               text        [not null]
   admin_user_id      text        [not null, ref: > users.user_id]
-  team_id            text        [ref: > teams.team_id]
   deck               jsonb       [not null, note: 'Object with name, kind, values[]']
   status             room_status [not null, default: 'ACTIVE']
   created_at         timestamptz [not null, default: `now()`]
@@ -111,6 +123,29 @@ Table room_participants {
   role       room_participant_role [not null, default: 'MEMBER']
   joined_at  timestamptz          [not null, default: `now()`]
   left_at    timestamptz
+}
+
+Table invitations {
+  invitation_id      text              [pk]
+  kind               invitation_kind   [not null]
+  status             invitation_status [not null, default: 'ACTIVE']
+  team_id            text              [ref: > teams.team_id]
+  room_id            text              [ref: > rooms.room_id]
+  invited_user_id    text              [ref: > users.user_id]
+  invited_email      text
+  created_by_user_id text              [not null, ref: > users.user_id]
+  token_id           text              [not null, unique, note: 'token reference embedded in signed invite claims']
+  accepted_at        timestamptz
+  declined_at        timestamptz
+  revoked_at         timestamptz
+  created_at         timestamptz       [not null, default: `now()`]
+  updated_at         timestamptz       [not null, default: `now()`]
+
+  Indexes {
+    (room_id) [name: 'invitations_room_id_idx']
+    (team_id) [name: 'invitations_team_id_idx']
+    (invited_email) [name: 'invitations_active_invited_email_idx', note: 'partial index where status = ACTIVE and invited_email is not null']
+  }
 }
 
 Table tasks {

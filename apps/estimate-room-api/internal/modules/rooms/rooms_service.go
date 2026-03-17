@@ -4,42 +4,97 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
+	invitesmodels "github.com/master-bogdan/estimate-room-api/internal/modules/invites/models"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
 	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
+	teamsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/teams/models"
+	teamsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/teams/repositories"
+	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
+	"github.com/uptrace/bun"
 )
 
 type RoomsService interface {
-	CreateRoom(ctx context.Context, model roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error)
+	CreateRoom(ctx context.Context, input CreateRoomInput) (*CreateRoomResult, error)
 	GetRoom(roomID string) (*roomsmodels.RoomsModel, error)
 	ValidateUserRoomAccess(roomID, userID string) error
 	UpdateRoom(roomID, userID string, input UpdateRoomInput) (*roomsmodels.RoomsModel, error)
 }
 
+type CreateRoomInput struct {
+	Name            string
+	Deck            roomsmodels.RoomDeck
+	AdminUserID     string
+	InviteTeamID    *string
+	InviteEmails    []string
+	CreateShareLink bool
+}
+
+type CreatedRoomInvitation struct {
+	Invitation *invitesmodels.InvitationModel
+	Token      string
+}
+
+type CreateRoomSkippedRecipient struct {
+	UserID *string
+	Email  *string
+	Reason string
+}
+
+type CreateRoomResult struct {
+	Room              *roomsmodels.RoomsModel
+	EmailInvitations  []CreatedRoomInvitation
+	ShareLink         *CreatedRoomInvitation
+	SkippedRecipients []CreateRoomSkippedRecipient
+}
+
 type roomsService struct {
+	db              *bun.DB
 	roomsRepo       roomsrepositories.RoomsRepository
 	participantRepo roomsrepositories.RoomParticipantRepository
+	teamRepo        teamsrepositories.TeamRepository
+	memberRepo      teamsrepositories.TeamMemberRepository
+	userRepo        usersrepositories.UserRepository
+	invitesService  invites.InvitesService
 	logger          *slog.Logger
 }
 
 func NewRoomsService(
+	db *bun.DB,
 	roomsRepo roomsrepositories.RoomsRepository,
 	participantRepo roomsrepositories.RoomParticipantRepository,
+	teamRepo teamsrepositories.TeamRepository,
+	memberRepo teamsrepositories.TeamMemberRepository,
+	userRepo usersrepositories.UserRepository,
+	invitesService invites.InvitesService,
 ) RoomsService {
 	return &roomsService{
+		db:              db,
 		roomsRepo:       roomsRepo,
 		participantRepo: participantRepo,
+		teamRepo:        teamRepo,
+		memberRepo:      memberRepo,
+		userRepo:        userRepo,
+		invitesService:  invitesService,
 		logger:          logger.L().With(slog.String("service", "rooms")),
 	}
 }
 
-func (s *roomsService) CreateRoom(ctx context.Context, model roomsmodels.RoomsModel) (*roomsmodels.RoomsModel, error) {
+func (s *roomsService) CreateRoom(ctx context.Context, input CreateRoomInput) (*CreateRoomResult, error) {
+	model := roomsmodels.RoomsModel{
+		Name:        strings.TrimSpace(input.Name),
+		Deck:        input.Deck,
+		AdminUserID: input.AdminUserID,
+	}
+
 	if model.Deck.IsZero() {
 		model.Deck = roomsmodels.DefaultRoomDeck()
 	}
@@ -56,7 +111,12 @@ func (s *roomsService) CreateRoom(ctx context.Context, model roomsmodels.RoomsMo
 	model.Deck.Values = values
 
 	if !model.Deck.IsValid() {
-		return nil, errors.New("invalid deck")
+		return nil, fmt.Errorf("%w: invalid deck", apperrors.ErrBadRequest)
+	}
+
+	invitePlan, err := s.planRoomInvitations(input.AdminUserID, input.InviteTeamID, input.InviteEmails)
+	if err != nil {
+		return nil, err
 	}
 
 	timestamp := time.Now().String()
@@ -64,22 +124,72 @@ func (s *roomsService) CreateRoom(ctx context.Context, model roomsmodels.RoomsMo
 
 	model.Code = code
 
-	room, err := s.roomsRepo.Create(ctx, &model)
-	if err != nil {
-		return nil, err
+	result := &CreateRoomResult{
+		EmailInvitations:  make([]CreatedRoomInvitation, 0, len(invitePlan.Emails)),
+		SkippedRecipients: invitePlan.SkippedRecipients,
 	}
+	err = s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		roomRepo := roomsrepositories.NewRoomsRepository(tx)
+		participantRepo := roomsrepositories.NewRoomParticipantRepository(tx)
 
-	_, err = s.participantRepo.Create(&roomsmodels.RoomParticipantModel{
-		RoomParticipantID: uuid.NewString(),
-		RoomID:            room.RoomID,
-		UserID:            &room.AdminUserID,
-		Role:              roomsmodels.RoomParticipantRoleAdmin,
+		room, err := roomRepo.Create(ctx, &model)
+		if err != nil {
+			return err
+		}
+
+		_, err = participantRepo.Create(&roomsmodels.RoomParticipantModel{
+			RoomParticipantID: uuid.NewString(),
+			RoomID:            room.RoomID,
+			UserID:            &room.AdminUserID,
+			Role:              roomsmodels.RoomParticipantRoleAdmin,
+		})
+		if err != nil {
+			return err
+		}
+
+		result.Room = room
+
+		for _, email := range invitePlan.Emails {
+			emailCopy := email
+			invitation, token, err := s.invitesService.CreateInvitationWithDB(ctx, tx, invites.CreateInvitationInput{
+				Kind:            invitesmodels.InvitationKindRoomEmail,
+				RoomID:          &room.RoomID,
+				InvitedEmail:    &emailCopy,
+				CreatedByUserID: input.AdminUserID,
+			})
+			if err != nil {
+				return err
+			}
+
+			result.EmailInvitations = append(result.EmailInvitations, CreatedRoomInvitation{
+				Invitation: invitation,
+				Token:      token,
+			})
+		}
+
+		if input.CreateShareLink {
+			invitation, token, err := s.invitesService.CreateInvitationWithDB(ctx, tx, invites.CreateInvitationInput{
+				Kind:            invitesmodels.InvitationKindRoomLink,
+				RoomID:          &room.RoomID,
+				CreatedByUserID: input.AdminUserID,
+			})
+			if err != nil {
+				return err
+			}
+
+			result.ShareLink = &CreatedRoomInvitation{
+				Invitation: invitation,
+				Token:      token,
+			}
+		}
+
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return room, nil
+	return result, nil
 }
 
 func (s *roomsService) GetRoom(roomID string) (*roomsmodels.RoomsModel, error) {
@@ -139,6 +249,177 @@ func roomPatchIsNoop(room *roomsmodels.RoomsModel, input UpdateRoomInput) bool {
 		return false
 	}
 	return true
+}
+
+type roomInvitationPlan struct {
+	Emails            []string
+	SkippedRecipients []CreateRoomSkippedRecipient
+}
+
+func (s *roomsService) planRoomInvitations(
+	adminUserID string,
+	inviteTeamID *string,
+	inviteEmails []string,
+) (*roomInvitationPlan, error) {
+	plan := &roomInvitationPlan{
+		Emails:            make([]string, 0),
+		SkippedRecipients: make([]CreateRoomSkippedRecipient, 0),
+	}
+
+	creator, err := s.userRepo.FindByID(adminUserID)
+	if err != nil {
+		return nil, err
+	}
+
+	var creatorEmail string
+	if creator.Email != nil {
+		creatorEmail = strings.ToLower(strings.TrimSpace(*creator.Email))
+	}
+
+	seenEmails := make(map[string]struct{}, len(inviteEmails))
+	seenSkipped := make(map[string]struct{})
+
+	if teamID := normalizeOptionalStringValue(inviteTeamID); teamID != "" {
+		team, err := s.ensureTeamInviteOwner(teamID, adminUserID)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, member := range team.Members {
+			if member == nil {
+				continue
+			}
+
+			if member.UserID == adminUserID {
+				continue
+			}
+
+			if member.User == nil || member.User.Email == nil || strings.TrimSpace(*member.User.Email) == "" {
+				userID := member.UserID
+				s.addSkippedRecipient(plan, seenSkipped, CreateRoomSkippedRecipient{
+					UserID: &userID,
+					Reason: "missing_email",
+				})
+				continue
+			}
+
+			normalizedEmail := strings.ToLower(strings.TrimSpace(*member.User.Email))
+			if normalizedEmail == "" {
+				userID := member.UserID
+				s.addSkippedRecipient(plan, seenSkipped, CreateRoomSkippedRecipient{
+					UserID: &userID,
+					Reason: "missing_email",
+				})
+				continue
+			}
+			if creatorEmail != "" && normalizedEmail == creatorEmail {
+				email := normalizedEmail
+				s.addSkippedRecipient(plan, seenSkipped, CreateRoomSkippedRecipient{
+					UserID: &member.UserID,
+					Email:  &email,
+					Reason: "self",
+				})
+				continue
+			}
+			if _, exists := seenEmails[normalizedEmail]; exists {
+				continue
+			}
+
+			seenEmails[normalizedEmail] = struct{}{}
+			plan.Emails = append(plan.Emails, normalizedEmail)
+		}
+	}
+
+	for _, email := range normalizeInviteEmails(inviteEmails) {
+		if creatorEmail != "" && email == creatorEmail {
+			emailCopy := email
+			s.addSkippedRecipient(plan, seenSkipped, CreateRoomSkippedRecipient{
+				Email:  &emailCopy,
+				Reason: "self",
+			})
+			continue
+		}
+		if _, exists := seenEmails[email]; exists {
+			continue
+		}
+
+		seenEmails[email] = struct{}{}
+		plan.Emails = append(plan.Emails, email)
+	}
+
+	return plan, nil
+}
+
+func (s *roomsService) ensureTeamInviteOwner(teamID, actorUserID string) (*teamsmodels.TeamModel, error) {
+	team, err := s.teamRepo.FindByID(teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	member, err := s.memberRepo.FindByTeamAndUser(teamID, actorUserID)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil, apperrors.ErrForbidden
+		}
+
+		return nil, err
+	}
+
+	if member.Role != teamsmodels.TeamMemberRoleOwner || team.OwnerUserID != actorUserID {
+		return nil, apperrors.ErrForbidden
+	}
+
+	return team, nil
+}
+
+func (s *roomsService) addSkippedRecipient(
+	plan *roomInvitationPlan,
+	seen map[string]struct{},
+	recipient CreateRoomSkippedRecipient,
+) {
+	key := recipient.Reason + "|" + valueOrEmpty(recipient.UserID) + "|" + valueOrEmpty(recipient.Email)
+	if _, exists := seen[key]; exists {
+		return
+	}
+
+	seen[key] = struct{}{}
+	plan.SkippedRecipients = append(plan.SkippedRecipients, recipient)
+}
+
+func normalizeInviteEmails(emails []string) []string {
+	seen := make(map[string]struct{}, len(emails))
+	normalized := make([]string, 0, len(emails))
+
+	for _, email := range emails {
+		trimmed := strings.ToLower(strings.TrimSpace(email))
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := seen[trimmed]; exists {
+			continue
+		}
+
+		seen[trimmed] = struct{}{}
+		normalized = append(normalized, trimmed)
+	}
+
+	return normalized
+}
+
+func normalizeOptionalStringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+
+	return strings.TrimSpace(*value)
+}
+
+func valueOrEmpty(value *string) string {
+	if value == nil {
+		return ""
+	}
+
+	return *value
 }
 
 func (s *roomsService) ensureRoomAdmin(roomID, userID string) (*roomsmodels.RoomsModel, error) {
