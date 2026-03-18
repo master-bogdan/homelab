@@ -250,20 +250,69 @@ func (s *Service) SendToConnection(connID string, event Event) error {
 		return err
 	}
 
+	var unwritable []*Client
 	s.mu.RLock()
 	client, ok := s.connClients[trimmedConnID]
-	s.mu.RUnlock()
 	if !ok || client == nil {
+		s.mu.RUnlock()
 		return errors.New("connection not found")
 	}
 
 	select {
 	case client.Send <- data:
+		s.mu.RUnlock()
 		return nil
 	default:
-		s.unregister <- client
-		return errors.New("connection is not writable")
+		unwritable = append(unwritable, client)
 	}
+	s.mu.RUnlock()
+
+	for _, pending := range unwritable {
+		s.unregister <- pending
+	}
+
+	return errors.New("connection is not writable")
+}
+
+func (s *Service) SendToIdentity(identityID string, event Event) error {
+	trimmedIdentityID := strings.TrimSpace(identityID)
+	if trimmedIdentityID == "" {
+		return errors.New("identityID is required")
+	}
+
+	s.normalizeOutgoingEvent(&event)
+	data, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	unwritable := make([]*Client, 0)
+	s.mu.RLock()
+	identityMembers := s.identityClients[trimmedIdentityID]
+	for client := range identityMembers {
+		select {
+		case client.Send <- data:
+		default:
+			unwritable = append(unwritable, client)
+		}
+	}
+	s.mu.RUnlock()
+
+	for _, client := range unwritable {
+		s.unregister <- client
+	}
+
+	return nil
+}
+
+func (s *Service) SendToUser(userID string, event Event) error {
+	trimmedUserID := strings.TrimSpace(userID)
+	if trimmedUserID == "" {
+		return errors.New("userID is required")
+	}
+
+	event.UserID = trimmedUserID
+	return s.SendToIdentity("user:"+trimmedUserID, event)
 }
 
 func (s *Service) GetRoomOnlineParticipantIDs(roomID string) []string {

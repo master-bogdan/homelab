@@ -104,6 +104,7 @@ Table rooms {
   code               text        [not null, unique, note: 'short unique string used in URLs']
   name               text        [not null]
   admin_user_id      text        [not null, ref: > users.user_id]
+  team_id            text        [ref: > teams.team_id]
   deck               jsonb       [not null, note: 'Object with name, kind, values[]']
   status             room_status [not null, default: 'ACTIVE']
   created_at         timestamptz [not null, default: `now()`]
@@ -208,6 +209,21 @@ Table user_achievements {
 
   Indexes {
     (user_id, achievement_key) [pk]
+  }
+}
+
+Table user_session_rewards {
+  room_id                       text        [not null, ref: > rooms.room_id]
+  user_id                       text        [not null, ref: > users.user_id]
+  is_admin                      boolean     [not null, default: false]
+  sessions_participated_delta   int         [not null, default: 0]
+  sessions_admined_delta        int         [not null, default: 0]
+  tasks_estimated_delta         int         [not null, default: 0]
+  xp_gained                     int         [not null, default: 0]
+  created_at                    timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (room_id, user_id) [pk]
   }
 }
 

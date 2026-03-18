@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	invitesmodels "github.com/master-bogdan/estimate-room-api/internal/modules/invites/models"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
@@ -64,6 +65,7 @@ type roomsService struct {
 	memberRepo      teamsrepositories.TeamMemberRepository
 	userRepo        usersrepositories.UserRepository
 	invitesService  invites.InvitesService
+	rewardService   gamification.RoomRewardService
 	logger          *slog.Logger
 }
 
@@ -75,6 +77,7 @@ func NewRoomsService(
 	memberRepo teamsrepositories.TeamMemberRepository,
 	userRepo usersrepositories.UserRepository,
 	invitesService invites.InvitesService,
+	rewardService gamification.RoomRewardService,
 ) RoomsService {
 	return &roomsService{
 		db:              db,
@@ -84,6 +87,7 @@ func NewRoomsService(
 		memberRepo:      memberRepo,
 		userRepo:        userRepo,
 		invitesService:  invitesService,
+		rewardService:   rewardService,
 		logger:          logger.L().With(slog.String("service", "rooms")),
 	}
 }
@@ -117,6 +121,9 @@ func (s *roomsService) CreateRoom(ctx context.Context, input CreateRoomInput) (*
 	invitePlan, err := s.planRoomInvitations(input.AdminUserID, input.InviteTeamID, input.InviteEmails)
 	if err != nil {
 		return nil, err
+	}
+	if teamID := normalizeOptionalStringValue(input.InviteTeamID); teamID != "" {
+		model.TeamID = &teamID
 	}
 
 	timestamp := time.Now().String()
@@ -230,15 +237,72 @@ func (s *roomsService) UpdateRoom(roomID, userID string, input UpdateRoomInput) 
 		}
 		input.Name = &name
 	}
+	if input.Status != nil {
+		status := strings.TrimSpace(*input.Status)
+		input.Status = &status
+	}
 
+	if isTerminalRoomStatus(room.Status) {
+		return nil, fmt.Errorf("%w: terminal rooms cannot be updated", apperrors.ErrBadRequest)
+	}
 	if roomPatchIsNoop(room, input) {
 		return room, nil
 	}
+	if input.Status != nil && *input.Status == "EXPIRED" {
+		return nil, fmt.Errorf("%w: room expiry is system managed", apperrors.ErrBadRequest)
+	}
 
-	return s.roomsRepo.Update(roomID, roomsrepositories.UpdateRoomFields{
-		Name:   input.Name,
-		Status: input.Status,
+	var updatedRoom *roomsmodels.RoomsModel
+	err = s.db.RunInTx(context.Background(), nil, func(ctx context.Context, tx bun.Tx) error {
+		roomRepo := roomsrepositories.NewRoomsRepository(tx)
+
+		updatedRoom, err = roomRepo.Update(roomID, roomsrepositories.UpdateRoomFields{
+			Name:   input.Name,
+			Status: input.Status,
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	if s.rewardService != nil && isTerminalRoomStatus(updatedRoom.Status) {
+		appliedRewards := s.applyTerminalRewardsBestEffort(updatedRoom)
+		if len(appliedRewards) > 0 {
+			if err := s.rewardService.NotifyAppliedRewards(context.Background(), appliedRewards); err != nil {
+				s.logger.Error("failed to notify room rewards", "room_id", roomID, "err", err)
+			}
+		}
+	}
+
+	return updatedRoom, nil
+}
+
+func (s *roomsService) applyTerminalRewardsBestEffort(room *roomsmodels.RoomsModel) []gamification.AppliedRoomReward {
+	if s.rewardService == nil || room == nil || !isTerminalRoomStatus(room.Status) {
+		return nil
+	}
+
+	appliedRewards := make([]gamification.AppliedRoomReward, 0)
+	err := s.db.RunInTx(context.Background(), nil, func(ctx context.Context, tx bun.Tx) error {
+		rewards, err := s.rewardService.ApplyRoomTerminalRewards(ctx, tx, room)
+		if err != nil {
+			return err
+		}
+
+		appliedRewards = rewards
+		return nil
+	})
+	if err != nil {
+		s.logger.Error("failed to apply room rewards", "room_id", room.RoomID, "status", room.Status, "err", err)
+		return nil
+	}
+
+	return appliedRewards
 }
 
 func roomPatchIsNoop(room *roomsmodels.RoomsModel, input UpdateRoomInput) bool {
@@ -249,6 +313,10 @@ func roomPatchIsNoop(room *roomsmodels.RoomsModel, input UpdateRoomInput) bool {
 		return false
 	}
 	return true
+}
+
+func isTerminalRoomStatus(status string) bool {
+	return status == "FINISHED" || status == "EXPIRED"
 }
 
 type roomInvitationPlan struct {

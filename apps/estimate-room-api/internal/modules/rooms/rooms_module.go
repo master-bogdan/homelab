@@ -3,6 +3,7 @@ package rooms
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
@@ -27,6 +28,7 @@ type RoomsModuleDeps struct {
 	WsService      *ws.Service
 	AuthService    oauth2.AuthService
 	InvitesService invites.InvitesService
+	RewardService  gamification.RoomRewardService
 }
 
 func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
@@ -38,8 +40,8 @@ func NewRoomsModule(deps RoomsModuleDeps) *RoomsModule {
 	teamRepo := teamsrepositories.NewTeamRepository(deps.DB)
 	memberRepo := teamsrepositories.NewTeamMemberRepository(deps.DB)
 	userRepo := usersrepositories.NewUserRepository(deps.DB)
-	expirySvc := NewRoomsExpiryService(roomsRepo, deps.WsService)
-	svc := NewRoomsService(deps.DB, roomsRepo, participantRepo, teamRepo, memberRepo, userRepo, deps.InvitesService)
+	expirySvc := NewRoomsExpiryService(deps.DB, roomsRepo, deps.WsService, deps.RewardService)
+	svc := NewRoomsService(deps.DB, roomsRepo, participantRepo, teamRepo, memberRepo, userRepo, deps.InvitesService, deps.RewardService)
 	voteSvc := NewRoomsVoteService(roomsRepo, taskRepo, voteRepo, roundRepo, participantRepo, expirySvc)
 	taskSvc := NewRoomsTaskService(roomsRepo, taskRepo, voteSvc, participantRepo, expirySvc)
 	ctrl := NewRoomsController(svc, taskSvc, deps.InvitesService, deps.AuthService)

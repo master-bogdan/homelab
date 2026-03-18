@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS oauth2_clients;
 
 DROP TABLE IF EXISTS team_achievements;
 DROP TABLE IF EXISTS team_stats;
+DROP TABLE IF EXISTS user_session_rewards;
 DROP TABLE IF EXISTS user_achievements;
 DROP TABLE IF EXISTS user_stats;
 DROP TABLE IF EXISTS votes;

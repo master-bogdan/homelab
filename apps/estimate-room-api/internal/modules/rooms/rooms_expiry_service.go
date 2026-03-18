@@ -7,10 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
 	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
+	"github.com/uptrace/bun"
 )
 
 const (
@@ -25,8 +27,10 @@ type RoomsExpiryService interface {
 }
 
 type roomsExpiryService struct {
+	db        *bun.DB
 	roomsRepo roomsrepositories.RoomsRepository
 	wsService *ws.Service
+	rewardSvc gamification.RoomRewardService
 	logger    *slog.Logger
 }
 
@@ -36,12 +40,16 @@ type roomExpiredPayload struct {
 }
 
 func NewRoomsExpiryService(
+	db *bun.DB,
 	roomsRepo roomsrepositories.RoomsRepository,
 	wsService *ws.Service,
+	rewardSvc gamification.RoomRewardService,
 ) RoomsExpiryService {
 	return &roomsExpiryService{
+		db:        db,
 		roomsRepo: roomsRepo,
 		wsService: wsService,
+		rewardSvc: rewardSvc,
 		logger:    logger.L().With(slog.String("service", "rooms-expiry")),
 	}
 }
@@ -60,7 +68,18 @@ func (s *roomsExpiryService) TouchActivity(roomID string) {
 }
 
 func (s *roomsExpiryService) ExpireInactiveRooms(cutoff time.Time) ([]*roomsmodels.RoomsModel, error) {
-	expiredRooms, err := s.roomsRepo.ExpireInactiveRooms(cutoff)
+	expiredRooms := make([]*roomsmodels.RoomsModel, 0)
+	err := s.db.RunInTx(context.Background(), nil, func(ctx context.Context, tx bun.Tx) error {
+		roomRepo := roomsrepositories.NewRoomsRepository(tx)
+
+		expired, err := roomRepo.ExpireInactiveRooms(cutoff)
+		if err != nil {
+			return err
+		}
+		expiredRooms = expired
+
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +88,7 @@ func (s *roomsExpiryService) ExpireInactiveRooms(cutoff time.Time) ([]*roomsmode
 		if room == nil {
 			continue
 		}
+		s.applyTerminalRewardsBestEffort(room)
 		if err := s.broadcastRoomExpired(room); err != nil {
 			s.logger.Error("failed to broadcast room expired", "room_id", room.RoomID, "err", err)
 		}
@@ -109,6 +129,35 @@ func (s *roomsExpiryService) runExpirySweep() {
 
 	if len(expiredRooms) > 0 {
 		s.logger.Info("expired inactive rooms", "count", len(expiredRooms), "cutoff", cutoff)
+	}
+}
+
+func (s *roomsExpiryService) applyTerminalRewardsBestEffort(room *roomsmodels.RoomsModel) {
+	if s.rewardSvc == nil || room == nil || !isTerminalRoomStatus(room.Status) {
+		return
+	}
+
+	appliedRewards := make([]gamification.AppliedRoomReward, 0)
+	err := s.db.RunInTx(context.Background(), nil, func(ctx context.Context, tx bun.Tx) error {
+		rewards, err := s.rewardSvc.ApplyRoomTerminalRewards(ctx, tx, room)
+		if err != nil {
+			return err
+		}
+
+		appliedRewards = rewards
+		return nil
+	})
+	if err != nil {
+		s.logger.Error("failed to apply expiry rewards", "room_id", room.RoomID, "status", room.Status, "err", err)
+		return
+	}
+
+	if len(appliedRewards) == 0 {
+		return
+	}
+
+	if err := s.rewardSvc.NotifyAppliedRewards(context.Background(), appliedRewards); err != nil {
+		s.logger.Error("failed to notify room expiry rewards", "room_id", room.RoomID, "count", len(appliedRewards), "err", err)
 	}
 }
 

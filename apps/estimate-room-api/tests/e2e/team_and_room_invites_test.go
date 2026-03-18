@@ -34,6 +34,7 @@ type e2eTeamDetailResponse struct {
 type e2eRoomResponse struct {
 	RoomID       string `json:"RoomID"`
 	Name         string `json:"Name"`
+	TeamID       *string `json:"TeamID"`
 	Participants []struct {
 		Role      string  `json:"Role"`
 		UserID    *string `json:"UserID"`
@@ -230,6 +231,9 @@ func TestRoomInviteFlow(t *testing.T) {
 	roomCreate := decodeJSON[e2eCreateRoomResponse](t, createRoomResp)
 	if roomCreate.Room.RoomID == "" {
 		t.Fatal("expected room id in create room response")
+	}
+	if roomCreate.Room.TeamID == nil || *roomCreate.Room.TeamID != team.TeamID {
+		t.Fatalf("expected room team id %s, got %#v", team.TeamID, roomCreate.Room.TeamID)
 	}
 	if roomCreate.ShareLink == nil || roomCreate.InviteToken == "" {
 		t.Fatalf("expected share link in create room response, got %#v", roomCreate.ShareLink)

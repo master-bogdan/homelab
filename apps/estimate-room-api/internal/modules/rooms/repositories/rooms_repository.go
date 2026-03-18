@@ -39,7 +39,7 @@ func (r *roomsRepository) Create(ctx context.Context, model *roomsmodels.RoomsMo
 
 	_, err := r.db.NewInsert().
 		Model(model).
-		Column("code", "name", "admin_user_id", "deck").
+		Column("code", "name", "admin_user_id", "team_id", "deck").
 		Returning("*").
 		Exec(ctx)
 	if err != nil {
@@ -94,10 +94,8 @@ func (r *roomsRepository) Update(roomID string, input UpdateRoomFields) (*roomsm
 
 	if input.Status != nil {
 		query = query.Set("status = ?", *input.Status)
-		if *input.Status == "FINISHED" || *input.Status == "EXPIRED" {
+		if isTerminalRoomStatus(*input.Status) {
 			query = query.Set("finished_at = COALESCE(finished_at, NOW())")
-		} else {
-			query = query.Set("finished_at = NULL")
 		}
 	}
 
@@ -147,4 +145,8 @@ func (r *roomsRepository) ExpireInactiveRooms(cutoff time.Time) ([]*roomsmodels.
 	}
 
 	return rooms, nil
+}
+
+func isTerminalRoomStatus(status string) bool {
+	return status == "FINISHED" || status == "EXPIRED"
 }
