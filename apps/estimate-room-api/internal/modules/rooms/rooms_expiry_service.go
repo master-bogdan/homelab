@@ -69,7 +69,6 @@ func (s *roomsExpiryService) TouchActivity(roomID string) {
 
 func (s *roomsExpiryService) ExpireInactiveRooms(cutoff time.Time) ([]*roomsmodels.RoomsModel, error) {
 	expiredRooms := make([]*roomsmodels.RoomsModel, 0)
-	appliedRewards := make([]gamification.AppliedRoomReward, 0)
 	err := s.db.RunInTx(context.Background(), nil, func(ctx context.Context, tx bun.Tx) error {
 		roomRepo := roomsrepositories.NewRoomsRepository(tx)
 
@@ -79,38 +78,17 @@ func (s *roomsExpiryService) ExpireInactiveRooms(cutoff time.Time) ([]*roomsmode
 		}
 		expiredRooms = expired
 
-		if s.rewardSvc == nil {
-			return nil
-		}
-
-		for _, room := range expiredRooms {
-			if room == nil {
-				continue
-			}
-
-			rewards, err := s.rewardSvc.ApplyRoomTerminalRewards(ctx, tx, room)
-			if err != nil {
-				return err
-			}
-			appliedRewards = append(appliedRewards, rewards...)
-		}
-
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	if s.rewardSvc != nil {
-		if err := s.rewardSvc.NotifyAppliedRewards(context.Background(), appliedRewards); err != nil {
-			s.logger.Error("failed to notify room expiry rewards", "count", len(appliedRewards), "err", err)
-		}
-	}
-
 	for _, room := range expiredRooms {
 		if room == nil {
 			continue
 		}
+		s.applyTerminalRewardsBestEffort(room)
 		if err := s.broadcastRoomExpired(room); err != nil {
 			s.logger.Error("failed to broadcast room expired", "room_id", room.RoomID, "err", err)
 		}
@@ -151,6 +129,35 @@ func (s *roomsExpiryService) runExpirySweep() {
 
 	if len(expiredRooms) > 0 {
 		s.logger.Info("expired inactive rooms", "count", len(expiredRooms), "cutoff", cutoff)
+	}
+}
+
+func (s *roomsExpiryService) applyTerminalRewardsBestEffort(room *roomsmodels.RoomsModel) {
+	if s.rewardSvc == nil || room == nil || !isTerminalRoomStatus(room.Status) {
+		return
+	}
+
+	appliedRewards := make([]gamification.AppliedRoomReward, 0)
+	err := s.db.RunInTx(context.Background(), nil, func(ctx context.Context, tx bun.Tx) error {
+		rewards, err := s.rewardSvc.ApplyRoomTerminalRewards(ctx, tx, room)
+		if err != nil {
+			return err
+		}
+
+		appliedRewards = rewards
+		return nil
+	})
+	if err != nil {
+		s.logger.Error("failed to apply expiry rewards", "room_id", room.RoomID, "status", room.Status, "err", err)
+		return
+	}
+
+	if len(appliedRewards) == 0 {
+		return
+	}
+
+	if err := s.rewardSvc.NotifyAppliedRewards(context.Background(), appliedRewards); err != nil {
+		s.logger.Error("failed to notify room expiry rewards", "room_id", room.RoomID, "count", len(appliedRewards), "err", err)
 	}
 }
 

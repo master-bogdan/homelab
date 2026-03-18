@@ -213,3 +213,43 @@ func TestRoomsExpiry_IgnoreFinishedRooms(t *testing.T) {
 		t.Fatal("expected finished room to keep finishedAt")
 	}
 }
+
+func TestRoomsExpiry_RewardFailuresDoNotRollbackExpiry(t *testing.T) {
+	_, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	_, adminUserID := createAccessToken(t, db)
+	roomID := seedRoom(t, db, adminUserID)
+
+	staleActivityAt := time.Now().Add(-31 * time.Minute).UTC()
+	if _, err := db.ExecContext(context.Background(), `
+		UPDATE rooms
+		SET last_activity_at = $2
+		WHERE room_id = $1
+	`, roomID, staleActivityAt); err != nil {
+		t.Fatalf("failed to set room stale: %v", err)
+	}
+
+	expiryService := rooms.NewRoomsExpiryService(
+		db,
+		roomsrepositories.NewRoomsRepository(db),
+		nil,
+		&failingRewardService{applyErr: context.DeadlineExceeded},
+	)
+
+	expiredRooms, err := expiryService.ExpireInactiveRooms(time.Now().Add(-30 * time.Minute))
+	if err != nil {
+		t.Fatalf("expected expiry to succeed despite reward failure, got %v", err)
+	}
+	if len(expiredRooms) != 1 || expiredRooms[0].RoomID != roomID {
+		t.Fatalf("expected room %s to expire, got %+v", roomID, expiredRooms)
+	}
+
+	room := loadRoomForUpdateTest(t, db, roomID)
+	if room.Status != "EXPIRED" {
+		t.Fatalf("expected room to persist EXPIRED status, got %s", room.Status)
+	}
+	if room.FinishedAt == nil {
+		t.Fatal("expected expired room to keep finishedAt")
+	}
+}

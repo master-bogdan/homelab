@@ -8,10 +8,30 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/uptrace/bun"
 )
+
+type failingRewardService struct {
+	applyErr error
+}
+
+func (s *failingRewardService) ApplyRoomTerminalRewards(
+	ctx context.Context,
+	db bun.IDB,
+	room *roomsmodels.RoomsModel,
+) ([]gamification.AppliedRoomReward, error) {
+	return nil, s.applyErr
+}
+
+func (s *failingRewardService) NotifyAppliedRewards(
+	ctx context.Context,
+	rewards []gamification.AppliedRoomReward,
+) error {
+	return nil
+}
 
 func TestUpdateRoom_ChangesFieldsForCreator(t *testing.T) {
 	router, db := setupRoomsTasksTest(t)
@@ -167,6 +187,32 @@ func TestUpdateRoom_CannotReopenFinishedRoom(t *testing.T) {
 	}
 }
 
+func TestUpdateRoom_NoopPatchOnFinishedRoomReturnsBadRequest(t *testing.T) {
+	router, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	accessToken, userID := createAccessToken(t, db)
+	roomID := seedRoom(t, db, userID)
+
+	if _, err := db.ExecContext(context.Background(), `
+		UPDATE rooms
+		SET status = 'FINISHED', finished_at = NOW()
+		WHERE room_id = $1
+	`, roomID); err != nil {
+		t.Fatalf("failed to finish room: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/rooms/"+roomID, bytes.NewReader([]byte(`{"status":"FINISHED"}`)))
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
 func TestUpdateRoom_CannotEditExpiredRoom(t *testing.T) {
 	router, db := setupRoomsTasksTest(t)
 	defer db.Close()
@@ -224,6 +270,34 @@ func TestUpdateRoom_CannotSetExpiredStatusManually(t *testing.T) {
 	}
 	if room.FinishedAt != nil {
 		t.Fatalf("expected finishedAt to remain nil, got %v", room.FinishedAt)
+	}
+}
+
+func TestUpdateRoom_FinishPersistsWhenRewardApplicationFails(t *testing.T) {
+	router, db := setupRoomsTasksTestWithRewardService(t, &failingRewardService{
+		applyErr: context.DeadlineExceeded,
+	})
+	defer db.Close()
+
+	accessToken, userID := createAccessToken(t, db)
+	roomID := seedRoom(t, db, userID)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/rooms/"+roomID, bytes.NewReader([]byte(`{"status":"FINISHED"}`)))
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK when reward application fails, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	room := loadRoomForUpdateTest(t, db, roomID)
+	if room.Status != "FINISHED" {
+		t.Fatalf("expected room to persist FINISHED status, got %s", room.Status)
+	}
+	if room.FinishedAt == nil {
+		t.Fatal("expected finishedAt to stay set even when rewards fail")
 	}
 }
 

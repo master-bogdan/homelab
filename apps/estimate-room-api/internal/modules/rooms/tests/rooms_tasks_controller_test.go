@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	invitesdto "github.com/master-bogdan/estimate-room-api/internal/modules/invites/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
@@ -26,6 +27,10 @@ import (
 )
 
 func setupRoomsTasksTest(t *testing.T) (*chi.Mux, *bun.DB) {
+	return setupRoomsTasksTestWithRewardService(t, nil)
+}
+
+func setupRoomsTasksTestWithRewardService(t *testing.T, rewardService gamification.RoomRewardService) (*chi.Mux, *bun.DB) {
 	t.Helper()
 
 	db := testutils.SetupTestDB(t)
@@ -69,7 +74,7 @@ func setupRoomsTasksTest(t *testing.T) (*chi.Mux, *bun.DB) {
 			WsService:      wsService,
 			AuthService:    authService,
 			InvitesService: invitesModule.Service,
-			RewardService:  nil,
+			RewardService:  rewardService,
 		})
 	})
 
