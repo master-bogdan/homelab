@@ -93,6 +93,23 @@ func TestServiceSendToIdentity_UnregistersUnwritableClient(t *testing.T) {
 	waitForUnregisteredClient(t, service, client.ConnID)
 }
 
+func TestServiceAllowIncomingMessage_EnforcesConfiguredRateLimit(t *testing.T) {
+	service := NewService(nil, "test")
+	service.SetInboundRateLimit(2, time.Minute)
+
+	client := &Client{}
+
+	if !service.allowIncomingMessage(client) {
+		t.Fatal("expected first message within limit")
+	}
+	if !service.allowIncomingMessage(client) {
+		t.Fatal("expected second message within limit")
+	}
+	if service.allowIncomingMessage(client) {
+		t.Fatal("expected third message to exceed rate limit")
+	}
+}
+
 func waitForRegisteredClient(t *testing.T, service *Service, connID string) {
 	t.Helper()
 

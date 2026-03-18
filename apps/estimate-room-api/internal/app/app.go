@@ -24,6 +24,7 @@ import (
 	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/metrics"
 	"github.com/redis/go-redis/v9"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/uptrace/bun"
@@ -42,18 +43,31 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if deps.Cfg == nil {
+		deps.Cfg = &config.Config{}
+	}
+
+	httpRateLimitPerMinute := 100
+	wsRateLimitPerMinute := 120
+	if deps.Cfg.Server.HTTPRateLimitPerMinute > 0 {
+		httpRateLimitPerMinute = deps.Cfg.Server.HTTPRateLimitPerMinute
+	}
+	if deps.Cfg.Server.WSRateLimitPerMinute > 0 {
+		wsRateLimitPerMinute = deps.Cfg.Server.WSRateLimitPerMinute
+	}
 
 	deps.Router.Use(
 		logger.RequestIDMiddleware,
 		middleware.RealIP,
 		logger.RequestLoggerMiddleware,
 		middleware.Recoverer,
-		httprate.LimitByIP(100, 1*time.Minute),
+		httprate.LimitByIP(httpRateLimitPerMinute, 1*time.Minute),
 	)
 
 	deps.Router.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
 	))
+	deps.Router.Handle("/metrics", metrics.Handler())
 
 	githubScopes := strings.Fields(deps.Cfg.Github.Scopes)
 	wsOriginPatterns := splitConfigList(deps.Cfg.Server.WebSocketAllowedOrigins)
@@ -85,11 +99,12 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		})
 
 		wsModule := ws.NewWsModule(ws.WsModuleDeps{
-			Router:         r,
-			AuthService:    oauth2Module.AuthService,
-			TokenKey:       deps.Cfg.Server.PasetoSymmetricKey,
-			Server:         deps.WsServer,
-			OriginPatterns: wsOriginPatterns,
+			Router:               r,
+			AuthService:          oauth2Module.AuthService,
+			TokenKey:             deps.Cfg.Server.PasetoSymmetricKey,
+			Server:               deps.WsServer,
+			OriginPatterns:       wsOriginPatterns,
+			MessageRatePerMinute: wsRateLimitPerMinute,
 		})
 
 		users.NewUsersModule(users.UsersModuleDeps{

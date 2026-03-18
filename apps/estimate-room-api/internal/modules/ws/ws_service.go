@@ -13,6 +13,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/google/uuid"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/metrics"
 )
 
 const (
@@ -29,6 +30,8 @@ type Client struct {
 	ParticipantID string
 	RoomID        string
 	Send          chan []byte
+	MessageWindow time.Time
+	MessageCount  int
 }
 
 type Service struct {
@@ -43,6 +46,8 @@ type Service struct {
 	server          PubSub
 	channel         string
 	originPatterns  []string
+	maxMessages     int
+	messageWindow   time.Duration
 	subscriptions   map[string][]EventHandler
 	disconnects     []DisconnectHandler
 }
@@ -59,6 +64,8 @@ func NewService(server PubSub, channel string) *Service {
 		server:          server,
 		channel:         channel,
 		originPatterns:  make([]string, 0),
+		maxMessages:     120,
+		messageWindow:   time.Minute,
 		subscriptions:   make(map[string][]EventHandler),
 		disconnects:     make([]DisconnectHandler, 0),
 	}
@@ -81,6 +88,17 @@ func (s *Service) SetOriginPatterns(patterns []string) {
 
 	s.mu.Lock()
 	s.originPatterns = append([]string(nil), patterns...)
+	s.mu.Unlock()
+}
+
+func (s *Service) SetInboundRateLimit(maxMessages int, window time.Duration) {
+	if s == nil || maxMessages <= 0 || window <= 0 {
+		return
+	}
+
+	s.mu.Lock()
+	s.maxMessages = maxMessages
+	s.messageWindow = window
 	s.mu.Unlock()
 }
 
@@ -111,13 +129,16 @@ func (s *Service) run() {
 			s.identityClients[client.IdentityID][client] = true
 			s.mu.Unlock()
 
+			metrics.IncWSConnections()
 			s.logConnect(clientInfo(client))
 
 		case client := <-s.unregister:
 			var disconnectInfo *DisconnectInfo
+			removed := false
 
 			s.mu.Lock()
 			if _, ok := s.clients[client]; ok {
+				removed = true
 				roomID, presenceLeft := s.removeClientFromRoomLocked(client)
 
 				delete(s.clients, client)
@@ -140,6 +161,9 @@ func (s *Service) run() {
 			}
 			s.mu.Unlock()
 
+			if removed {
+				metrics.DecWSConnections()
+			}
 			s.logDisconnect(clientInfo(client))
 			if disconnectInfo != nil {
 				s.dispatchDisconnect(*disconnectInfo)
@@ -384,9 +408,12 @@ func (s *Service) acceptOptions() *websocket.AcceptOptions {
 }
 
 func (s *Service) readHandler(client *Client) {
+	closeStatus := websocket.StatusNormalClosure
+	closeReason := ""
+
 	defer func() {
 		s.unregister <- client
-		client.Conn.Close(websocket.StatusNormalClosure, "")
+		client.Conn.Close(closeStatus, closeReason)
 	}()
 
 	ctx := context.Background()
@@ -394,6 +421,19 @@ func (s *Service) readHandler(client *Client) {
 		_, message, err := client.Conn.Read(ctx)
 		if err != nil {
 			s.logError(clientInfo(client), err)
+			break
+		}
+		if !s.allowIncomingMessage(client) {
+			closeStatus = websocket.StatusPolicyViolation
+			closeReason = "rate limit exceeded"
+			logger.L().Warn(
+				"ws rate limit exceeded",
+				"conn_id", client.ConnID,
+				"identity_type", client.IdentityType,
+				"identity_id", client.IdentityID,
+				"user_id", client.UserID,
+				"participant_id", client.ParticipantID,
+			)
 			break
 		}
 		var event Event
@@ -594,6 +634,35 @@ func (s *Service) sendHello(client *Client) {
 	default:
 		s.unregister <- client
 	}
+}
+
+func (s *Service) allowIncomingMessage(client *Client) bool {
+	if s == nil || client == nil {
+		return false
+	}
+
+	s.mu.RLock()
+	maxMessages := s.maxMessages
+	window := s.messageWindow
+	s.mu.RUnlock()
+
+	if maxMessages <= 0 || window <= 0 {
+		return true
+	}
+
+	now := time.Now()
+	if client.MessageWindow.IsZero() || now.Sub(client.MessageWindow) >= window {
+		client.MessageWindow = now
+		client.MessageCount = 1
+		return true
+	}
+
+	if client.MessageCount >= maxMessages {
+		return false
+	}
+
+	client.MessageCount++
+	return true
 }
 
 func (s *Service) normalizeIncomingEvent(client *Client, event *Event) {

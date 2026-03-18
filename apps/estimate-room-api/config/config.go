@@ -14,6 +14,8 @@ type Config struct {
 		PasetoSymmetricKey      string `env:"PASETO_SYMMETRIC_KEY"`
 		Issuer                  string `env:"ISSUER"`
 		WebSocketAllowedOrigins string `env:"WS_ALLOWED_ORIGINS"`
+		HTTPRateLimitPerMinute  int    `env:"HTTP_RATE_LIMIT_PER_MINUTE" envDefault:"100"`
+		WSRateLimitPerMinute    int    `env:"WS_RATE_LIMIT_PER_MINUTE" envDefault:"120"`
 	}
 	DB struct {
 		DatabaseURL      string `env:"DATABASE_URL"`
