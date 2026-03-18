@@ -250,20 +250,28 @@ func (s *Service) SendToConnection(connID string, event Event) error {
 		return err
 	}
 
+	var unwritable []*Client
 	s.mu.RLock()
 	client, ok := s.connClients[trimmedConnID]
-	s.mu.RUnlock()
 	if !ok || client == nil {
+		s.mu.RUnlock()
 		return errors.New("connection not found")
 	}
 
 	select {
 	case client.Send <- data:
+		s.mu.RUnlock()
 		return nil
 	default:
-		s.unregister <- client
-		return errors.New("connection is not writable")
+		unwritable = append(unwritable, client)
 	}
+	s.mu.RUnlock()
+
+	for _, pending := range unwritable {
+		s.unregister <- pending
+	}
+
+	return errors.New("connection is not writable")
 }
 
 func (s *Service) SendToIdentity(identityID string, event Event) error {
@@ -278,20 +286,20 @@ func (s *Service) SendToIdentity(identityID string, event Event) error {
 		return err
 	}
 
+	unwritable := make([]*Client, 0)
 	s.mu.RLock()
 	identityMembers := s.identityClients[trimmedIdentityID]
-	clients := make([]*Client, 0, len(identityMembers))
 	for client := range identityMembers {
-		clients = append(clients, client)
-	}
-	s.mu.RUnlock()
-
-	for _, client := range clients {
 		select {
 		case client.Send <- data:
 		default:
-			s.unregister <- client
+			unwritable = append(unwritable, client)
 		}
+	}
+	s.mu.RUnlock()
+
+	for _, client := range unwritable {
+		s.unregister <- client
 	}
 
 	return nil
