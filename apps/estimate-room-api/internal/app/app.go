@@ -13,6 +13,7 @@ import (
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/history"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
@@ -117,6 +118,12 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 			WsService:      wsModule.Service,
 			AuthService:    oauth2Module.AuthService,
 			InvitesService: invitesModule.Service,
+		})
+
+		history.NewHistoryModule(history.HistoryModuleDeps{
+			Router:      r,
+			DB:          deps.DB,
+			AuthService: oauth2Module.AuthService,
 		})
 
 		if roomsModule != nil && roomsModule.ExpiryService != nil {
