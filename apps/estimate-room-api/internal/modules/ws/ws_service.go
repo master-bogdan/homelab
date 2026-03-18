@@ -266,6 +266,47 @@ func (s *Service) SendToConnection(connID string, event Event) error {
 	}
 }
 
+func (s *Service) SendToIdentity(identityID string, event Event) error {
+	trimmedIdentityID := strings.TrimSpace(identityID)
+	if trimmedIdentityID == "" {
+		return errors.New("identityID is required")
+	}
+
+	s.normalizeOutgoingEvent(&event)
+	data, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	s.mu.RLock()
+	identityMembers := s.identityClients[trimmedIdentityID]
+	clients := make([]*Client, 0, len(identityMembers))
+	for client := range identityMembers {
+		clients = append(clients, client)
+	}
+	s.mu.RUnlock()
+
+	for _, client := range clients {
+		select {
+		case client.Send <- data:
+		default:
+			s.unregister <- client
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) SendToUser(userID string, event Event) error {
+	trimmedUserID := strings.TrimSpace(userID)
+	if trimmedUserID == "" {
+		return errors.New("userID is required")
+	}
+
+	event.UserID = trimmedUserID
+	return s.SendToIdentity("user:"+trimmedUserID, event)
+}
+
 func (s *Service) GetRoomOnlineParticipantIDs(roomID string) []string {
 	trimmedRoomID := strings.TrimSpace(roomID)
 	if trimmedRoomID == "" {

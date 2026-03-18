@@ -7,10 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
 	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
+	"github.com/uptrace/bun"
 )
 
 const (
@@ -25,8 +27,10 @@ type RoomsExpiryService interface {
 }
 
 type roomsExpiryService struct {
+	db        *bun.DB
 	roomsRepo roomsrepositories.RoomsRepository
 	wsService *ws.Service
+	rewardSvc gamification.RoomRewardService
 	logger    *slog.Logger
 }
 
@@ -36,12 +40,16 @@ type roomExpiredPayload struct {
 }
 
 func NewRoomsExpiryService(
+	db *bun.DB,
 	roomsRepo roomsrepositories.RoomsRepository,
 	wsService *ws.Service,
+	rewardSvc gamification.RoomRewardService,
 ) RoomsExpiryService {
 	return &roomsExpiryService{
+		db:        db,
 		roomsRepo: roomsRepo,
 		wsService: wsService,
+		rewardSvc: rewardSvc,
 		logger:    logger.L().With(slog.String("service", "rooms-expiry")),
 	}
 }
@@ -60,9 +68,43 @@ func (s *roomsExpiryService) TouchActivity(roomID string) {
 }
 
 func (s *roomsExpiryService) ExpireInactiveRooms(cutoff time.Time) ([]*roomsmodels.RoomsModel, error) {
-	expiredRooms, err := s.roomsRepo.ExpireInactiveRooms(cutoff)
+	expiredRooms := make([]*roomsmodels.RoomsModel, 0)
+	appliedRewards := make([]gamification.AppliedRoomReward, 0)
+	err := s.db.RunInTx(context.Background(), nil, func(ctx context.Context, tx bun.Tx) error {
+		roomRepo := roomsrepositories.NewRoomsRepository(tx)
+
+		expired, err := roomRepo.ExpireInactiveRooms(cutoff)
+		if err != nil {
+			return err
+		}
+		expiredRooms = expired
+
+		if s.rewardSvc == nil {
+			return nil
+		}
+
+		for _, room := range expiredRooms {
+			if room == nil {
+				continue
+			}
+
+			rewards, err := s.rewardSvc.ApplyRoomTerminalRewards(ctx, tx, room)
+			if err != nil {
+				return err
+			}
+			appliedRewards = append(appliedRewards, rewards...)
+		}
+
+		return nil
+	})
 	if err != nil {
 		return nil, err
+	}
+
+	if s.rewardSvc != nil {
+		if err := s.rewardSvc.NotifyAppliedRewards(context.Background(), appliedRewards); err != nil {
+			s.logger.Error("failed to notify room expiry rewards", "count", len(appliedRewards), "err", err)
+		}
 	}
 
 	for _, room := range expiredRooms {

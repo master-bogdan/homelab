@@ -33,13 +33,27 @@ func NewHistoryController(service HistoryService, authService oauth2.AuthService
 	}
 }
 
+// ListMySessions godoc
+// @Summary Current user sessions
+// @Description Returns paginated room history for the current authenticated user.
+// @Tags history
+// @Produce json
+// @Param page query int false "Page number"
+// @Param pageSize query int false "Page size"
+// @Param status query string false "Status filter" Enums(ALL,ACTIVE,FINISHED,EXPIRED)
+// @Param role query string false "Role filter" Enums(ALL,ADMIN,PARTICIPANT)
+// @Success 200 {object} historydto.SessionListResponse
+// @Failure 400 {object} apperrors.HttpError
+// @Failure 401 {object} apperrors.HttpError
+// @Failure 500 {object} apperrors.HttpError
+// @Router /api/v1/history/me/sessions [get]
 func (c *historyController) ListMySessions(w http.ResponseWriter, r *http.Request) {
 	userID, ok := c.requireUserID(w, r)
 	if !ok {
 		return
 	}
 
-	query, err := historydto.ParsePaginationQuery(r.URL.Query())
+	query, err := historydto.ParseMySessionsQuery(r.URL.Query())
 	if err != nil {
 		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
@@ -54,13 +68,29 @@ func (c *historyController) ListMySessions(w http.ResponseWriter, r *http.Reques
 	httputils.WriteResponse(w, response)
 }
 
+// ListTeamSessions godoc
+// @Summary Team sessions
+// @Description Returns paginated room history for a team. Team owner access is required.
+// @Tags history
+// @Produce json
+// @Param id path string true "Team ID"
+// @Param page query int false "Page number"
+// @Param pageSize query int false "Page size"
+// @Param status query string false "Status filter" Enums(ALL,ACTIVE,FINISHED,EXPIRED)
+// @Success 200 {object} historydto.SessionListResponse
+// @Failure 400 {object} apperrors.HttpError
+// @Failure 401 {object} apperrors.HttpError
+// @Failure 403 {object} apperrors.HttpError
+// @Failure 404 {object} apperrors.HttpError
+// @Failure 500 {object} apperrors.HttpError
+// @Router /api/v1/history/teams/{id}/sessions [get]
 func (c *historyController) ListTeamSessions(w http.ResponseWriter, r *http.Request) {
 	userID, ok := c.requireUserID(w, r)
 	if !ok {
 		return
 	}
 
-	query, err := historydto.ParsePaginationQuery(r.URL.Query())
+	query, err := historydto.ParseTeamSessionsQuery(r.URL.Query())
 	if err != nil {
 		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
@@ -76,6 +106,19 @@ func (c *historyController) ListTeamSessions(w http.ResponseWriter, r *http.Requ
 	httputils.WriteResponse(w, response)
 }
 
+// GetRoomSummary godoc
+// @Summary Room summary
+// @Description Returns aggregated room history, participants, tasks, rounds, and revealed votes.
+// @Tags history
+// @Produce json
+// @Param id path string true "Room ID"
+// @Success 200 {object} historydto.RoomSummaryResponse
+// @Failure 400 {object} apperrors.HttpError
+// @Failure 401 {object} apperrors.HttpError
+// @Failure 403 {object} apperrors.HttpError
+// @Failure 404 {object} apperrors.HttpError
+// @Failure 500 {object} apperrors.HttpError
+// @Router /api/v1/history/rooms/{id}/summary [get]
 func (c *historyController) GetRoomSummary(w http.ResponseWriter, r *http.Request) {
 	userID, ok := c.requireUserID(w, r)
 	if !ok {

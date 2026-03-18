@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/history"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
@@ -112,12 +113,20 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 			InvitesService: invitesModule.Service,
 		})
 
+		gamificationModule := gamification.NewGamificationModule(gamification.GamificationModuleDeps{
+			Router:      r,
+			DB:          deps.DB,
+			AuthService: oauth2Module.AuthService,
+			WsService:   wsModule.Service,
+		})
+
 		roomsModule := rooms.NewRoomsModule(rooms.RoomsModuleDeps{
 			Router:         r,
 			DB:             deps.DB,
 			WsService:      wsModule.Service,
 			AuthService:    oauth2Module.AuthService,
 			InvitesService: invitesModule.Service,
+			RewardService:  gamificationModule.Service,
 		})
 
 		history.NewHistoryModule(history.HistoryModuleDeps{

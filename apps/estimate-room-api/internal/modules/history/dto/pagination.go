@@ -25,6 +25,14 @@ type PaginatedResponse[T any] struct {
 	Total    int `json:"total"`
 }
 
+func (q PaginationQuery) Offset() int {
+	if q.Page <= 1 {
+		return 0
+	}
+
+	return (q.Page - 1) * q.PageSize
+}
+
 func ParsePaginationQuery(values url.Values) (PaginationQuery, error) {
 	query := PaginationQuery{
 		Page:     DefaultPage,

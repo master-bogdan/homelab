@@ -109,6 +109,7 @@ func setupRoomsRealtimeTest(t *testing.T) (*httptest.Server, *bun.DB) {
 			WsService:      wsModule.Service,
 			AuthService:    authService,
 			InvitesService: invitesModule.Service,
+			RewardService:  nil,
 		})
 	})
 

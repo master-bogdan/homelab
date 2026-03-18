@@ -40,7 +40,7 @@ func TestRoomsExpiry_ExpireInactiveRoomsMarksStaleRoomsExpiredAndBroadcastsEvent
 
 	pubSub := newTestPubSub()
 	wsService := ws.NewService(pubSub, "test-room-events")
-	expiryService := rooms.NewRoomsExpiryService(roomsrepositories.NewRoomsRepository(db), wsService)
+	expiryService := rooms.NewRoomsExpiryService(db, roomsrepositories.NewRoomsRepository(db), wsService, nil)
 
 	events := make(chan ws.Event, 1)
 	pubSub.Subscribe("test-room-events", func(data []byte) {
@@ -138,7 +138,7 @@ func TestRoomsExpiry_TouchActivityUpdatesOnlyActiveRooms(t *testing.T) {
 		t.Fatalf("failed to set expired room activity time: %v", err)
 	}
 
-	expiryService := rooms.NewRoomsExpiryService(roomsrepositories.NewRoomsRepository(db), nil)
+	expiryService := rooms.NewRoomsExpiryService(db, roomsrepositories.NewRoomsRepository(db), nil, nil)
 	expiryService.TouchActivity(activeRoomID)
 	expiryService.TouchActivity(expiredRoomID)
 
@@ -189,7 +189,7 @@ func TestRoomsExpiry_IgnoreFinishedRooms(t *testing.T) {
 		t.Fatalf("failed to mark active room stale: %v", err)
 	}
 
-	expiryService := rooms.NewRoomsExpiryService(roomsrepositories.NewRoomsRepository(db), nil)
+	expiryService := rooms.NewRoomsExpiryService(db, roomsrepositories.NewRoomsRepository(db), nil, nil)
 	expiredRooms, err := expiryService.ExpireInactiveRooms(time.Now().Add(-30 * time.Minute))
 	if err != nil {
 		t.Fatalf("failed to expire inactive rooms: %v", err)

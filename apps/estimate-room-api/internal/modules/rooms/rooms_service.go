@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/invites"
 	invitesmodels "github.com/master-bogdan/estimate-room-api/internal/modules/invites/models"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
@@ -64,6 +65,7 @@ type roomsService struct {
 	memberRepo      teamsrepositories.TeamMemberRepository
 	userRepo        usersrepositories.UserRepository
 	invitesService  invites.InvitesService
+	rewardService   gamification.RoomRewardService
 	logger          *slog.Logger
 }
 
@@ -75,6 +77,7 @@ func NewRoomsService(
 	memberRepo teamsrepositories.TeamMemberRepository,
 	userRepo usersrepositories.UserRepository,
 	invitesService invites.InvitesService,
+	rewardService gamification.RoomRewardService,
 ) RoomsService {
 	return &roomsService{
 		db:              db,
@@ -84,6 +87,7 @@ func NewRoomsService(
 		memberRepo:      memberRepo,
 		userRepo:        userRepo,
 		invitesService:  invitesService,
+		rewardService:   rewardService,
 		logger:          logger.L().With(slog.String("service", "rooms")),
 	}
 }
@@ -248,10 +252,39 @@ func (s *roomsService) UpdateRoom(roomID, userID string, input UpdateRoomInput) 
 		return nil, fmt.Errorf("%w: room expiry is system managed", apperrors.ErrBadRequest)
 	}
 
-	return s.roomsRepo.Update(roomID, roomsrepositories.UpdateRoomFields{
-		Name:   input.Name,
-		Status: input.Status,
+	var updatedRoom *roomsmodels.RoomsModel
+	appliedRewards := make([]gamification.AppliedRoomReward, 0)
+	err = s.db.RunInTx(context.Background(), nil, func(ctx context.Context, tx bun.Tx) error {
+		roomRepo := roomsrepositories.NewRoomsRepository(tx)
+
+		updatedRoom, err = roomRepo.Update(roomID, roomsrepositories.UpdateRoomFields{
+			Name:   input.Name,
+			Status: input.Status,
+		})
+		if err != nil {
+			return err
+		}
+
+		if s.rewardService != nil && isTerminalRoomStatus(updatedRoom.Status) {
+			appliedRewards, err = s.rewardService.ApplyRoomTerminalRewards(ctx, tx, updatedRoom)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	if s.rewardService != nil {
+		if err := s.rewardService.NotifyAppliedRewards(context.Background(), appliedRewards); err != nil {
+			s.logger.Error("failed to notify room rewards", "room_id", roomID, "err", err)
+		}
+	}
+
+	return updatedRoom, nil
 }
 
 func roomPatchIsNoop(room *roomsmodels.RoomsModel, input UpdateRoomInput) bool {

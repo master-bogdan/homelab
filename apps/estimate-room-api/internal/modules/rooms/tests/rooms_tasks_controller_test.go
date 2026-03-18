@@ -69,6 +69,7 @@ func setupRoomsTasksTest(t *testing.T) (*chi.Mux, *bun.DB) {
 			WsService:      wsService,
 			AuthService:    authService,
 			InvitesService: invitesModule.Service,
+			RewardService:  nil,
 		})
 	})
 

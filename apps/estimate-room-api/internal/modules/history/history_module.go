@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	historyrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/history/repositories"
+	teamsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/teams/repositories"
 	"github.com/uptrace/bun"
 )
 
@@ -21,7 +22,9 @@ type HistoryModuleDeps struct {
 
 func NewHistoryModule(deps HistoryModuleDeps) *HistoryModule {
 	repo := historyrepositories.NewHistoryRepository(deps.DB)
-	svc := NewHistoryService(repo)
+	teamRepo := teamsrepositories.NewTeamRepository(deps.DB)
+	memberRepo := teamsrepositories.NewTeamMemberRepository(deps.DB)
+	svc := NewHistoryService(repo, teamRepo, memberRepo)
 	ctrl := NewHistoryController(svc, deps.AuthService)
 
 	deps.Router.Route("/history", func(r chi.Router) {

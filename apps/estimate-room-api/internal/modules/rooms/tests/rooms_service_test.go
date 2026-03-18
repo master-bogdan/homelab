@@ -108,6 +108,7 @@ func TestCreateRoom_RollsBackRoomAndParticipantWhenInviteCreationFails(t *testin
 		teamsrepositories.NewTeamMemberRepository(db),
 		usersrepositories.NewUserRepository(db),
 		&failingInvitesService{err: errors.New("invite failure")},
+		nil,
 	)
 
 	_, err = service.CreateRoom(context.Background(), rooms.CreateRoomInput{
