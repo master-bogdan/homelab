@@ -13,15 +13,20 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
+	"github.com/coder/websocket"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/master-bogdan/estimate-room-api/config"
 	"github.com/master-bogdan/estimate-room-api/internal/app"
 	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
 	"github.com/uptrace/bun"
 )
+
+const e2eWSOrigin = "http://frontend.test"
 
 type e2eApp struct {
 	server      *httptest.Server
@@ -40,6 +45,7 @@ func setupE2EApp(t *testing.T) *e2eApp {
 	cfg := &config.Config{}
 	cfg.Server.PasetoSymmetricKey = testutils.TestTokenKey
 	cfg.Server.Issuer = testutils.TestIssuer
+	cfg.Server.WebSocketAllowedOrigins = e2eWSOrigin
 
 	backgroundCtx, cancel := context.WithCancel(context.Background())
 	application := app.AppDeps{
@@ -246,4 +252,74 @@ func readBody(t *testing.T, resp *http.Response) string {
 	}
 
 	return string(body)
+}
+
+func connectWS(t *testing.T, serverURL, accessToken string) *websocket.Conn {
+	t.Helper()
+
+	wsURL := "ws" + strings.TrimPrefix(serverURL, "http") + "/api/v1/ws"
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, _, err := websocket.Dial(ctx, wsURL, &websocket.DialOptions{
+		HTTPHeader: http.Header{
+			"Authorization": []string{"Bearer " + accessToken},
+			"Origin":        []string{e2eWSOrigin},
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to connect websocket: %v", err)
+	}
+
+	return conn
+}
+
+func readUntilEvent(t *testing.T, conn *websocket.Conn, eventType string) ws.Event {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	for {
+		_, data, err := conn.Read(ctx)
+		if err != nil {
+			t.Fatalf("failed to read websocket event %s: %v", eventType, err)
+		}
+
+		event := ws.Event{}
+		if err := json.Unmarshal(data, &event); err != nil {
+			t.Fatalf("failed to decode websocket event: %v", err)
+		}
+
+		if event.Type == eventType {
+			return event
+		}
+	}
+}
+
+func writeEvent(t *testing.T, conn *websocket.Conn, event ws.Event) {
+	t.Helper()
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		t.Fatalf("failed to marshal websocket event: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := conn.Write(ctx, websocket.MessageText, data); err != nil {
+		t.Fatalf("failed to write websocket event: %v", err)
+	}
+}
+
+func mustMarshalJSON(t *testing.T, value any) []byte {
+	t.Helper()
+
+	data, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("failed to marshal JSON payload: %v", err)
+	}
+
+	return data
 }

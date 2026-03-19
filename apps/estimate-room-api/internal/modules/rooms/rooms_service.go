@@ -20,6 +20,7 @@ import (
 	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/metrics"
 	"github.com/uptrace/bun"
 )
 
@@ -196,6 +197,9 @@ func (s *roomsService) CreateRoom(ctx context.Context, input CreateRoomInput) (*
 		return nil, err
 	}
 
+	metrics.RecordRoomLifecycle("created")
+	s.logger.Info("room created", "room_id", result.Room.RoomID, "admin_user_id", input.AdminUserID, "team_id", result.Room.TeamID)
+
 	return result, nil
 }
 
@@ -270,6 +274,10 @@ func (s *roomsService) UpdateRoom(roomID, userID string, input UpdateRoomInput) 
 		return nil, err
 	}
 
+	if room.Status != updatedRoom.Status && isTerminalRoomStatus(updatedRoom.Status) {
+		metrics.RecordRoomLifecycle(updatedRoom.Status)
+	}
+
 	if s.rewardService != nil && isTerminalRoomStatus(updatedRoom.Status) {
 		appliedRewards := s.applyTerminalRewardsBestEffort(updatedRoom)
 		if len(appliedRewards) > 0 {
@@ -278,6 +286,8 @@ func (s *roomsService) UpdateRoom(roomID, userID string, input UpdateRoomInput) 
 			}
 		}
 	}
+
+	s.logger.Info("room updated", "room_id", updatedRoom.RoomID, "status", updatedRoom.Status, "admin_user_id", userID)
 
 	return updatedRoom, nil
 }

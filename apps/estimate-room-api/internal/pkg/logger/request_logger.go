@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/metrics"
 )
 
 type responseRecorder struct {
@@ -72,9 +75,18 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 		}
 
 		duration := time.Since(start)
+		routePattern := r.URL.Path
+		if routeCtx := chi.RouteContext(r.Context()); routeCtx != nil {
+			if pattern := strings.TrimSpace(routeCtx.RoutePattern()); pattern != "" {
+				routePattern = pattern
+			}
+		}
+		metrics.RecordHTTPRequest(r.Method, routePattern, status, duration)
+
 		L().Log(r.Context(), level, "request",
 			"method", r.Method,
 			"path", r.URL.Path,
+			"route", routePattern,
 			"status", status,
 			"duration_ms", duration.Milliseconds(),
 			"bytes", rec.bytes,

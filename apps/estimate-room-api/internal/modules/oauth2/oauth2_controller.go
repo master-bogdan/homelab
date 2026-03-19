@@ -218,13 +218,7 @@ func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    oidcSessionID,
-		HttpOnly: true,
-		Secure:   r.TLS != nil,
-		Path:     "/",
-	})
+	http.SetCookie(w, sessionCookie(oidcSessionID, r.TLS != nil))
 
 	createAuthCodeDTO := &oauth2dto.CreateOauthCodeDTO{
 		ClientID:            loginDTO.ClientID,
@@ -417,13 +411,7 @@ func (c *oauth2Controller) GithubCallback(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    oidcSessionID,
-		HttpOnly: true,
-		Secure:   r.TLS != nil,
-		Path:     "/",
-	})
+	http.SetCookie(w, sessionCookie(oidcSessionID, r.TLS != nil))
 
 	createAuthCodeDTO := &oauth2dto.CreateOauthCodeDTO{
 		ClientID:            query.ClientID,
@@ -499,4 +487,15 @@ func parseTokenForm(r *http.Request) (*oauth2dto.GetTokenDTO, error) {
 		RedirectURI:  r.Form.Get("redirect_uri"),
 		RefreshToken: r.Form.Get("refresh_token"),
 	}, nil
+}
+
+func sessionCookie(sessionID string, secure bool) *http.Cookie {
+	return &http.Cookie{
+		Name:     "session_id",
+		Value:    sessionID,
+		HttpOnly: true,
+		Secure:   secure,
+		Path:     "/",
+		SameSite: http.SameSiteLaxMode,
+	}
 }

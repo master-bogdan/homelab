@@ -12,6 +12,7 @@ import (
 	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/ws"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/metrics"
 	"github.com/uptrace/bun"
 )
 
@@ -88,6 +89,7 @@ func (s *roomsExpiryService) ExpireInactiveRooms(cutoff time.Time) ([]*roomsmode
 		if room == nil {
 			continue
 		}
+		metrics.RecordRoomLifecycle(room.Status)
 		s.applyTerminalRewardsBestEffort(room)
 		if err := s.broadcastRoomExpired(room); err != nil {
 			s.logger.Error("failed to broadcast room expired", "room_id", room.RoomID, "err", err)

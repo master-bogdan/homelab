@@ -25,16 +25,22 @@ type WsModule struct {
 }
 
 type WsModuleDeps struct {
-	Router         chi.Router
-	AuthService    oauth2.AuthService
-	TokenKey       string
-	Server         PubSub
-	OriginPatterns []string
+	Router               chi.Router
+	AuthService          oauth2.AuthService
+	TokenKey             string
+	Server               PubSub
+	OriginPatterns       []string
+	MessageRatePerMinute int
 }
 
 func NewWsModule(deps WsModuleDeps) *WsModule {
 	service := NewService(deps.Server, defaultChannel)
 	service.SetOriginPatterns(deps.OriginPatterns)
+	messageRatePerMinute := deps.MessageRatePerMinute
+	if messageRatePerMinute <= 0 {
+		messageRatePerMinute = 120
+	}
+	service.SetInboundRateLimit(messageRatePerMinute, time.Minute)
 	tokenKey := []byte(deps.TokenKey)
 
 	deps.Router.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
