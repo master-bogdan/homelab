@@ -14,19 +14,19 @@ Lightweight Kubernetes manifests and local app projects for a home cluster. Uses
 
 > Using Minikube? Start your cluster (example 3-node profile), then enable the storage addons once all nodes are ready (enabling them inline prevents secondary nodes from booting and kube-proxy from starting):
 > ```bash
-> minikube start --profile homelab-dev --nodes=3 --driver=docker --cpus=4 --memory=8192
-> minikube addons enable storage-provisioner --profile homelab-dev
-> minikube addons enable default-storageclass --profile homelab-dev
-> minikube addons enable ingress --profile homelab-dev
+> minikube start --profile homelab-staging --nodes=3 --driver=docker --cpus=4 --memory=8192
+> minikube addons enable storage-provisioner --profile homelab-staging
+> minikube addons enable default-storageclass --profile homelab-staging
+> minikube addons enable ingress --profile homelab-staging
 > ```
 >
 > If the profile gets wedged (e.g., kube-proxy or nodes never become Ready), delete and recreate it:
 > ```bash
-> minikube delete --profile homelab-dev
-> minikube start --profile homelab-dev --nodes=3 --driver=docker --cpus=4 --memory=8192
-> minikube addons enable storage-provisioner --profile homelab-dev
-> minikube addons enable default-storageclass --profile homelab-dev
-> minikube addons enable ingress --profile homelab-dev
+> minikube delete --profile homelab-staging
+> minikube start --profile homelab-staging --nodes=3 --driver=docker --cpus=4 --memory=8192
+> minikube addons enable storage-provisioner --profile homelab-staging
+> minikube addons enable default-storageclass --profile homelab-staging
+> minikube addons enable ingress --profile homelab-staging
 > ```
 
 ### Example workflow
@@ -34,7 +34,7 @@ Lightweight Kubernetes manifests and local app projects for a home cluster. Uses
 ```bash
 # 1) Confirm kubectl points at the cluster (minikube, k3s, etc.)
 kubectl config get-contexts
-kubectl config use-context homelab
+kubectl config use-context homelab-staging
 
 # 2) Build & push images for one app
 make docker-build-push APP=ephermal-notes-api REGISTRY=docker.io/yourname TAG=latest
@@ -48,15 +48,15 @@ make deploy-all ENV=dev REGISTRY=docker.io/yourname TAG=latest
 
 # Check deployments
 kubectl get pods -A
-kubectl logs -f -n <namespace> <pod>
+kubectl logs -f -n <env>-<namespace> <pod>
 ```
 
 ## Networking & access control
 
-- **Gateway API + Traefik:** `k8s/networking/gateway` defines the shared `homelab-gw`. Dev overlays ride the HTTP listener for speed, while prod HTTPRoutes bind to the HTTPS listener with TLS terminated by the `homelab-gw-tls` secret.
+- **Gateway API + Traefik:** `k8s/networking/gateway` defines `homelab-gw` per environment. Dev overlays ride the HTTP listener for speed, while staging/prod HTTPRoutes bind to the HTTPS listener with TLS terminated by the `homelab-gw-tls` secret.
 - **Authentik forward auth:** The `authentik-forward-auth` middleware (Traefik CR) forwards requests to `authentik-server.platform.svc.cluster.local/outpost.goauthentik.io/auth/traefik` and injects identity headers. Every sensitive platform/observability route (Grafana, n8n, OpenSearch Dashboards, SeaweedFS filer, etc.) references this middleware so users must authenticate; only the personal site and the ephemeral notes API remain public on purpose.
 - **SeaweedFS routing:** `/personal-website` and `/internal-artifacts` continue to flow through the S3 route, while the filer UI now uses `http-seaweedfs-filer` and is SSO-protected. This avoids exposing the filer/console without Authentik.
-- **Namespace scoping:** Both HTTP and HTTPS listeners restrict `allowedRoutes` to the `networking` namespace so misconfigured routes elsewhere cannot bind to the shared gateway.
+- **Namespace scoping:** Each environment uses prefixed namespaces (e.g., `staging-networking`, `prod-platform`), and routes explicitly reference the env-specific gateway.
 
 ## Makefile targets
 
@@ -113,6 +113,7 @@ Use `ENV=dev` or `ENV=prod` and make sure `kubectl` points at the intended clust
 - `make deploy-all ENV=prod [REGISTRY=<r>] [TAG=<t>]` — Deploy everything (no DBs, prod-ready)
 - `make delete-all ENV=<env>` — Delete full stack
 - `make validate-all ENV=<env>` — Dry-run validate all manifests
+- `make update-minikube-ip ENV=<dev|staging> [MINIKUBE_PROFILE=<profile>]` — Rewrite `*.sslip.io` host IPs in overlays and `Makefile`
 
 ## Repository structure
 
@@ -122,7 +123,7 @@ Use `ENV=dev` or `ENV=prod` and make sure `kubectl` points at the intended clust
 │   ├── ephermal-notes-api/        # Go backend API
 │   └── personal-website-ui/       # Next.js frontend
 ├── k8s/                           # Kubernetes manifests (Kustomize)
-│   ├── namespaces/                # Namespace definitions (dev/prod overlays)
+│   ├── namespaces/                # Namespace definitions (dev/staging/prod overlays)
 │   ├── apps/                      # App deployments (base + overlays)
 │   ├── networking/                # Traefik & Ingress Gateway
 │   ├── platform/                  # Authentik, n8n, SeaweedFS
@@ -141,7 +142,7 @@ Use `ENV=dev` or `ENV=prod` and make sure `kubectl` points at the intended clust
 **Option 1: Wildcard DNS (nip.io / sslip.io)**
 ```bash
 # Get your Minikube IP
-IP=$(minikube ip --profile homelab-dev)
+IP=$(minikube ip --profile homelab-staging)
 
 # Access services using nip.io (example with 192.168.49.2)
 # https://auth.192.168.49.2.nip.io
@@ -152,7 +153,7 @@ IP=$(minikube ip --profile homelab-dev)
 **Option 2: minikube tunnel (LoadBalancer services)**
 ```bash
 # In a separate terminal, start tunnel
-minikube tunnel --profile homelab-dev
+minikube tunnel --profile homelab-staging
 
 # Then access services on localhost with appropriate ports
 # (ports depend on ingress/service configuration)
@@ -161,28 +162,28 @@ minikube tunnel --profile homelab-dev
 **Option 3: minikube service (direct service URL)**
 ```bash
 # Open service directly in browser (bypasses ingress)
-minikube service --url -n observability grafana --profile homelab-dev
-minikube service --url -n platform n8n --profile homelab-dev
+minikube service --url -n staging-observability grafana --profile homelab-staging
+minikube service --url -n staging-platform n8n --profile homelab-staging
 ```
 
 **Option 4: kubectl port-forward (fallback)**
 ```bash
 # Forward local port to service
-kubectl -n observability port-forward svc/grafana 3000:3000
-kubectl -n observability port-forward svc/prometheus 9090:9090
-kubectl -n observability port-forward svc/opensearch-dashboards 5601:5601
-kubectl -n platform port-forward svc/n8n 5678:5678
-kubectl -n platform port-forward svc/authentik 8000:8000
+kubectl -n staging-observability port-forward svc/grafana 3000:3000
+kubectl -n staging-observability port-forward svc/prometheus 9090:9090
+kubectl -n staging-observability port-forward svc/opensearch-dashboards 5601:5601
+kubectl -n staging-platform port-forward svc/n8n 5678:5678
+kubectl -n staging-auth port-forward svc/authentik 8000:8000
 
 # Then access on localhost:port
 ```
 
-### Dev example URLs (dev overlay, nip.io) ✅
+### Staging example URLs (staging overlay, nip.io, HTTPS) ✅
 
 Use the Minikube IP with a wildcard DNS service like nip.io to access Gateway routes quickly:
 
 ```bash
-IP=$(minikube ip --profile homelab-dev)
+IP=$(minikube ip --profile homelab-staging)
 # Personal website (root)
 # http://$IP.nip.io/
 # Ephemeral notes API
@@ -201,19 +202,19 @@ SeaweedFS storage uses a specific hostname in the manifests (`storage.homelab.lo
 
 ```bash
 # Add /etc/hosts entry (example)
-echo "$(minikube ip --profile homelab-dev) storage.homelab.local" | sudo tee -a /etc/hosts
+echo "$(minikube ip --profile homelab-staging) storage.homelab.local" | sudo tee -a /etc/hosts
 # or use nip.io:
 # http://storage.$IP.nip.io/personal-website
 # http://storage.$IP.nip.io/internal-artifacts
 ```
 
-> Note: routes that reference the `authentik-forward-auth` middleware (Grafana, n8n, OpenSearch Dashboards, SeaweedFS internal artifacts) require signing in via Authentik. Dev overlays use the HTTP listener (no TLS) by default.
+> Note: routes that reference the `authentik-forward-auth` middleware (Grafana, n8n, OpenSearch Dashboards, SeaweedFS internal artifacts) require signing in via Authentik. Staging uses the HTTPS listener (TLS) by default.
 
 ## Configuration
 
 ### Environment variables (make)
 
-- `ENV` — Deployment environment: `dev` (includes DBs) or `prod` (no DBs). Default: `dev`
+- `ENV` — Deployment environment: `dev`, `staging` (HTTPS, prod-like), or `prod`. Default: `dev`
 - `REGISTRY` — Container registry. Default: `docker.io/masterbogdan0`
 - `TAG` — Image tag. Default: `latest`
 - `APP` — Application name (required for single-app targets like `deploy-app`, `docker-build`)
@@ -222,6 +223,7 @@ echo "$(minikube ip --profile homelab-dev) storage.homelab.local" | sudo tee -a 
 
 - `k8s/*/base/` — Base manifests (shared)
 - `k8s/*/overlays/dev/` — Dev-specific (with databases, resource limits, etc.)
+- `k8s/*/overlays/staging/` — Staging (HTTPS, prod-like on Minikube)
 - `k8s/*/overlays/prod/` — Prod-specific (no databases, higher resource limits)
 
 The Makefile automatically prefers `overlays/$(ENV)` when present; falls back to `base/` if overlay not found.
@@ -229,6 +231,7 @@ The Makefile automatically prefers `overlays/$(ENV)` when present; falls back to
 ## Notes
 
 - **Cluster context**: Make sure `kubectl config current-context` points at the cluster you intend to manage (minikube, k3s, etc.) before running make targets.
+- **Minikube IP sync**: Before deploying `ENV=staging` (or `ENV=dev` with sslip routes), run `make update-minikube-ip ENV=staging MINIKUBE_PROFILE=homelab-staging`; if Minikube is not reachable from your shell, use `ENV=staging PROFILE=homelab-staging MINIKUBE_IP=<ip> scripts/update-minikube-ip.sh`.
 - **Dev vs Prod**: `ENV=dev` includes PostgreSQL and Redis; `ENV=prod` omits them.
 - **Validate before deploy**: Use `make validate-all ENV=dev` (dry-run) before deploying.
 - **Kustomize**: All k8s manifests use Kustomize. Overlays can override base patches, replicas, resource limits, etc.

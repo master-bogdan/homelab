@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: staging-observability
+resources:
+  - ../../base
+
+  - external-secret.yaml
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-grafana
+    path: httproute-patch.yaml
+
+helmCharts:
+  - name: grafana
+    repo: https://grafana.github.io/helm-charts
+    version: "8.5.10"
+    releaseName: grafana
+    namespace: staging-observability
+    includeCRDs: false
+    valuesFile: values-staging.yaml

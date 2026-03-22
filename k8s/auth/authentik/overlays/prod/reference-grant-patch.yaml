@@ -1,0 +1,12 @@
+- op: replace
+  path: /spec/from
+  value:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: prod-observability
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: prod-platform
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: prod-secrets

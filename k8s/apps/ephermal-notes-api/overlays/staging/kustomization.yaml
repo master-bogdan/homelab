@@ -1,0 +1,18 @@
+# k8s/apps/ephermal-notes-api/overlays/staging/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: staging-apps
+resources:
+  - ../../base
+  - external-config.yaml
+
+patches:
+  - target:
+      kind: HTTPRoute
+      name: http-ephermal-notes-api
+    path: httproute-patch.yaml
+  - target:
+      kind: Deployment
+      name: ephermal-notes-api-deploy
+    path: deploy-patch.yaml
