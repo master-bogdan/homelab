@@ -46,26 +46,51 @@ const createRequestUrl = (
   return url;
 };
 
+const isJsonContentType = (contentType: string) => {
+  const normalizedContentType = contentType.toLowerCase();
+
+  return (
+    normalizedContentType.includes('application/json') ||
+    normalizedContentType.includes('+json')
+  );
+};
+
+const readResponseText = async (response: Response) => {
+  try {
+    return (await response.text()).trim();
+  } catch {
+    return '';
+  }
+};
+
 const parseError = async (response: Response): Promise<ApiError> => {
   const fallbackError: ApiError = {
     message: `Request failed with status ${response.status}.`,
     status: response.status
   };
-
   const contentType = response.headers.get('content-type') ?? '';
+  const fallbackResponse = response.clone();
 
-  if (!contentType.includes('application/json')) {
-    return fallbackError;
+  if (!isJsonContentType(contentType)) {
+    const rawText = await readResponseText(fallbackResponse);
+
+    return rawText ? { ...fallbackError, message: rawText } : fallbackError;
   }
 
-  const payload = (await response.json()) as Partial<ApiError>;
+  try {
+    const payload = (await response.json()) as Partial<ApiError>;
 
-  return {
-    code: payload.code,
-    details: payload.details,
-    message: payload.message ?? fallbackError.message,
-    status: payload.status ?? fallbackError.status
-  };
+    return {
+      code: payload.code,
+      details: payload.details,
+      message: payload.message ?? fallbackError.message,
+      status: payload.status ?? fallbackError.status
+    };
+  } catch {
+    const rawText = await readResponseText(fallbackResponse);
+
+    return rawText ? { ...fallbackError, message: rawText } : fallbackError;
+  }
 };
 
 export class HttpClient {
@@ -132,7 +157,7 @@ export class HttpClient {
 
     const contentType = response.headers.get('content-type') ?? '';
 
-    if (contentType.includes('application/json')) {
+    if (isJsonContentType(contentType)) {
       return (await response.json()) as TResponse;
     }
 

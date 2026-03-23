@@ -35,26 +35,49 @@ export class WebSocketClient {
   private statusListeners = new Set<WebSocketStatusHandler>();
 
   public connect(url = appConfig.wsBaseUrl) {
-    if (this.socket && this.socket.readyState <= WebSocket.OPEN) {
+    if (
+      this.socket &&
+      (this.socket.readyState === WebSocket.CONNECTING ||
+        this.socket.readyState === WebSocket.OPEN)
+    ) {
       return;
     }
 
-    this.socket = new WebSocket(url);
-    this.notifyStatus();
+    const socket = new WebSocket(url);
 
-    this.socket.addEventListener('open', () => {
-      this.notifyStatus();
+    this.socket = socket;
+    this.notifyStatus(socket);
+
+    socket.addEventListener('open', () => {
+      if (this.socket !== socket) {
+        return;
+      }
+
+      this.notifyStatus(socket);
     });
 
-    this.socket.addEventListener('close', () => {
-      this.notifyStatus();
+    socket.addEventListener('close', () => {
+      if (this.socket !== socket) {
+        return;
+      }
+
+      this.socket = null;
+      this.notifyStatus(socket);
     });
 
-    this.socket.addEventListener('error', () => {
+    socket.addEventListener('error', () => {
+      if (this.socket !== socket) {
+        return;
+      }
+
       this.statusListeners.forEach((listener) => listener('error'));
     });
 
-    this.socket.addEventListener('message', (event) => {
+    socket.addEventListener('message', (event) => {
+      if (this.socket !== socket) {
+        return;
+      }
+
       const payload = this.parseMessage(event.data);
 
       this.messageListeners.forEach((listener) => listener(payload));
@@ -62,7 +85,19 @@ export class WebSocketClient {
   }
 
   public disconnect() {
-    this.socket?.close();
+    if (!this.socket) {
+      return;
+    }
+
+    const socket = this.socket;
+
+    this.socket = null;
+
+    if (socket.readyState !== WebSocket.CLOSED) {
+      socket.close();
+    }
+
+    this.notifyStatus(socket);
   }
 
   public getStatus(): WebSocketStatus {
@@ -94,8 +129,8 @@ export class WebSocketClient {
     };
   }
 
-  private notifyStatus() {
-    const status = this.getStatus();
+  private notifyStatus(socket: WebSocket | null = this.socket) {
+    const status = getStatusFromSocket(socket);
 
     this.statusListeners.forEach((listener) => listener(status));
   }
