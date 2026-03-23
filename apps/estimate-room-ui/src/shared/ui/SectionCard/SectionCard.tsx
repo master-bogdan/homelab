@@ -18,7 +18,7 @@ export const SectionCard = ({
   title,
   ...paperProps
 }: SectionCardProps) => (
-  <SectionCardRoot elevation={0} variant="outlined" {...paperProps}>
+  <SectionCardRoot elevation={0} {...paperProps}>
     <Stack
       alignItems={{ sm: 'center' }}
       direction={{ sm: 'row' }}

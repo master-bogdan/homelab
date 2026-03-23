@@ -1,17 +1,24 @@
 import { Box, Paper, Stack, styled } from '@mui/material';
 
 export const SectionCardRoot = styled(Paper)(({ theme }) => ({
+  backgroundColor: theme.app.surfaces.card,
+  border: 'none',
+  borderRadius:
+    theme.palette.mode === 'light'
+      ? theme.shape.borderRadius * 1.5
+      : theme.shape.borderRadius * 2,
+  boxShadow: 'none',
   display: 'flex',
   flexDirection: 'column',
   gap: theme.spacing(2),
   height: '100%',
   padding: theme.spacing(3),
-  borderRadius: `calc(${theme.shape.borderRadius} * 1.25)`,
-  backgroundImage: 'none'
+  transition: theme.transitions.create(['background-color'])
 }));
 
 export const SectionCardHeader = styled(Stack)(({ theme }) => ({
-  gap: theme.spacing(0.75)
+  gap: theme.spacing(0.75),
+  minWidth: 0
 }));
 
 export const SectionCardBody = styled(Box)({

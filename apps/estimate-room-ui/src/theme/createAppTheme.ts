@@ -1,14 +1,22 @@
 import { createTheme } from '@mui/material/styles';
 
-import { getComponentOverrides, getPaletteTokens, getShadowTokens, shapeTokens, typographyTokens } from './tokens';
+import {
+  getAppTokens,
+  getComponentOverrides,
+  getPaletteTokens,
+  getShadowTokens,
+  getShapeTokens,
+  getTypographyTokens
+} from './tokens';
 import type { ThemeMode } from './types';
 
 export const createAppTheme = (mode: ThemeMode) =>
   createTheme({
+    app: getAppTokens(mode),
     palette: getPaletteTokens(mode),
-    typography: typographyTokens,
+    typography: getTypographyTokens(mode),
     spacing: 8,
-    shape: shapeTokens,
+    shape: getShapeTokens(mode),
     shadows: getShadowTokens(mode),
     components: getComponentOverrides(mode)
   });

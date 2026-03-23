@@ -49,14 +49,14 @@ export const AppTopBar = ({
       elevation={0}
       position="fixed"
       sx={{
-        backdropFilter: 'blur(18px)',
-        borderBottom: '1px solid',
-        borderColor: 'divider',
+        backdropFilter: (theme) => `blur(${theme.app.effects.backdropBlur})`,
+        backgroundColor: (theme) => theme.app.surfaces.overlay,
+        boxShadow: 'none',
         width: { lg: `calc(100% - ${drawerWidth}px)` },
         ml: { lg: `${drawerWidth}px` }
       }}
     >
-      <Toolbar sx={{ gap: 2 }}>
+      <Toolbar sx={{ gap: 2, minHeight: 76 }}>
         {!isDesktop ? (
           <IconButton color="inherit" edge="start" onClick={onMenuClick}>
             <MenuRoundedIcon />
@@ -74,12 +74,18 @@ export const AppTopBar = ({
           <IconButton
             color="inherit"
             onClick={() => dispatch(toggleThemeMode())}
+            sx={{ bgcolor: 'action.hover' }}
             title="Toggle theme"
           >
             {themeMode === 'light' ? <DarkModeRoundedIcon /> : <LightModeRoundedIcon />}
           </IconButton>
           <Stack alignItems="center" direction="row" spacing={1}>
-            <Avatar sx={{ bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+            <Avatar
+              sx={{
+                backgroundImage: (theme) => theme.app.gradients.primary,
+                color: 'primary.contrastText'
+              }}
+            >
               {initials}
             </Avatar>
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>

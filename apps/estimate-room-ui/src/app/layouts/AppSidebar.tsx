@@ -5,7 +5,6 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import AddHomeWorkRoundedIcon from '@mui/icons-material/AddHomeWorkRounded';
 import {
   Box,
-  Divider,
   Drawer,
   List,
   ListItemButton,
@@ -68,7 +67,6 @@ export const AppSidebar = ({ isDesktop }: AppSidebarProps) => {
           Page-by-page frontend scaffold with clean module boundaries.
         </Typography>
       </Stack>
-      <Divider />
       <List sx={{ px: 1.5, py: 2 }}>
         {navigationItems.map(({ icon: Icon, label, to }) => (
           <ListItemButton
@@ -80,10 +78,23 @@ export const AppSidebar = ({ isDesktop }: AppSidebarProps) => {
               }
             }}
             selected={location.pathname === to}
-            sx={{ borderRadius: 2, mb: 0.5 }}
+            sx={{
+              position: 'relative',
+              '&.Mui-selected::before': {
+                backgroundColor: 'primary.main',
+                borderRadius: 999,
+                content: '""',
+                height: 22,
+                left: 10,
+                position: 'absolute',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 4
+              }
+            }}
             to={to}
           >
-            <ListItemIcon sx={{ minWidth: 40 }}>
+            <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
               <Icon />
             </ListItemIcon>
             <ListItemText primary={label} />
