@@ -17,10 +17,12 @@ export const useLoginPage = () => {
   const dispatch = useAppDispatch();
   const { createPendingRequest } = useAuthContinuation();
   const form = useForm<LoginFormValues>({
+    mode: 'onBlur',
     defaultValues: {
       email: '',
       password: ''
-    }
+    },
+    reValidateMode: 'onChange'
   });
 
   const submit = form.handleSubmit(async (values) => {

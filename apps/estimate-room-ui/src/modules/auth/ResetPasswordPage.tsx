@@ -1,11 +1,18 @@
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
-import { Alert, Box, Link, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Link, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
 import { AppButton, OverlineText } from '@/shared/ui';
 
-import { AuthCard, AuthIntro, AuthShell, PasswordRecommendations } from './components';
+import { createPasswordValidationRules } from './utils';
+import {
+  AuthCard,
+  AuthIntro,
+  AuthShell,
+  PasswordField,
+  PasswordRecommendations
+} from './components';
 import { useResetPasswordPage } from './hooks';
 
 export const ResetPasswordPage = () => {
@@ -71,31 +78,23 @@ export const ResetPasswordPage = () => {
               {errors.root?.message ? <Alert severity="error">{errors.root.message}</Alert> : null}
               <Stack spacing={1}>
                 <OverlineText>New Password</OverlineText>
-                <TextField
+                <PasswordField
                   autoComplete="new-password"
                   error={Boolean(errors.password)}
                   fullWidth
                   helperText={errors.password?.message}
                   placeholder="••••••••"
-                  type="password"
-                  {...register('password', {
-                    minLength: {
-                      message: 'Password must be at least 8 characters.',
-                      value: 8
-                    },
-                    required: 'Password is required.'
-                  })}
+                  {...register('password', createPasswordValidationRules())}
                 />
               </Stack>
               <Stack spacing={1}>
                 <OverlineText>Confirm New Password</OverlineText>
-                <TextField
+                <PasswordField
                   autoComplete="new-password"
                   error={Boolean(errors.confirmPassword)}
                   fullWidth
                   helperText={errors.confirmPassword?.message}
                   placeholder="••••••••"
-                  type="password"
                   {...register('confirmPassword', {
                     required: 'Please confirm your new password.',
                     validate: (value, values) =>

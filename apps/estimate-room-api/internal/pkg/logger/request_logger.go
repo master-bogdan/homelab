@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -60,6 +61,15 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 		start := time.Now()
 		rec := &responseRecorder{ResponseWriter: w}
 
+		L().InfoContext(r.Context(), Prefix("MW", "HTTP", "REQUEST", "Request started"),
+			"method", r.Method,
+			"path", r.URL.Path,
+			"headers", requestHeaders(r),
+			"content_length", r.ContentLength,
+			"remote_ip", clientIP(r),
+			"user_agent", r.UserAgent(),
+		)
+
 		next.ServeHTTP(rec, r)
 
 		status := rec.status
@@ -83,7 +93,7 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 		}
 		metrics.RecordHTTPRequest(r.Method, routePattern, status, duration)
 
-		L().Log(r.Context(), level, "request",
+		L().Log(r.Context(), level, Prefix("MW", "HTTP", "REQUEST", "Request ended"),
 			"method", r.Method,
 			"path", r.URL.Path,
 			"route", routePattern,
@@ -94,6 +104,46 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 			"user_agent", r.UserAgent(),
 		)
 	})
+}
+
+func requestHeaders(r *http.Request) map[string]string {
+	if r == nil {
+		return map[string]string{}
+	}
+
+	allowedHeaders := []string{
+		"Accept",
+		"Content-Type",
+		"Origin",
+		"Referer",
+		RequestIDHeader,
+	}
+
+	headers := make(map[string]string, len(allowedHeaders))
+	for _, header := range allowedHeaders {
+		value := strings.TrimSpace(r.Header.Get(header))
+		if value == "" {
+			continue
+		}
+
+		headers[strings.ToLower(header)] = value
+	}
+
+	if len(headers) == 0 {
+		return map[string]string{}
+	}
+
+	normalizedHeaders := make(map[string]string, len(headers))
+	keys := make([]string, 0, len(headers))
+	for key := range headers {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		normalizedHeaders[key] = headers[key]
+	}
+
+	return normalizedHeaders
 }
 
 func clientIP(r *http.Request) string {

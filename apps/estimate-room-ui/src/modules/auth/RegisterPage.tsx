@@ -1,3 +1,4 @@
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import { Alert, Box, Link, Stack, TextField, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
@@ -5,7 +6,15 @@ import { Link as RouterLink } from 'react-router-dom';
 import { appRoutes } from '@/shared/constants/routes';
 import { AppButton, OverlineText } from '@/shared/ui';
 
-import { AuthActionDivider, AuthCard, AuthIntro, AuthShell } from './components';
+import { createEmailValidationRules, createPasswordValidationRules } from './utils';
+import {
+  AuthActionDivider,
+  AuthCard,
+  AuthIntro,
+  AuthShell,
+  PasswordField,
+  PasswordRecommendations
+} from './components';
 import { useRegisterPage } from './hooks';
 
 export const RegisterPage = () => {
@@ -15,7 +24,8 @@ export const RegisterPage = () => {
       register
     },
     onSubmit,
-    onSubmitWithGithub
+    onSubmitWithGithub,
+    password
   } = useRegisterPage();
 
   return (
@@ -24,7 +34,7 @@ export const RegisterPage = () => {
         description="Define your professional profile to start estimating."
         title="Create Workspace"
       />
-      <AuthCard>
+      <AuthCard sx={{ maxWidth: 460, mx: 'auto' }}>
         <Box component="form" noValidate onSubmit={onSubmit}>
           <Stack spacing={2.5}>
             {errors.root?.message ? <Alert severity="error">{errors.root.message}</Alert> : null}
@@ -36,7 +46,7 @@ export const RegisterPage = () => {
                 error={Boolean(errors.displayName)}
                 fullWidth
                 helperText={errors.displayName?.message}
-                placeholder="Jane Architect"
+                placeholder="John Doe"
                 {...register('displayName', {
                   maxLength: {
                     message: 'Display name must be 100 characters or less.',
@@ -55,39 +65,83 @@ export const RegisterPage = () => {
                 fullWidth
                 helperText={errors.email?.message}
                 placeholder="name@company.com"
-                {...register('email', {
-                  pattern: {
-                    message: 'Enter a valid email address.',
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/u
-                  },
-                  required: 'Email is required.'
-                })}
+                type="email"
+                {...register('email', createEmailValidationRules())}
               />
             </Stack>
 
+            <Box
+              sx={{
+                columnGap: 1.5,
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+                rowGap: 2.5
+              }}
+            >
+              <Stack spacing={1}>
+                <Stack alignItems="baseline" direction="row" spacing={0.75}>
+                  <OverlineText component="span">Organization</OverlineText>
+                  <Typography color="text.secondary" component="span" variant="caption">
+                    (optional)
+                  </Typography>
+                </Stack>
+                <TextField
+                  fullWidth
+                  placeholder="Acme Corp"
+                  {...register('organization')}
+                />
+              </Stack>
+
+              <Stack spacing={1}>
+                <Stack alignItems="baseline" direction="row" spacing={0.75}>
+                  <OverlineText component="span">Occupation</OverlineText>
+                  <Typography color="text.secondary" component="span" variant="caption">
+                    (optional)
+                  </Typography>
+                </Stack>
+                <TextField
+                  fullWidth
+                  placeholder="Developer"
+                  {...register('occupation')}
+                />
+              </Stack>
+            </Box>
+
             <Stack spacing={1}>
               <OverlineText>Password</OverlineText>
-              <TextField
+              <PasswordField
                 autoComplete="new-password"
                 error={Boolean(errors.password)}
                 fullWidth
                 helperText={errors.password?.message}
                 placeholder="••••••••"
-                type="password"
-                {...register('password', {
-                  minLength: {
-                    message: 'Password must be at least 8 characters.',
-                    value: 8
-                  },
-                  required: 'Password is required.'
+                {...register('password', createPasswordValidationRules())}
+              />
+            </Stack>
+
+            <Stack spacing={1}>
+              <OverlineText>Confirm Password</OverlineText>
+              <PasswordField
+                autoComplete="new-password"
+                error={Boolean(errors.confirmPassword)}
+                fullWidth
+                helperText={errors.confirmPassword?.message}
+                placeholder="••••••••"
+                {...register('confirmPassword', {
+                  required: 'Please confirm your password.',
+                  validate: (value, values) =>
+                    value === values.password || 'Passwords do not match.'
                 })}
               />
             </Stack>
+
+            <PasswordRecommendations password={password} />
 
             <AppButton
               fullWidth
               loading={isSubmitting}
               loadingText="Creating Account..."
+              endIcon={<ArrowForwardRoundedIcon />}
               type="submit"
               variant="contained"
             >

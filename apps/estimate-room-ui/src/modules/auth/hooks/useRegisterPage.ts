@@ -1,4 +1,5 @@
-import { useForm } from 'react-hook-form';
+import { useEffect } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 
 import { useAppDispatch } from '@/app/store/hooks';
 
@@ -9,23 +10,50 @@ import { isEmailAlreadyInUseError, resolveApiErrorMessage } from '../utils';
 import { useAuthContinuation } from './useAuthContinuation';
 
 interface RegisterFormValues {
+  readonly confirmPassword: string;
   readonly displayName: string;
   readonly email: string;
+  readonly occupation: string;
+  readonly organization: string;
   readonly password: string;
 }
+
+const normalizeOptionalField = (value: string) => {
+  const trimmedValue = value.trim();
+
+  return trimmedValue ? trimmedValue : undefined;
+};
 
 export const useRegisterPage = () => {
   const dispatch = useAppDispatch();
   const { createPendingRequest } = useAuthContinuation();
   const form = useForm<RegisterFormValues>({
+    mode: 'onBlur',
     defaultValues: {
+      confirmPassword: '',
       displayName: '',
       email: '',
+      occupation: '',
+      organization: '',
       password: ''
-    }
+    },
+    reValidateMode: 'onChange'
   });
+  const password = useWatch({
+    control: form.control,
+    name: 'password'
+  });
+  const confirmPasswordTouched = form.formState.touchedFields.confirmPassword;
 
-  const submit = form.handleSubmit(async (values) => {
+  useEffect(() => {
+    if (!confirmPasswordTouched) {
+      return;
+    }
+
+    void form.trigger('confirmPassword');
+  }, [confirmPasswordTouched, form, password]);
+
+  const submit = form.handleSubmit(async ({ confirmPassword: _confirmPassword, ...values }) => {
     form.clearErrors();
 
     try {
@@ -34,6 +62,8 @@ export const useRegisterPage = () => {
         continue: pendingRequest.continueUrl,
         displayName: values.displayName.trim(),
         email: values.email,
+        occupation: normalizeOptionalField(values.occupation),
+        organization: normalizeOptionalField(values.organization),
         password: values.password
       });
 
@@ -73,6 +103,7 @@ export const useRegisterPage = () => {
   return {
     form,
     onSubmit: submit,
-    onSubmitWithGithub: signUpWithGithub
+    onSubmitWithGithub: signUpWithGithub,
+    password
   };
 };

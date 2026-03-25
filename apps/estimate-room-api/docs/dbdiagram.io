@@ -57,6 +57,8 @@ Table users {
   password_hash  text
   github_id      text
   display_name   text        [not null, default: '']
+  organization   text
+  occupation     text
   avatar_url     text
   created_at     timestamptz [not null, default: `now()`]
   updated_at     timestamptz [not null, default: `now()`]

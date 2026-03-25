@@ -1,0 +1,25 @@
+root = "."
+tmp_dir = "build/air"
+
+[build]
+cmd = "go build -o ./build/air/server ./cmd/server"
+bin = "./build/air/server"
+full_bin = "./build/air/server"
+delay = 500
+exclude_dir = ["bin", "build", "tmp", "vendor", "docs"]
+exclude_regex = ["_test\\.go"]
+include_ext = ["go", "yaml", "yml", "sql"]
+include_file = [".env"]
+stop_on_error = true
+
+[color]
+app = "blue"
+build = "yellow"
+runner = "green"
+watcher = "cyan"
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true

@@ -23,7 +23,9 @@ const mapSessionUser = (user: SessionUserResponseDto | null): AuthUser | null =>
     avatarUrl: user.avatarUrl ?? null,
     displayName: user.displayName,
     email: user.email ?? '',
-    id: user.id
+    id: user.id,
+    occupation: user.occupation ?? null,
+    organization: user.organization ?? null
   };
 };
 

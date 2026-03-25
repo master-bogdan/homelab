@@ -14,6 +14,8 @@ type UserModel struct {
 	PasswordHash *string    `bun:"password_hash"`
 	GithubID     *string    `bun:"github_id"`
 	DisplayName  string     `bun:"display_name"`
+	Organization *string    `bun:"organization"`
+	Occupation   *string    `bun:"occupation"`
 	AvatarURL    *string    `bun:"avatar_url"`
 	CreatedAt    time.Time  `bun:"created_at"`
 	UpdatedAt    time.Time  `bun:"updated_at"`

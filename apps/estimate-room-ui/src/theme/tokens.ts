@@ -353,15 +353,21 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
     styleOverrides: {
       root: ({ theme }) => ({
         borderRadius: theme.shape.borderRadius,
+        boxShadow: 'none',
         minHeight: 40,
         paddingBlock: theme.spacing(1),
         paddingInline: theme.spacing(2.75),
-        transition: theme.transitions.create(['background-color', 'border-color', 'color'])
+        transition: theme.transitions.create(
+          ['background-color', 'border-color', 'box-shadow', 'color', 'opacity'],
+          { duration: theme.transitions.duration.shorter }
+        )
       }),
       contained: () => ({
         boxShadow: 'none',
-        '&:hover': {
-          boxShadow: 'none'
+        '@media (hover: hover)': {
+          '&:hover': {
+            boxShadow: 'none'
+          }
         },
         '&.Mui-disabled': {
           backgroundImage: 'none'
@@ -369,12 +375,16 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
       }),
       containedPrimary: ({ theme }) => ({
         backgroundColor: 'transparent',
+        backgroundBlendMode: 'soft-light',
         backgroundImage: theme.app.gradients.primary,
         color: theme.palette.primary.contrastText,
-        '&:hover': {
-          backgroundColor: 'transparent',
-          backgroundImage: theme.app.gradients.primary,
-          filter: 'brightness(1.04)'
+        '@media (hover: hover)': {
+          '&:hover': {
+            backgroundColor: alpha(theme.palette.common.white, theme.palette.mode === 'light' ? 0.1 : 0.14),
+            backgroundImage: theme.app.gradients.primary,
+            boxShadow:
+              theme.palette.mode === 'light' ? theme.app.effects.ambientShadow : 'none'
+          }
         }
       }),
       containedSecondary: ({ theme }) => ({
@@ -383,11 +393,15 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
             ? theme.app.surfaces.well
             : theme.palette.secondary.main,
         color: theme.palette.secondary.contrastText,
-        '&:hover': {
-          backgroundColor:
-            theme.palette.mode === 'light'
-              ? theme.app.surfaces.rowAlternate
-              : theme.palette.secondary.dark
+        '@media (hover: hover)': {
+          '&:hover': {
+            backgroundColor:
+              theme.palette.mode === 'light'
+                ? theme.app.surfaces.rowAlternate
+                : theme.palette.secondary.dark,
+            boxShadow:
+              theme.palette.mode === 'light' ? theme.app.effects.ambientShadow : 'none'
+          }
         }
       }),
       outlined: ({ theme }) => ({
@@ -395,12 +409,15 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
           theme.palette.mode === 'light' ? theme.app.surfaces.inset : 'transparent',
         borderColor: theme.palette.mode === 'light' ? 'transparent' : theme.app.borders.ghost,
         color: theme.palette.text.primary,
-        '&:hover': {
-          backgroundColor:
-            theme.palette.mode === 'light'
-              ? theme.app.surfaces.well
-              : theme.app.surfaces.section,
-          borderColor: theme.palette.mode === 'light' ? 'transparent' : theme.app.borders.ghost
+        '@media (hover: hover)': {
+          '&:hover': {
+            backgroundColor:
+              theme.palette.mode === 'light'
+                ? theme.app.surfaces.well
+                : theme.app.surfaces.section,
+            borderColor:
+              theme.palette.mode === 'light' ? 'transparent' : theme.app.borders.ghost
+          }
         }
       }),
       text: ({ theme }) => ({
@@ -408,8 +425,10 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
           theme.palette.mode === 'light'
             ? theme.palette.text.secondary
             : theme.palette.primary.light,
-        '&:hover': {
-          backgroundColor: theme.app.surfaces.section
+        '@media (hover: hover)': {
+          '&:hover': {
+            backgroundColor: theme.app.surfaces.section
+          }
         }
       })
     }
@@ -535,18 +554,22 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
         transition: theme.transitions.create(['background-color', 'box-shadow', 'border-color']),
         '&:hover': {
           backgroundColor:
-            theme.palette.mode === 'light' ? theme.app.surfaces.inset : theme.app.surfaces.section
+            theme.palette.mode === 'light'
+              ? theme.app.surfaces.inset
+              : theme.app.surfaces.section
         },
         '&:hover .MuiOutlinedInput-notchedOutline': {
           borderColor:
             theme.palette.mode === 'light'
-              ? 'transparent'
+              ? alpha(theme.palette.primary.main, 0.24)
               : alpha(theme.palette.primary.main, 0.3)
         },
         '&.Mui-focused': {
           backgroundColor: theme.app.surfaces.card,
           boxShadow:
-            theme.palette.mode === 'light' ? 'none' : `0 0 0 2px ${theme.app.borders.focusRing}`
+            theme.palette.mode === 'light'
+              ? `0 0 0 3px ${alpha(theme.palette.primary.main, 0.12)}`
+              : `0 0 0 2px ${theme.app.borders.focusRing}`
         },
         '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
           borderColor:
@@ -559,6 +582,37 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
             theme.palette.mode === 'light'
               ? theme.palette.error.main
               : alpha(theme.palette.error.main, 0.7)
+        }
+      })
+    }
+  },
+  MuiMenuItem: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        borderRadius:
+          theme.palette.mode === 'light'
+            ? Math.max(Number(theme.shape.borderRadius) / 3, 2)
+            : Number(theme.shape.borderRadius),
+        marginInline: theme.spacing(0.5),
+        marginBlock: theme.spacing(0.25),
+        transition: theme.transitions.create(['background-color', 'color']),
+        '&:hover': {
+          backgroundColor:
+            theme.palette.mode === 'light'
+              ? theme.app.surfaces.rowAlternate
+              : theme.app.surfaces.section
+        },
+        '&.Mui-selected': {
+          backgroundColor:
+            theme.palette.mode === 'light'
+              ? theme.app.surfaces.well
+              : theme.app.surfaces.card,
+          '&:hover': {
+            backgroundColor:
+              theme.palette.mode === 'light'
+                ? theme.app.surfaces.cardHover
+                : theme.app.surfaces.card
+          }
         }
       })
     }

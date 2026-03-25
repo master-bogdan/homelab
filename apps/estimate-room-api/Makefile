@@ -1,4 +1,4 @@
-.PHONY: build run test lint compose-up compose-down run-compose migrate-up migrate-down migrate-create swagger-generate
+.PHONY: build run dev test lint compose-up compose-down run-compose dev-compose migrate-up migrate-down migrate-create swagger-generate
 
 # Build the API binary
 build:
@@ -8,6 +8,23 @@ build:
 # Run the API locally
 run:
 	@go run ./cmd/server
+
+# Run the API locally with live reload via air
+dev:
+	@AIR_BIN="$$(command -v air || true)"; \
+	if [ -z "$$AIR_BIN" ]; then \
+		GOBIN="$$(go env GOBIN)"; \
+		GOPATH="$$(go env GOPATH)"; \
+		if [ -n "$$GOBIN" ] && [ -x "$$GOBIN/air" ]; then \
+			AIR_BIN="$$GOBIN/air"; \
+		elif [ -n "$$GOPATH" ] && [ -x "$$GOPATH/bin/air" ]; then \
+			AIR_BIN="$$GOPATH/bin/air"; \
+		else \
+			echo "air is not installed. Install it with: go install github.com/air-verse/air@latest"; \
+			exit 1; \
+		fi; \
+	fi; \
+	"$$AIR_BIN" -c .air.toml
 
 # Run all tests
 test:
@@ -28,6 +45,10 @@ compose-down:
 # Run required services via docker compose, then start the API locally
 run-compose: compose-up
 	@go run ./cmd/server
+
+# Run required services via docker compose, then start the API with live reload
+dev-compose: compose-up
+	@$(MAKE) dev
 
 # Apply all pending migrations
 migrate-up:

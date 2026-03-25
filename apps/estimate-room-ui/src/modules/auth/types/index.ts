@@ -13,6 +13,8 @@ export interface SessionUserResponseDto {
   readonly displayName: string;
   readonly email?: string;
   readonly id: string;
+  readonly occupation?: string | null;
+  readonly organization?: string | null;
 }
 
 export interface SessionResponseDto {
@@ -30,6 +32,8 @@ export interface RegisterPayload {
   readonly continue: string;
   readonly displayName: string;
   readonly email: string;
+  readonly occupation?: string;
+  readonly organization?: string;
   readonly password: string;
 }
 

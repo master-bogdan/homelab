@@ -12,3 +12,10 @@ export {
   resolveApiErrorMessage
 } from './errorMessages';
 export { clearOauthTokenCookies, persistOauthTokenCookies } from './tokenCookies';
+export {
+  createEmailValidationRules,
+  createPasswordValidationRules,
+  normalizeEmailAddress,
+  validateEmailAddress,
+  validatePasswordStrength
+} from './validation';

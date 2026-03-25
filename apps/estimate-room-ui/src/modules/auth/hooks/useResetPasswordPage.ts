@@ -29,10 +29,12 @@ export const useResetPasswordPage = () => {
     useState<ResetPasswordValidationReason>('invalid');
   const [pageError, setPageError] = useState<string | null>(null);
   const form = useForm<ResetPasswordFormValues>({
+    mode: 'onBlur',
     defaultValues: {
       confirmPassword: '',
       password: ''
-    }
+    },
+    reValidateMode: 'onChange'
   });
 
   useEffect(() => {
@@ -79,10 +81,19 @@ export const useResetPasswordPage = () => {
     control: form.control,
     name: 'password'
   });
+  const confirmPasswordTouched = form.formState.touchedFields.confirmPassword;
   const invalidLinkCopy = useMemo(
     () => getResetLinkCopy(validationReason),
     [validationReason]
   );
+
+  useEffect(() => {
+    if (!confirmPasswordTouched) {
+      return;
+    }
+
+    void form.trigger('confirmPassword');
+  }, [confirmPasswordTouched, form, password]);
 
   const submit = form.handleSubmit(async ({ password: nextPassword }) => {
     form.clearErrors();

@@ -7,4 +7,6 @@ export type { AuthIntroProps } from './AuthIntro';
 export { AuthSessionBootstrap } from './AuthSessionBootstrap';
 export { AuthShell } from './AuthShell';
 export type { AuthShellProps } from './AuthShell';
+export { PasswordField } from './PasswordField';
+export type { PasswordFieldProps } from './PasswordField';
 export { PasswordRecommendations } from './PasswordRecommendations';

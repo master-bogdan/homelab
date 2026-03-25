@@ -45,5 +45,26 @@ describe.each([
       expect(theme.typography.body1?.fontFamily).toContain(expectedBodyFont);
       expect(theme.shadows[12]).not.toBe('none');
     });
+
+    it('uses transition-based button hovers without hover lift effects', () => {
+      const theme = createAppTheme(mode);
+      const buttonOverrides = theme.components?.MuiButton?.styleOverrides;
+      const rootStyles = (buttonOverrides?.root as (args: { theme: typeof theme }) => Record<string, string>)({
+        theme
+      });
+      const containedPrimaryStyles = (
+        buttonOverrides?.containedPrimary as (args: { theme: typeof theme }) => Record<string, unknown>
+      )({ theme });
+      const hoverStyles = (
+        containedPrimaryStyles['@media (hover: hover)'] as Record<string, Record<string, unknown>>
+      )['&:hover'];
+
+      expect(rootStyles.transition).toContain('opacity');
+      expect(rootStyles.transition).not.toContain('filter');
+      expect(rootStyles.transition).not.toContain('transform');
+      expect(containedPrimaryStyles.backgroundBlendMode).toBe('soft-light');
+      expect(hoverStyles.filter).toBeUndefined();
+      expect(hoverStyles.transform).toBeUndefined();
+    });
   }
 );

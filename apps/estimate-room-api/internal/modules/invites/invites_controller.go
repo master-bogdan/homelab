@@ -64,6 +64,11 @@ func (c *invitesController) AcceptInvitation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	c.logger.InfoContext(r.Context(), "accept invitation dto accepted",
+		"path", r.URL.Path,
+		"guest_name_provided", dto.GuestName != nil,
+	)
+
 	result, err := c.service.AcceptInvitation(r.Context(), token, userID, dto.GuestName)
 	if err != nil {
 		c.writeInviteError(w, r, err)

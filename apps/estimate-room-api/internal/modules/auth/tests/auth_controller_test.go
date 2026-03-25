@@ -149,6 +149,61 @@ func TestRegister_DuplicateEmail_ReturnsConflict(t *testing.T) {
 	}
 }
 
+func TestRegister_PersistsProfessionalProfile(t *testing.T) {
+	router, db, clientID, redirectURI := setupAuthTest(t)
+	defer db.Close()
+
+	body := map[string]string{
+		"email":        "profile@example.com",
+		"password":     "password123",
+		"displayName":  "Profile User",
+		"organization": "Acme Corp",
+		"occupation":   "Developer",
+		"continue":     continueURL(clientID, redirectURI, "state-profile", "nonce-profile", "challenge-profile"),
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created, got %d", rr.Code)
+	}
+
+	var response authdto.SessionResponse
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if response.User == nil {
+		t.Fatalf("expected user payload in response")
+	}
+	if response.User.Organization == nil || *response.User.Organization != "Acme Corp" {
+		t.Fatalf("expected organization in response, got %#v", response.User)
+	}
+	if response.User.Occupation == nil || *response.User.Occupation != "Developer" {
+		t.Fatalf("expected occupation in response, got %#v", response.User)
+	}
+
+	userRepo := usersrepositories.NewUserRepository(db)
+	user, err := userRepo.FindByEmail("profile@example.com")
+	if err != nil {
+		t.Fatalf("failed to load persisted user: %v", err)
+	}
+	if user.Organization == nil || *user.Organization != "Acme Corp" {
+		t.Fatalf("expected organization to be persisted, got %#v", user.Organization)
+	}
+	if user.Occupation == nil || *user.Occupation != "Developer" {
+		t.Fatalf("expected occupation to be persisted, got %#v", user.Occupation)
+	}
+}
+
 func TestGetSession_WithSessionCookie_ReturnsAuthenticatedUser(t *testing.T) {
 	router, db, clientID, redirectURI := setupAuthTest(t)
 	defer db.Close()

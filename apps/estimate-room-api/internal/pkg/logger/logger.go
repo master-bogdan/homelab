@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -20,7 +21,6 @@ var (
 	initOnce      sync.Once
 )
 
-// JSONHandler formats logs for OpenSearch, but adds colors when writing to a TTY.
 type JSONHandler struct {
 	level  slog.Leveler
 	writer *os.File
@@ -54,10 +54,10 @@ func (h *JSONHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	// collect attributes
 	for _, a := range h.attrs {
-		logEntry[a.Key] = a.Value.Any()
+		logEntry[a.Key] = normalizeLogValue(a.Value.Any())
 	}
 	r.Attrs(func(a slog.Attr) bool {
-		logEntry[a.Key] = a.Value.Any()
+		logEntry[a.Key] = normalizeLogValue(a.Value.Any())
 		return true
 	})
 
@@ -98,7 +98,7 @@ func colorize(level slog.Level, msg string) string {
 	case slog.LevelDebug:
 		return "\033[37m" + msg + "\033[0m" // gray
 	case slog.LevelInfo:
-		return "\033[34m" + msg + "\033[0m" // blue
+		return "\033[36m" + msg + "\033[0m" // cyan
 	case slog.LevelWarn:
 		return "\033[33m" + msg + "\033[0m" // yellow
 	default:
@@ -111,7 +111,48 @@ func isTerminal(f *os.File) bool {
 	return (fi.Mode() & os.ModeCharDevice) != 0
 }
 
-// InitLogger initializes and sets default slog logger
+func normalizeLogValue(value any) any {
+	switch v := value.(type) {
+	case nil:
+		return nil
+	case error:
+		return v.Error()
+	}
+
+	if _, err := json.Marshal(value); err == nil {
+		return value
+	}
+
+	return fmt.Sprint(value)
+}
+
+func Prefix(parts ...string) string {
+	if len(parts) == 0 {
+		return ""
+	}
+
+	var prefix strings.Builder
+	for _, part := range parts[:len(parts)-1] {
+		trimmed := strings.ToUpper(strings.TrimSpace(part))
+		if trimmed == "" {
+			continue
+		}
+		prefix.WriteString("[")
+		prefix.WriteString(trimmed)
+		prefix.WriteString("]")
+	}
+
+	message := strings.TrimSpace(parts[len(parts)-1])
+	if prefix.Len() == 0 {
+		return message
+	}
+	if message == "" {
+		return prefix.String()
+	}
+
+	return prefix.String() + " " + message
+}
+
 func InitLogger() *slog.Logger {
 	initOnce.Do(func() {
 		handler := NewJSONHandler(slog.LevelInfo)
@@ -121,7 +162,6 @@ func InitLogger() *slog.Logger {
 	return defaultLogger
 }
 
-// L returns the singleton logger instance, initializing it if needed.
 func L() *slog.Logger {
 	if defaultLogger != nil {
 		return defaultLogger
@@ -129,7 +169,6 @@ func L() *slog.Logger {
 	return InitLogger()
 }
 
-// WithRequestID stores a request ID in context for log enrichment.
 func WithRequestID(ctx context.Context, requestID string) context.Context {
 	if ctx == nil || requestID == "" {
 		return ctx
@@ -137,7 +176,6 @@ func WithRequestID(ctx context.Context, requestID string) context.Context {
 	return context.WithValue(ctx, requestIDKey, requestID)
 }
 
-// GetRequestID retrieves the request ID from context.
 func GetRequestID(ctx context.Context) string {
 	if ctx == nil {
 		return ""

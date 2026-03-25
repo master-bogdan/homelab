@@ -5,7 +5,8 @@ import { Link as RouterLink } from 'react-router-dom';
 import { appRoutes } from '@/shared/constants/routes';
 import { AppButton, OverlineText } from '@/shared/ui';
 
-import { AuthActionDivider, AuthCard, AuthIntro, AuthShell } from './components';
+import { createEmailValidationRules } from './utils';
+import { AuthActionDivider, AuthCard, AuthIntro, AuthShell, PasswordField } from './components';
 import { useLoginPage } from './hooks';
 
 export const LoginPage = () => {
@@ -36,13 +37,8 @@ export const LoginPage = () => {
                 fullWidth
                 helperText={errors.email?.message}
                 placeholder="name@company.com"
-                {...register('email', {
-                  pattern: {
-                    message: 'Enter a valid email address.',
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/u
-                  },
-                  required: 'Email is required.'
-                })}
+                type="email"
+                {...register('email', createEmailValidationRules())}
               />
             </Stack>
 
@@ -59,13 +55,12 @@ export const LoginPage = () => {
                   Forgot?
                 </Link>
               </Stack>
-              <TextField
+              <PasswordField
                 autoComplete="current-password"
                 error={Boolean(errors.password)}
                 fullWidth
                 helperText={errors.password?.message}
                 placeholder="••••••••"
-                type="password"
                 {...register('password', {
                   minLength: {
                     message: 'Password must be at least 8 characters.',

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	authdto "github.com/master-bogdan/estimate-room-api/internal/modules/auth/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
@@ -60,6 +61,12 @@ func (c *authController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	c.logger.InfoContext(r.Context(), "login dto accepted",
+		"path", r.URL.Path,
+		"email", maskEmailForLog(dto.Email),
+		"continue", dto.ContinueURL,
+	)
+
 	user, sessionID, err := c.service.Login(r.Context(), &dto)
 	if err != nil {
 		c.writeAuthError(w, r, err)
@@ -93,6 +100,15 @@ func (c *authController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	c.logger.InfoContext(r.Context(), "register dto accepted",
+		"path", r.URL.Path,
+		"email", maskEmailForLog(dto.Email),
+		"display_name_provided", dto.DisplayName != "",
+		"organization_provided", dto.Organization != "",
+		"occupation_provided", dto.Occupation != "",
+		"continue", dto.ContinueURL,
+	)
+
 	user, sessionID, err := c.service.Register(r.Context(), &dto)
 	if err != nil {
 		c.writeAuthError(w, r, err)
@@ -125,6 +141,11 @@ func (c *authController) ForgotPassword(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	c.logger.InfoContext(r.Context(), "forgot password dto accepted",
+		"path", r.URL.Path,
+		"email", maskEmailForLog(dto.Email),
+	)
+
 	if err := c.service.ForgotPassword(r.Context(), &dto); err != nil {
 		c.writeError(w, r, apperrors.ErrInternal, "", err)
 		return
@@ -149,6 +170,12 @@ func (c *authController) ValidateResetPasswordToken(w http.ResponseWriter, r *ht
 		c.writeError(w, r, apperrors.ErrBadRequest, "token is required", nil)
 		return
 	}
+
+	c.logger.InfoContext(r.Context(), "reset password token validation requested",
+		"path", r.URL.Path,
+		"token_present", true,
+		"token_length", len(token),
+	)
 
 	valid, reason, err := c.service.ValidateResetPasswordToken(r.Context(), token)
 	if err != nil {
@@ -183,6 +210,13 @@ func (c *authController) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
 	}
+
+	c.logger.InfoContext(r.Context(), "reset password dto accepted",
+		"path", r.URL.Path,
+		"token_present", dto.Token != "",
+		"token_length", len(dto.Token),
+		"password_length", len(dto.Password),
+	)
 
 	if err := c.service.ResetPassword(r.Context(), &dto); err != nil {
 		c.writeAuthError(w, r, err)
@@ -251,6 +285,10 @@ func (c *authController) GetSession(w http.ResponseWriter, r *http.Request) {
 // @Router /api/v1/auth/github/login [get]
 func (c *authController) GithubLogin(w http.ResponseWriter, r *http.Request) {
 	continueURL := r.URL.Query().Get("continue")
+	c.logger.InfoContext(r.Context(), "github login requested",
+		"path", r.URL.Path,
+		"continue", continueURL,
+	)
 	redirectURL, err := c.service.StartGithubLogin(continueURL)
 	if err != nil {
 		c.writeAuthError(w, r, err)
@@ -282,6 +320,12 @@ func (c *authController) GithubCallback(w http.ResponseWriter, r *http.Request) 
 		c.writeError(w, r, apperrors.ErrBadRequest, "code and state are required", nil)
 		return
 	}
+
+	c.logger.InfoContext(r.Context(), "github callback params accepted",
+		"path", r.URL.Path,
+		"code_present", true,
+		"state_present", true,
+	)
 
 	continueURL, sessionID, err := c.service.HandleGithubCallback(r.Context(), code, state)
 	if err != nil {
@@ -332,4 +376,20 @@ func (c *authController) writeError(w http.ResponseWriter, r *http.Request, errT
 			Instance: r.URL.Path,
 		},
 	))
+}
+
+func maskEmailForLog(email string) string {
+	parts := strings.Split(strings.TrimSpace(email), "@")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "[REDACTED_EMAIL]"
+	}
+
+	switch len(parts[0]) {
+	case 1:
+		return "*@" + parts[1]
+	case 2:
+		return parts[0][:1] + "*@" + parts[1]
+	default:
+		return parts[0][:1] + "***@" + parts[1]
+	}
 }

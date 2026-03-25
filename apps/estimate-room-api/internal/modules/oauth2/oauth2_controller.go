@@ -72,6 +72,15 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	c.logger.InfoContext(r.Context(), "authorize dto accepted",
+		"path", r.URL.Path,
+		"client_id", query.ClientID,
+		"redirect_uri", query.RedirectURI,
+		"response_type", query.ResponseType,
+		"scopes", query.Scopes,
+		"code_challenge_method", query.CodeChallengeMethod,
+	)
+
 	sessionID := ReadSessionID(r)
 	if sessionID == "" {
 		c.redirectToFrontendLogin(w, r)
@@ -162,6 +171,13 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
+
+	c.logger.InfoContext(r.Context(), "token dto accepted",
+		"path", r.URL.Path,
+		"grant_type", body.GrantType,
+		"client_id", body.ClientID,
+		"redirect_uri", body.RedirectURI,
+	)
 
 	switch body.GrantType {
 	case "authorization_code":

@@ -6,6 +6,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { appRoutes } from '@/shared/constants/routes';
 import { AppButton, OverlineText } from '@/shared/ui';
 
+import { createEmailValidationRules } from './utils';
 import { AuthCard, AuthIntro, AuthShell } from './components';
 import { useForgotPasswordPage } from './hooks';
 
@@ -80,13 +81,8 @@ export const ForgotPasswordPage = () => {
                   fullWidth
                   helperText={errors.email?.message}
                   placeholder="name@company.com"
-                  {...register('email', {
-                    pattern: {
-                      message: 'Enter a valid email address.',
-                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/u
-                    },
-                    required: 'Email is required.'
-                  })}
+                  type="email"
+                  {...register('email', createEmailValidationRules())}
                 />
               </Stack>
               <AppButton

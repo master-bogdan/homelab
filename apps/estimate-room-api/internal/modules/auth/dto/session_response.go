@@ -1,10 +1,12 @@
 package authdto
 
 type SessionUserResponse struct {
-	ID          string  `json:"id"`
-	Email       *string `json:"email,omitempty"`
-	DisplayName string  `json:"displayName"`
-	AvatarURL   *string `json:"avatarUrl,omitempty"`
+	ID           string  `json:"id"`
+	Email        *string `json:"email,omitempty"`
+	DisplayName  string  `json:"displayName"`
+	Organization *string `json:"organization,omitempty"`
+	Occupation   *string `json:"occupation,omitempty"`
+	AvatarURL    *string `json:"avatarUrl,omitempty"`
 }
 
 type SessionResponse struct {

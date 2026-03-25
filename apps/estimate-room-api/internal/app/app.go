@@ -3,12 +3,14 @@ package app
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
@@ -57,21 +59,50 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		wsRateLimitPerMinute = deps.Cfg.Server.WSRateLimitPerMinute
 	}
 
-	deps.Router.Use(
+	routerMiddlewares := []func(http.Handler) http.Handler{
 		logger.RequestIDMiddleware,
 		middleware.RealIP,
 		logger.RequestLoggerMiddleware,
 		middleware.Recoverer,
 		httprate.LimitByIP(httpRateLimitPerMinute, 1*time.Minute),
+	}
+
+	githubScopes := strings.Fields(deps.Cfg.Github.Scopes)
+	wsOriginPatterns := splitConfigList(deps.Cfg.Server.WebSocketAllowedOrigins)
+	httpOriginPatterns := append(
+		[]string{},
+		splitConfigList(deps.Cfg.Server.HTTPAllowedOrigins)...,
 	)
+	if deps.Cfg.Frontend.BaseURL != "" {
+		httpOriginPatterns = append(httpOriginPatterns, deps.Cfg.Frontend.BaseURL)
+	}
+
+	routerMiddlewares = append(routerMiddlewares, cors.Handler(cors.Options{
+		AllowedOrigins: httpOriginPatterns,
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+			http.MethodOptions,
+		},
+		AllowedHeaders: []string{
+			"Accept",
+			"Authorization",
+			"Content-Type",
+			"Origin",
+		},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
+	deps.Router.Use(routerMiddlewares...)
 
 	deps.Router.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
 	))
 	deps.Router.Handle("/metrics", metrics.Handler())
-
-	githubScopes := strings.Fields(deps.Cfg.Github.Scopes)
-	wsOriginPatterns := splitConfigList(deps.Cfg.Server.WebSocketAllowedOrigins)
 
 	deps.Router.Route("/api/v1", func(r chi.Router) {
 		health.NewHealthModule(health.HealthModuleDeps{

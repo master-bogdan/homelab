@@ -1004,6 +1004,14 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255
                 },
+                "occupation": {
+                    "type": "string",
+                    "maxLength": 120
+                },
+                "organization": {
+                    "type": "string",
+                    "maxLength": 120
+                },
                 "password": {
                     "type": "string",
                     "maxLength": 128,
@@ -1072,6 +1080,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "occupation": {
+                    "type": "string"
+                },
+                "organization": {
                     "type": "string"
                 }
             }

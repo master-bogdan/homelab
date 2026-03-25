@@ -13,7 +13,7 @@ type UsersService interface {
 	FindByGithubID(githubID string) (*usersmodels.UserModel, error)
 	HasSoftDeletedEmail(email string) (bool, error)
 	HasSoftDeletedGithubID(githubID string) (bool, error)
-	Create(email, passwordHash string) (string, error)
+	Create(email, passwordHash, displayName string, organization, occupation *string) (string, error)
 	CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error)
 	UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error
 	UpdateDisplayName(userID, displayName string) error
@@ -55,8 +55,8 @@ func (s *usersService) HasSoftDeletedGithubID(githubID string) (bool, error) {
 	return s.userRepo.HasSoftDeletedGithubID(githubID)
 }
 
-func (s *usersService) Create(email, passwordHash string) (string, error) {
-	return s.userRepo.Create(email, passwordHash)
+func (s *usersService) Create(email, passwordHash, displayName string, organization, occupation *string) (string, error) {
+	return s.userRepo.Create(email, passwordHash, displayName, organization, occupation)
 }
 
 func (s *usersService) CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error) {

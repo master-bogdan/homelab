@@ -53,6 +53,8 @@ CREATE TABLE "users" (
   "password_hash" text,
   "github_id" text,
   "display_name" text NOT NULL DEFAULT '',
+  "organization" text,
+  "occupation" text,
   "avatar_url" text,
   "created_at" timestamptz NOT NULL DEFAULT (now()),
   "updated_at" timestamptz NOT NULL DEFAULT (now()),

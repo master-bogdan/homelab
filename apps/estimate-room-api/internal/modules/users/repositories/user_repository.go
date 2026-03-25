@@ -17,7 +17,7 @@ type UserRepository interface {
 	FindByGithubID(githubID string) (*usersmodels.UserModel, error)
 	HasSoftDeletedEmail(email string) (bool, error)
 	HasSoftDeletedGithubID(githubID string) (bool, error)
-	Create(email, passwordHash string) (string, error)
+	Create(email, passwordHash, displayName string, organization, occupation *string) (string, error)
 	CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error)
 	UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error
 	UpdateDisplayName(userID, displayName string) error
@@ -102,10 +102,13 @@ func (r *userRepository) hasSoftDeletedUser(whereClause string, value string) (b
 		Exists(context.Background())
 }
 
-func (r *userRepository) Create(email, passwordHash string) (string, error) {
+func (r *userRepository) Create(email, passwordHash, displayName string, organization, occupation *string) (string, error) {
 	user := &usersmodels.UserModel{
-		UserID: uuid.NewString(),
-		Email:  &email,
+		UserID:       uuid.NewString(),
+		Email:        &email,
+		DisplayName:  displayName,
+		Organization: organization,
+		Occupation:   occupation,
 	}
 	if passwordHash != "" {
 		user.PasswordHash = &passwordHash
@@ -113,7 +116,7 @@ func (r *userRepository) Create(email, passwordHash string) (string, error) {
 
 	_, err := r.db.NewInsert().
 		Model(user).
-		Column("user_id", "email", "password_hash").
+		Column("user_id", "email", "password_hash", "display_name", "organization", "occupation").
 		Exec(context.Background())
 	if err != nil {
 		return "", err

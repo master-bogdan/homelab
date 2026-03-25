@@ -161,19 +161,20 @@ func (s *authService) Register(ctx context.Context, dto *authdto.RegisterDTO) (*
 		return nil, "", err
 	}
 
-	userID, err := s.userService.Create(email, passwordHash)
-	if err != nil {
-		return nil, "", err
-	}
-
 	displayName := strings.TrimSpace(dto.DisplayName)
 	if displayName == "" {
 		displayName = defaultDisplayName(email)
 	}
-	if displayName != "" {
-		if err := s.userService.UpdateDisplayName(userID, displayName); err != nil {
-			return nil, "", err
-		}
+
+	userID, err := s.userService.Create(
+		email,
+		passwordHash,
+		displayName,
+		normalizeOptionalProfileField(dto.Organization),
+		normalizeOptionalProfileField(dto.Occupation),
+	)
+	if err != nil {
+		return nil, "", err
 	}
 	if err := s.userService.UpdateLastLoginAt(userID); err != nil {
 		return nil, "", err
@@ -346,7 +347,7 @@ func (s *authService) HandleGithubCallback(ctx context.Context, code, stateToken
 
 	emails, err := oauth2utils.FetchGithubEmails(ctx, s.httpClient, accessToken)
 	if err != nil {
-		s.logger.Warn("failed to fetch github emails", "err", err)
+		s.logger.Warn(logger.Prefix("MODULE", "AUTH", "GITHUB", "Failed to fetch GitHub emails"), "err", err)
 	}
 
 	profile := oauth2utils.BuildGithubProfile(user, emails)
@@ -491,6 +492,15 @@ func defaultDisplayName(email string) string {
 	return strings.TrimSpace(strings.Join(words, " "))
 }
 
+func normalizeOptionalProfileField(value string) *string {
+	trimmedValue := strings.TrimSpace(value)
+	if trimmedValue == "" {
+		return nil
+	}
+
+	return &trimmedValue
+}
+
 func generateOpaqueToken() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
@@ -516,10 +526,12 @@ func formatSessionResponse(user *usersmodels.UserModel) authdto.SessionResponse 
 	return authdto.SessionResponse{
 		Authenticated: true,
 		User: &authdto.SessionUserResponse{
-			ID:          user.UserID,
-			Email:       user.Email,
-			DisplayName: user.DisplayName,
-			AvatarURL:   user.AvatarURL,
+			ID:           user.UserID,
+			Email:        user.Email,
+			DisplayName:  user.DisplayName,
+			Organization: user.Organization,
+			Occupation:   user.Occupation,
+			AvatarURL:    user.AvatarURL,
 		},
 	}
 }

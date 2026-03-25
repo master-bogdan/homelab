@@ -72,6 +72,15 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	c.logger.InfoContext(r.Context(), "create room dto accepted",
+		"path", r.URL.Path,
+		"name", dto.Name,
+		"invite_team_id_provided", dto.InviteTeamID != "",
+		"invite_emails_count", len(dto.InviteEmails),
+		"create_share_link", dto.CreateShareLink,
+		"has_deck", dto.Deck != nil,
+	)
+
 	deck := roomsmodels.RoomDeck{}
 	if dto.Deck != nil {
 		deck = roomsmodels.RoomDeck{
@@ -166,6 +175,12 @@ func (c *roomsController) UpdateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	c.logger.InfoContext(r.Context(), "update room dto accepted",
+		"path", r.URL.Path,
+		"name_provided", dto.Name != nil,
+		"status", dto.Status,
+	)
+
 	room, err := c.service.UpdateRoom(roomID, userID, UpdateRoomInput{
 		Name:   dto.Name,
 		Status: dto.Status,
@@ -200,6 +215,13 @@ func (c *roomsController) CreateTask(w http.ResponseWriter, r *http.Request) {
 		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
 	}
+
+	c.logger.InfoContext(r.Context(), "create task dto accepted",
+		"path", r.URL.Path,
+		"title", dto.Title,
+		"description_length", len(dto.Description),
+		"external_key_provided", dto.ExternalKey != "",
+	)
 
 	if strings.TrimSpace(dto.Title) == "" {
 		c.writeError(w, r, apperrors.ErrBadRequest, "title is required", nil)
@@ -273,6 +295,14 @@ func (c *roomsController) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
 	}
+
+	c.logger.InfoContext(r.Context(), "update task dto accepted",
+		"path", r.URL.Path,
+		"title_provided", dto.Title != nil,
+		"status", dto.Status,
+		"is_active", dto.IsActive,
+		"final_estimate_value_provided", dto.FinalEstimateValue != nil,
+	)
 
 	if dto.Title != nil && strings.TrimSpace(*dto.Title) == "" {
 		c.writeError(w, r, apperrors.ErrBadRequest, "title is required", nil)

@@ -12,9 +12,11 @@ export const useForgotPasswordPage = () => {
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
   const form = useForm<ForgotPasswordFormValues>({
+    mode: 'onBlur',
     defaultValues: {
       email: ''
-    }
+    },
+    reValidateMode: 'onChange'
   });
 
   const submit = form.handleSubmit(async ({ email }) => {
