@@ -4,24 +4,23 @@ package oauth2
 import (
 	"github.com/go-chi/chi/v5"
 	oauth2repositories "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/repositories"
-	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/uptrace/bun"
 )
 
 type Oauth2Module struct {
-	Controller Oauth2Controller
-	Service    Oauth2Service
+	Controller  Oauth2Controller
+	Service     Oauth2Service
 	AuthService AuthService
 }
 
 type Oauth2ModuleDeps struct {
-	Router      chi.Router
-	DB          *bun.DB
-	TokenKey    string
-	Issuer      string
-	UserService UserService
-	AuthService AuthService
-	Github      oauth2utils.GithubConfig
+	Router          chi.Router
+	DB              *bun.DB
+	TokenKey        string
+	Issuer          string
+	UserService     UserService
+	AuthService     AuthService
+	FrontendBaseURL string
 }
 
 func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
@@ -46,20 +45,16 @@ func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
 		deps.Issuer,
 	)
 
-	ctrl := NewOauth2Controller(svc, deps.Github)
+	ctrl := NewOauth2Controller(svc, authService, deps.FrontendBaseURL)
 
 	deps.Router.Route("/oauth2", func(r chi.Router) {
 		r.Get("/authorize", ctrl.Authorize)
-		r.Get("/login", ctrl.ShowLoginForm)
-		r.Post("/login", ctrl.Login)
 		r.Post("/token", ctrl.GetTokens)
-		r.Get("/github/login", ctrl.GithubLogin)
-		r.Get("/github/callback", ctrl.GithubCallback)
 	})
 
 	return &Oauth2Module{
-		Controller: ctrl,
-		Service:    svc,
+		Controller:  ctrl,
+		Service:     svc,
 		AuthService: authService,
 	}
 }

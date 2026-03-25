@@ -8,6 +8,374 @@
     },
     "basePath": "/api/v1",
     "paths": {
+        "/api/v1/auth/forgot-password": {
+            "post": {
+                "description": "Accepts an email and stores a one-time reset token when the account is eligible. The response is always generic.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Start password reset",
+                "parameters": [
+                    {
+                        "description": "Email address",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authdto.ForgotPasswordDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/authdto.ForgotPasswordResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/github/callback": {
+            "get": {
+                "description": "Completes GitHub login, creates a browser session, and redirects back to the OAuth continue URL.",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "GitHub auth callback",
+                "responses": {
+                    "302": {
+                        "description": "Redirect to continue URL",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/github/login": {
+            "get": {
+                "description": "Redirects the browser to GitHub OAuth using the provided OAuth continue URL.",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Start GitHub login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "OAuth continue URL",
+                        "name": "continue",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to GitHub",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Authenticates a local user, creates a browser session, and returns the authenticated user payload.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login with email and password",
+                "parameters": [
+                    {
+                        "description": "Credentials and OAuth continue URL",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authdto.LoginDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/authdto.SessionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "description": "Revokes the current browser session and clears auth cookies.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout current session",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/authdto.LogoutResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/register": {
+            "post": {
+                "description": "Creates a local user, auto-signs them in, and returns the authenticated user payload.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register a local account",
+                "parameters": [
+                    {
+                        "description": "Registration payload and OAuth continue URL",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authdto.RegisterDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/authdto.SessionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reset-password": {
+            "post": {
+                "description": "Resets the password for a valid token and revokes all active sessions and tokens for that user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Reset local account password",
+                "parameters": [
+                    {
+                        "description": "Reset token and new password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authdto.ResetPasswordDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/authdto.ResetPasswordResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reset-password/validate": {
+            "get": {
+                "description": "Returns whether a password reset token is valid, expired, invalid, or already used.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Validate password reset token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Reset token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/authdto.ResetPasswordValidationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/session": {
+            "get": {
+                "description": "Returns the currently authenticated user for the active browser session, or authenticated=false when there is no active session.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Current browser auth session",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/authdto.SessionResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/gamification/me": {
             "get": {
                 "description": "Returns cumulative stats and unlocked achievements for the current authenticated user.",
@@ -309,24 +677,175 @@
                 }
             }
         },
-        "/api/v1/oauth2/github/callback": {
+        "/api/v1/oauth2/authorize": {
             "get": {
-                "description": "Handles GitHub OAuth callback and issues internal auth code.",
+                "description": "Validates the authorization request and either issues an auth code for an authenticated browser session or redirects the user to the frontend login page.",
+                "produces": [
+                    "text/plain"
+                ],
                 "tags": [
                     "oauth2"
                 ],
-                "summary": "GitHub OAuth callback",
-                "responses": {}
+                "summary": "OAuth2 authorize",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "OAuth client ID",
+                        "name": "client_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Registered redirect URI",
+                        "name": "redirect_uri",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Must be code",
+                        "name": "response_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Space separated scopes",
+                        "name": "scopes",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Opaque client state",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "PKCE challenge",
+                        "name": "code_challenge",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "PKCE method",
+                        "name": "code_challenge_method",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "OIDC nonce",
+                        "name": "nonce",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to frontend login or client redirect URI",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
             }
         },
-        "/api/v1/oauth2/github/login": {
-            "get": {
-                "description": "Redirects to GitHub OAuth authorize URL.",
+        "/api/v1/oauth2/token": {
+            "post": {
+                "description": "Exchanges an authorization code or refresh token for access, refresh, and ID tokens.",
+                "consumes": [
+                    "application/x-www-form-urlencoded"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "oauth2"
                 ],
-                "summary": "Login with GitHub",
-                "responses": {}
+                "summary": "Exchange OAuth2 token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "authorization_code or refresh_token",
+                        "name": "grant_type",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Authorization code",
+                        "name": "code",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "PKCE verifier",
+                        "name": "code_verifier",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "OAuth client ID",
+                        "name": "client_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Redirect URI",
+                        "name": "redirect_uri",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Refresh token",
+                        "name": "refresh_token",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/oauth2dto.TokenResponseDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
             }
         },
         "/api/v1/users/me": {
@@ -402,6 +921,150 @@
                     "type": "string"
                 },
                 "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "authdto.ForgotPasswordDTO": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                }
+            }
+        },
+        "authdto.ForgotPasswordResponse": {
+            "type": "object",
+            "properties": {
+                "submitted": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "authdto.LoginDTO": {
+            "type": "object",
+            "required": [
+                "continue",
+                "email",
+                "password"
+            ],
+            "properties": {
+                "continue": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "minLength": 8
+                }
+            }
+        },
+        "authdto.LogoutResponse": {
+            "type": "object",
+            "properties": {
+                "loggedOut": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "authdto.RegisterDTO": {
+            "type": "object",
+            "required": [
+                "continue",
+                "email",
+                "password"
+            ],
+            "properties": {
+                "continue": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "displayName": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "minLength": 8
+                }
+            }
+        },
+        "authdto.ResetPasswordDTO": {
+            "type": "object",
+            "required": [
+                "password",
+                "token"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "minLength": 8
+                },
+                "token": {
+                    "type": "string",
+                    "maxLength": 512
+                }
+            }
+        },
+        "authdto.ResetPasswordResponse": {
+            "type": "object",
+            "properties": {
+                "reset": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "authdto.ResetPasswordValidationResponse": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "authdto.SessionResponse": {
+            "type": "object",
+            "properties": {
+                "authenticated": {
+                    "type": "boolean"
+                },
+                "user": {
+                    "$ref": "#/definitions/authdto.SessionUserResponse"
+                }
+            }
+        },
+        "authdto.SessionUserResponse": {
+            "type": "object",
+            "properties": {
+                "avatarUrl": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
                     "type": "string"
                 }
             }
@@ -764,6 +1427,28 @@
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "oauth2dto.TokenResponseDTO": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "description": "in seconds",
+                    "type": "integer"
+                },
+                "id_token": {
+                    "type": "string"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "token_type": {
+                    "description": "\"Bearer\"",
+                    "type": "string"
                 }
             }
         },

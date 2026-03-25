@@ -17,6 +17,7 @@ Minimum variables:
 
 - `HOST`
 - `PORT`
+- `FRONTEND_BASE_URL`
 - `DATABASE_URL`
 - `REDIS_URL`
 - `PASETO_SYMMETRIC_KEY`
@@ -28,6 +29,8 @@ Optional but recommended:
 - `HTTP_RATE_LIMIT_PER_MINUTE`
 - `WS_RATE_LIMIT_PER_MINUTE`
 - GitHub OAuth variables if GitHub login is required
+
+`FRONTEND_BASE_URL` is used by `/api/v1/oauth2/authorize` to redirect unauthenticated users to the frontend login page with a `continue` URL.
 
 ## Start Dependencies
 
@@ -101,6 +104,18 @@ Health:
 
 - `/api/v1/health/healthz`
 - `/api/v1/health/readyz`
+
+Auth:
+
+- `/api/v1/auth/login`
+- `/api/v1/auth/register`
+- `/api/v1/auth/session`
+- `/api/v1/auth/logout`
+- `/api/v1/auth/forgot-password`
+- `/api/v1/auth/reset-password/validate`
+- `/api/v1/auth/reset-password`
+- `/api/v1/auth/github/login`
+- `/api/v1/auth/github/callback`
 
 Swagger UI:
 

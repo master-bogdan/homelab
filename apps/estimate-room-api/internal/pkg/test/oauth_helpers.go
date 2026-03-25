@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
-	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 	"github.com/uptrace/bun"
@@ -49,6 +48,7 @@ func ResetOauthTables(t *testing.T, db *bun.DB) {
 
 	_, err := db.ExecContext(context.Background(), `
 		TRUNCATE TABLE
+			auth_password_reset_tokens,
 			oauth2_access_tokens,
 			oauth2_refresh_tokens,
 			oauth2_auth_codes,
@@ -72,13 +72,13 @@ func NewOauth2Service(db *bun.DB) oauth2.Oauth2Service {
 	})
 
 	oauth2Module := oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-		Router:      chi.NewRouter(),
-		DB:          db,
-		TokenKey:    TestTokenKey,
-		Issuer:      TestIssuer,
-		UserService: usersModule.Service,
-		AuthService: authService,
-		Github:      oauth2utils.GithubConfig{},
+		Router:          chi.NewRouter(),
+		DB:              db,
+		TokenKey:        TestTokenKey,
+		Issuer:          TestIssuer,
+		UserService:     usersModule.Service,
+		AuthService:     authService,
+		FrontendBaseURL: "http://localhost:5173",
 	})
 
 	return oauth2Module.Service

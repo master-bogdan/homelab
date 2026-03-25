@@ -1,52 +1,60 @@
 package oauth2
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"time"
-
-	stdErrors "errors"
+	"net/url"
+	"strings"
 
 	oauth2dto "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/dto"
-	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/httputils"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
-	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
 )
 
 type Oauth2Controller interface {
 	Authorize(w http.ResponseWriter, r *http.Request)
-	Login(w http.ResponseWriter, r *http.Request)
-	ShowLoginForm(w http.ResponseWriter, r *http.Request)
 	GetTokens(w http.ResponseWriter, r *http.Request)
-	GithubLogin(w http.ResponseWriter, r *http.Request)
-	GithubCallback(w http.ResponseWriter, r *http.Request)
 }
 
 type oauth2Controller struct {
-	service       Oauth2Service
-	logger        *slog.Logger
-	github        oauth2utils.GithubConfig
-	stateTokenKey []byte
-	httpClient    *http.Client
+	service         Oauth2Service
+	authService     AuthService
+	logger          *slog.Logger
+	frontendBaseURL string
 }
 
 func NewOauth2Controller(
 	oauth2Service Oauth2Service,
-	github oauth2utils.GithubConfig,
+	authService AuthService,
+	frontendBaseURL string,
 ) Oauth2Controller {
 	return &oauth2Controller{
-		service:       oauth2Service,
-		logger:        logger.L().With(slog.String("module", "oauth")),
-		github:        github,
-		stateTokenKey: []byte(github.StateSecret),
-		httpClient:    &http.Client{Timeout: 10 * time.Second},
+		service:         oauth2Service,
+		authService:     authService,
+		logger:          logger.L().With(slog.String("module", "oauth")),
+		frontendBaseURL: frontendBaseURL,
 	}
 }
 
+// Authorize godoc
+// @Summary OAuth2 authorize
+// @Description Validates the authorization request and either issues an auth code for an authenticated browser session or redirects the user to the frontend login page.
+// @Tags oauth2
+// @Produce plain
+// @Param client_id query string true "OAuth client ID"
+// @Param redirect_uri query string true "Registered redirect URI"
+// @Param response_type query string true "Must be code"
+// @Param scopes query string true "Space separated scopes"
+// @Param state query string true "Opaque client state"
+// @Param code_challenge query string true "PKCE challenge"
+// @Param code_challenge_method query string true "PKCE method"
+// @Param nonce query string true "OIDC nonce"
+// @Success 302 {string} string "Redirect to frontend login or client redirect URI"
+// @Failure 400 {object} apperrors.HttpError
+// @Failure 500 {object} apperrors.HttpError
+// @Router /api/v1/oauth2/authorize [get]
 func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 	query := parseAuthorizeQuery(r)
 
@@ -64,31 +72,38 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionID := ""
-	if cookie, err := r.Cookie("session_id"); err == nil {
-		sessionID = cookie.Value
-	}
-
-	xSessionIDHeader := r.Header.Get("X-Session-Id")
-	if xSessionIDHeader != "" {
-		sessionID = xSessionIDHeader
-	}
-
-	userID := ""
-	if sessionID != "" {
-		userID, err = c.service.GetLoggedInUserID(sessionID)
-	}
-
-	if userID == "" || err != nil {
-		c.logger.Warn("session not found")
-		loginRedirect := "/api/v1/oauth2/login?" + r.URL.RawQuery
-		http.Redirect(w, r, loginRedirect, http.StatusFound)
+	sessionID := ReadSessionID(r)
+	if sessionID == "" {
+		c.redirectToFrontendLogin(w, r)
 		return
+	}
+
+	session, err := c.authService.GetOidcSessionByID(sessionID)
+	if err != nil {
+		c.logger.Warn("session not found", "err", err)
+		c.redirectToFrontendLogin(w, r)
+		return
+	}
+
+	if session.ClientID != query.ClientID || session.Nonce != query.Nonce {
+		oidcSessionID, createErr := c.service.CreateOidcSession(&oauth2dto.CreateOidcSessionDTO{
+			UserID:   session.UserID,
+			ClientID: query.ClientID,
+			Nonce:    query.Nonce,
+		})
+		if createErr != nil {
+			c.logger.Error(createErr.Error())
+			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: createErr.Error()}))
+			return
+		}
+
+		sessionID = oidcSessionID
+		http.SetCookie(w, SessionCookie(oidcSessionID, r.TLS != nil))
 	}
 
 	createAuthCodeDTO := &oauth2dto.CreateOauthCodeDTO{
 		ClientID:            query.ClientID,
-		UserID:              userID,
+		UserID:              session.UserID,
 		OidcSessionID:       sessionID,
 		RedirectURI:         query.RedirectURI,
 		CodeChallenge:       query.CodeChallenge,
@@ -118,140 +133,23 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirectTo, http.StatusFound)
 }
 
-func (c *oauth2Controller) ShowLoginForm(w http.ResponseWriter, r *http.Request) {
-	query := parseAuthorizeQuery(r)
-
-	params, err := utils.StructToMap(query)
-	if err != nil {
-		c.logger.Error("invalid query params")
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: "invalid_query_params"}))
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	html := oauth2utils.CreateLoginHtml(params)
-	_, _ = w.Write([]byte(html))
-}
-
-func (c *oauth2Controller) Login(w http.ResponseWriter, r *http.Request) {
-	loginDTO, err := parseLoginForm(r)
-	if err != nil {
-		c.logger.Error(fmt.Sprintf("invalid body %s", err.Error()))
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	if err = loginDTO.Validate(); err != nil {
-		c.logger.Error(fmt.Sprintf("invalid loginDTO %s", err.Error()))
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	validateClientDTO := &oauth2dto.AuthorizeQueryDTO{
-		ClientID:            loginDTO.ClientID,
-		RedirectURI:         loginDTO.RedirectURI,
-		ResponseType:        loginDTO.ResponseType,
-		Scopes:              loginDTO.Scopes,
-		State:               loginDTO.State,
-		CodeChallenge:       loginDTO.CodeChallenge,
-		CodeChallengeMethod: loginDTO.CodeChallengeMethod,
-		Nonce:               loginDTO.Nonce,
-	}
-	if err = validateClientDTO.Validate(); err != nil {
-		c.logger.Error(fmt.Sprintf("invalid client query %s", err.Error()))
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-	if err = c.service.ValidateClient(validateClientDTO); err != nil {
-		c.logger.Error(err.Error())
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	userDTO := &oauth2dto.UserDTO{
-		Email:    loginDTO.Email,
-		Password: loginDTO.Password,
-	}
-	if err = userDTO.Validate(); err != nil {
-		c.logger.Error(fmt.Sprintf("invalid userDTO %s", err.Error()))
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	userID, err := c.service.AuthenticateUser(userDTO)
-	if err != nil {
-		if err == apperrors.ErrUserNotFound {
-			c.logger.Warn("user not found")
-			userID, err = c.service.RegisterUser(userDTO)
-			if err != nil || userID == "" {
-				c.logger.Error(err.Error())
-				httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: "registration failed"}))
-				return
-			}
-		} else if err == ErrInvalidCredentials {
-			c.logger.Warn("invalid credentials")
-			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: "invalid credentials"}))
-			return
-		} else {
-			c.logger.Error(err.Error())
-			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
-			return
-		}
-	}
-
-	oidcSessionDTO := &oauth2dto.CreateOidcSessionDTO{
-		UserID:   userID,
-		ClientID: loginDTO.ClientID,
-		Nonce:    loginDTO.Nonce,
-	}
-
-	if err = oidcSessionDTO.Validate(); err != nil {
-		c.logger.Error(fmt.Sprintf("invalid oidcSessionDTO %s", err.Error()))
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	oidcSessionID, err := c.service.CreateOidcSession(oidcSessionDTO)
-	if err != nil {
-		c.logger.Error(err.Error())
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	http.SetCookie(w, sessionCookie(oidcSessionID, r.TLS != nil))
-
-	createAuthCodeDTO := &oauth2dto.CreateOauthCodeDTO{
-		ClientID:            loginDTO.ClientID,
-		UserID:              userID,
-		OidcSessionID:       oidcSessionID,
-		RedirectURI:         loginDTO.RedirectURI,
-		CodeChallenge:       loginDTO.CodeChallenge,
-		CodeChallengeMethod: loginDTO.CodeChallengeMethod,
-		Scopes:              loginDTO.Scopes,
-	}
-	if err = createAuthCodeDTO.Validate(); err != nil {
-		c.logger.Error(fmt.Sprintf("invalid createAuthCodeDTO %s", err.Error()))
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	authCode, err := c.service.CreateAuthCode(createAuthCodeDTO)
-	if err != nil {
-		c.logger.Error(err.Error())
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	redirectTo := loginDTO.RedirectURI + "?code=" + authCode
-	if loginDTO.State != "" {
-		redirectTo += "&state=" + loginDTO.State
-	}
-
-	c.logger.Info(fmt.Sprintf("redirecting to %s", redirectTo))
-
-	http.Redirect(w, r, redirectTo, http.StatusFound)
-}
-
+// GetTokens godoc
+// @Summary Exchange OAuth2 token
+// @Description Exchanges an authorization code or refresh token for access, refresh, and ID tokens.
+// @Tags oauth2
+// @Accept x-www-form-urlencoded
+// @Produce json
+// @Param grant_type formData string true "authorization_code or refresh_token"
+// @Param code formData string false "Authorization code"
+// @Param code_verifier formData string false "PKCE verifier"
+// @Param client_id formData string true "OAuth client ID"
+// @Param redirect_uri formData string false "Redirect URI"
+// @Param refresh_token formData string false "Refresh token"
+// @Success 200 {object} oauth2dto.TokenResponseDTO
+// @Failure 400 {object} apperrors.HttpError
+// @Failure 401 {object} apperrors.HttpError
+// @Failure 500 {object} apperrors.HttpError
+// @Router /api/v1/oauth2/token [post]
 func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 	body, err := parseTokenForm(r)
 	if err != nil {
@@ -292,155 +190,6 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GithubLogin godoc
-// @Summary Login with GitHub
-// @Description Redirects to GitHub OAuth authorize URL.
-// @Tags oauth2
-// @Router /api/v1/oauth2/github/login [get]
-func (c *oauth2Controller) GithubLogin(w http.ResponseWriter, r *http.Request) {
-	if !c.github.IsConfigured() {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: "github oauth is not configured"}))
-		return
-	}
-
-	query := parseAuthorizeQuery(r)
-	if err := query.Validate(); err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	if err := c.service.ValidateClient(query); err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	stateToken, err := oauth2utils.CreateGithubState(c.stateTokenKey, oauth2utils.AuthorizeQueryFromDTO(query))
-	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	redirectURL := oauth2utils.BuildGithubAuthorizeURL(c.github, stateToken)
-	http.Redirect(w, r, redirectURL, http.StatusFound)
-}
-
-// GithubCallback godoc
-// @Summary GitHub OAuth callback
-// @Description Handles GitHub OAuth callback and issues internal auth code.
-// @Tags oauth2
-// @Router /api/v1/oauth2/github/callback [get]
-func (c *oauth2Controller) GithubCallback(w http.ResponseWriter, r *http.Request) {
-	if !c.github.IsConfigured() {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: "github oauth is not configured"}))
-		return
-	}
-
-	if r.URL.Query().Get("error") != "" {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: "github authentication failed"}))
-		return
-	}
-
-	code := r.URL.Query().Get("code")
-	stateToken := r.URL.Query().Get("state")
-	if code == "" || stateToken == "" {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: "code and state are required"}))
-		return
-	}
-
-	state, err := oauth2utils.ParseGithubState(c.stateTokenKey, stateToken)
-	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	query := oauth2utils.AuthorizeQueryFromState(state).ToDTO()
-	if err := query.Validate(); err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	if err := c.service.ValidateClient(query); err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-	defer cancel()
-
-	accessToken, err := oauth2utils.ExchangeGithubCode(ctx, c.httpClient, c.github, code)
-	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	user, err := oauth2utils.FetchGithubUser(ctx, c.httpClient, accessToken)
-	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	emails, err := oauth2utils.FetchGithubEmails(ctx, c.httpClient, accessToken)
-	if err != nil {
-		c.logger.Warn("failed to fetch github emails", "err", err)
-	}
-
-	profile := oauth2utils.BuildGithubProfile(user, emails)
-	userID, err := c.service.GetOrCreateUserFromGithub(profile)
-	if err != nil {
-		if stdErrors.Is(err, apperrors.ErrUserNotFound) {
-			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrNotFound, apperrors.HttpError{Detail: "user not found"}))
-			return
-		}
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: "failed to login with github"}))
-		return
-	}
-
-	oidcSessionDTO := &oauth2dto.CreateOidcSessionDTO{
-		UserID:   userID,
-		ClientID: query.ClientID,
-		Nonce:    query.Nonce,
-	}
-	if err := oidcSessionDTO.Validate(); err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	oidcSessionID, err := c.service.CreateOidcSession(oidcSessionDTO)
-	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	http.SetCookie(w, sessionCookie(oidcSessionID, r.TLS != nil))
-
-	createAuthCodeDTO := &oauth2dto.CreateOauthCodeDTO{
-		ClientID:            query.ClientID,
-		UserID:              userID,
-		OidcSessionID:       oidcSessionID,
-		RedirectURI:         query.RedirectURI,
-		CodeChallenge:       query.CodeChallenge,
-		CodeChallengeMethod: query.CodeChallengeMethod,
-		Scopes:              query.Scopes,
-	}
-	if err := createAuthCodeDTO.Validate(); err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	authCode, err := c.service.CreateAuthCode(createAuthCodeDTO)
-	if err != nil {
-		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
-		return
-	}
-
-	redirectTo := query.RedirectURI + "?code=" + authCode
-	if query.State != "" {
-		redirectTo += "&state=" + query.State
-	}
-
-	http.Redirect(w, r, redirectTo, http.StatusFound)
-}
-
 func parseAuthorizeQuery(r *http.Request) *oauth2dto.AuthorizeQueryDTO {
 	q := r.URL.Query()
 	return &oauth2dto.AuthorizeQueryDTO{
@@ -453,25 +202,6 @@ func parseAuthorizeQuery(r *http.Request) *oauth2dto.AuthorizeQueryDTO {
 		CodeChallengeMethod: q.Get("code_challenge_method"),
 		Nonce:               q.Get("nonce"),
 	}
-}
-
-func parseLoginForm(r *http.Request) (*oauth2dto.LoginDTO, error) {
-	if err := r.ParseForm(); err != nil {
-		return nil, err
-	}
-
-	return &oauth2dto.LoginDTO{
-		Email:               r.Form.Get("email"),
-		Password:            r.Form.Get("password"),
-		ClientID:            r.Form.Get("client_id"),
-		RedirectURI:         r.Form.Get("redirect_uri"),
-		ResponseType:        r.Form.Get("response_type"),
-		Scopes:              r.Form.Get("scopes"),
-		State:               r.Form.Get("state"),
-		CodeChallenge:       r.Form.Get("code_challenge"),
-		CodeChallengeMethod: r.Form.Get("code_challenge_method"),
-		Nonce:               r.Form.Get("nonce"),
-	}, nil
 }
 
 func parseTokenForm(r *http.Request) (*oauth2dto.GetTokenDTO, error) {
@@ -489,13 +219,57 @@ func parseTokenForm(r *http.Request) (*oauth2dto.GetTokenDTO, error) {
 	}, nil
 }
 
-func sessionCookie(sessionID string, secure bool) *http.Cookie {
-	return &http.Cookie{
-		Name:     "session_id",
-		Value:    sessionID,
-		HttpOnly: true,
-		Secure:   secure,
-		Path:     "/",
-		SameSite: http.SameSiteLaxMode,
+func (c *oauth2Controller) redirectToFrontendLogin(w http.ResponseWriter, r *http.Request) {
+	loginURL, err := buildFrontendLoginURL(c.frontendBaseURL, currentRequestURL(r))
+	if err != nil {
+		c.logger.Error("failed to build frontend login redirect", "err", err)
+		httputils.WriteResponseError(w, apperrors.CreateHttpError(
+			apperrors.ErrInternal,
+			apperrors.HttpError{Detail: "frontend auth redirect is not configured"},
+		))
+		return
 	}
+
+	http.Redirect(w, r, loginURL, http.StatusFound)
+}
+
+func buildFrontendLoginURL(frontendBaseURL, continueURL string) (string, error) {
+	trimmed := strings.TrimRight(strings.TrimSpace(frontendBaseURL), "/")
+	if trimmed == "" {
+		return "", fmt.Errorf("frontend base url is required")
+	}
+
+	loginURL, err := url.Parse(trimmed + "/login")
+	if err != nil {
+		return "", err
+	}
+
+	query := loginURL.Query()
+	query.Set("continue", continueURL)
+	loginURL.RawQuery = query.Encode()
+
+	return loginURL.String(), nil
+}
+
+func currentRequestURL(r *http.Request) string {
+	if r == nil || r.URL == nil {
+		return ""
+	}
+
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+
+	if forwardedProto := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Proto"), ",")[0]); forwardedProto != "" {
+		scheme = forwardedProto
+	}
+
+	copyURL := *r.URL
+	if !copyURL.IsAbs() {
+		copyURL.Scheme = scheme
+		copyURL.Host = r.Host
+	}
+
+	return copyURL.String()
 }

@@ -15,6 +15,8 @@ type Oauth2RefreshTokenRepository interface {
 	Create(ctx context.Context, model *oauth2models.Oauth2RefreshTokenModel) (string, error)
 	FindByToken(ctx context.Context, token string) (*oauth2models.Oauth2RefreshTokenModel, error)
 	Revoke(ctx context.Context, refreshTokenID string) error
+	RevokeByOidcSessionID(ctx context.Context, oidcSessionID string) error
+	RevokeByUserID(ctx context.Context, userID string) error
 }
 
 type oauth2RefreshTokenRepository struct {
@@ -97,5 +99,27 @@ func (r *oauth2RefreshTokenRepository) Revoke(ctx context.Context, refreshTokenI
 	`
 
 	_, err := r.db.ExecContext(ctx, query, refreshTokenID)
+	return err
+}
+
+func (r *oauth2RefreshTokenRepository) RevokeByOidcSessionID(ctx context.Context, oidcSessionID string) error {
+	const query = `
+		UPDATE oauth2_refresh_tokens
+		SET is_revoked = true
+		WHERE oidc_session_id = $1 AND is_revoked = false
+	`
+
+	_, err := r.db.ExecContext(ctx, query, oidcSessionID)
+	return err
+}
+
+func (r *oauth2RefreshTokenRepository) RevokeByUserID(ctx context.Context, userID string) error {
+	const query = `
+		UPDATE oauth2_refresh_tokens
+		SET is_revoked = true
+		WHERE user_id = $1 AND is_revoked = false
+	`
+
+	_, err := r.db.ExecContext(ctx, query, userID)
 	return err
 }

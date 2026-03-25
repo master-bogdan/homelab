@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/history"
@@ -84,11 +85,20 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		userService := users.NewUsersService(userRepo)
 
 		oauth2Module := oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-			Router:      r,
-			DB:          deps.DB,
-			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
-			Issuer:      deps.Cfg.Server.Issuer,
-			UserService: userService,
+			Router:          r,
+			DB:              deps.DB,
+			TokenKey:        deps.Cfg.Server.PasetoSymmetricKey,
+			Issuer:          deps.Cfg.Server.Issuer,
+			UserService:     userService,
+			FrontendBaseURL: deps.Cfg.Frontend.BaseURL,
+		})
+
+		auth.NewAuthModule(auth.AuthModuleDeps{
+			Router:         r,
+			DB:             deps.DB,
+			UserService:    userService,
+			Oauth2Service:  oauth2Module.Service,
+			SessionService: oauth2Module.AuthService,
 			Github: oauth2utils.GithubConfig{
 				ClientID:     deps.Cfg.Github.ClientID,
 				ClientSecret: deps.Cfg.Github.ClientSecret,

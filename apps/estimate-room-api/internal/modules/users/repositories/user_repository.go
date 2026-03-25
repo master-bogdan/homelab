@@ -20,6 +20,9 @@ type UserRepository interface {
 	Create(email, passwordHash string) (string, error)
 	CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error)
 	UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error
+	UpdateDisplayName(userID, displayName string) error
+	UpdatePasswordHash(userID, passwordHash string) error
+	UpdateLastLoginAt(userID string) error
 }
 
 type userRepository struct {
@@ -147,6 +150,39 @@ func (r *userRepository) UpdateGithubProfile(userID, githubID, displayName strin
 		Set("display_name = ?", displayName).
 		Set("avatar_url = ?", avatarURL).
 		Set("email = COALESCE(?, email)", email).
+		Set("updated_at = NOW()").
+		Where("user_id = ?", userID).
+		Exec(context.Background())
+
+	return err
+}
+
+func (r *userRepository) UpdateDisplayName(userID, displayName string) error {
+	_, err := r.db.NewUpdate().
+		Model((*usersmodels.UserModel)(nil)).
+		Set("display_name = ?", displayName).
+		Set("updated_at = NOW()").
+		Where("user_id = ?", userID).
+		Exec(context.Background())
+
+	return err
+}
+
+func (r *userRepository) UpdatePasswordHash(userID, passwordHash string) error {
+	_, err := r.db.NewUpdate().
+		Model((*usersmodels.UserModel)(nil)).
+		Set("password_hash = ?", passwordHash).
+		Set("updated_at = NOW()").
+		Where("user_id = ?", userID).
+		Exec(context.Background())
+
+	return err
+}
+
+func (r *userRepository) UpdateLastLoginAt(userID string) error {
+	_, err := r.db.NewUpdate().
+		Model((*usersmodels.UserModel)(nil)).
+		Set("last_login_at = NOW()").
 		Set("updated_at = NOW()").
 		Where("user_id = ?", userID).
 		Exec(context.Background())

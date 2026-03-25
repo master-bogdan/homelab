@@ -4,8 +4,9 @@
 
 EstimateRoom is a realtime estimation backend for planning poker style sessions. It supports:
 
-- Email/password sign-in through the local OAuth2 authorization-code flow
+- Email/password sign-in through a local auth module that resumes the OAuth2 authorization-code flow
 - GitHub sign-in
+- Password reset for local accounts
 - Teams and invitations
 - Rooms with share links and guest access
 - Task estimation rounds over WebSockets
@@ -18,7 +19,7 @@ The backend is implemented as a single Go service with PostgreSQL for persistenc
 ### Core runtime pieces
 
 - HTTP server: `chi` router, middleware stack, JSON/problem+json responses
-- Auth: local OAuth2/OIDC-style flow with PKCE plus GitHub OAuth bridge
+- Auth: `/auth/*` for browser session and account lifecycle plus `/oauth2/*` for authorization-code + PKCE token issuance
 - Realtime: WebSocket transport with Redis-backed pub/sub for broadcast fan-out
 - Persistence: PostgreSQL via `bun`
 - Background work: room inactivity expiry sweep
@@ -54,13 +55,20 @@ The backend is implemented as a single Go service with PostgreSQL for persistenc
 
 ## Module Map
 
+### `auth`
+
+- Local email/password login
+- Local account registration
+- Browser session inspection and logout
+- Password reset token validation and password reset
+- GitHub login bridge for first-party auth
+
 ### `oauth2`
 
-- Local authorization-code + PKCE flow
+- Authorization-code + PKCE flow
 - Access token and refresh token issuance
 - Refresh token rotation by revoke-and-reissue
-- OIDC session persistence
-- GitHub OAuth login bridge
+- OIDC session persistence for browser auth continuation
 
 ### `users`
 
@@ -120,6 +128,7 @@ The backend is implemented as a single Go service with PostgreSQL for persistenc
 ### Identity and auth
 
 - `users`
+- `auth_password_reset_tokens`
 - `oauth2_clients`
 - `oauth2_oidc_sessions`
 - `oauth2_auth_codes`
@@ -160,6 +169,7 @@ The backend is implemented as a single Go service with PostgreSQL for persistenc
 - Only one active task may exist per room.
 - Final estimate values must come from the room deck.
 - Guests can read only the room they joined through a valid guest token.
+- Resetting a password revokes all active browser sessions and tokens for that user.
 - Inactive active rooms are expired by the background sweep.
 
 ## Realtime Model

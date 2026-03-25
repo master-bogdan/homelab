@@ -15,6 +15,8 @@ type Oauth2AuthCodeRepository interface {
 	Create(model *oauth2models.Oauth2AuthCodeModel) error
 	FindByCode(code string) (*oauth2models.Oauth2AuthCodeModel, error)
 	MarkUsed(authCodeID string) error
+	MarkUsedByOidcSessionID(oidcSessionID string) error
+	MarkUsedByUserID(userID string) error
 }
 
 type oauth2AuthCodeRepository struct {
@@ -97,5 +99,27 @@ func (r *oauth2AuthCodeRepository) MarkUsed(authCodeID string) error {
 	`
 
 	_, err := r.db.ExecContext(context.Background(), query, authCodeID)
+	return err
+}
+
+func (r *oauth2AuthCodeRepository) MarkUsedByOidcSessionID(oidcSessionID string) error {
+	const query = `
+		UPDATE oauth2_auth_codes
+		SET is_used = true
+		WHERE oidc_session_id = $1 AND is_used = false
+	`
+
+	_, err := r.db.ExecContext(context.Background(), query, oidcSessionID)
+	return err
+}
+
+func (r *oauth2AuthCodeRepository) MarkUsedByUserID(userID string) error {
+	const query = `
+		UPDATE oauth2_auth_codes
+		SET is_used = true
+		WHERE user_id = $1 AND is_used = false
+	`
+
+	_, err := r.db.ExecContext(context.Background(), query, userID)
 	return err
 }

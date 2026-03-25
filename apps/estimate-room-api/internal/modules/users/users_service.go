@@ -16,6 +16,9 @@ type UsersService interface {
 	Create(email, passwordHash string) (string, error)
 	CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error)
 	UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error
+	UpdateDisplayName(userID, displayName string) error
+	UpdatePasswordHash(userID, passwordHash string) error
+	UpdateLastLoginAt(userID string) error
 }
 
 type usersService struct {
@@ -62,6 +65,18 @@ func (s *usersService) CreateWithGithub(email *string, githubID, displayName str
 
 func (s *usersService) UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error {
 	return s.userRepo.UpdateGithubProfile(userID, githubID, displayName, avatarURL, email)
+}
+
+func (s *usersService) UpdateDisplayName(userID, displayName string) error {
+	return s.userRepo.UpdateDisplayName(userID, displayName)
+}
+
+func (s *usersService) UpdatePasswordHash(userID, passwordHash string) error {
+	return s.userRepo.UpdatePasswordHash(userID, passwordHash)
+}
+
+func (s *usersService) UpdateLastLoginAt(userID string) error {
+	return s.userRepo.UpdateLastLoginAt(userID)
 }
 
 func (s *usersService) activeUser(user *usersmodels.UserModel, err error) (*usersmodels.UserModel, error) {

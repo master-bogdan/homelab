@@ -7,6 +7,9 @@ type Config struct {
 	App struct {
 		Env string
 	}
+	Frontend struct {
+		BaseURL string `env:"FRONTEND_BASE_URL"`
+	}
 	Server struct {
 		Port                    string `env:"PORT"`
 		Host                    string `env:"HOST"`

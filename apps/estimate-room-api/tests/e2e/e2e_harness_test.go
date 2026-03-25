@@ -43,6 +43,7 @@ func setupE2EApp(t *testing.T) *e2eApp {
 
 	router := chi.NewRouter()
 	cfg := &config.Config{}
+	cfg.Frontend.BaseURL = "http://localhost:5173"
 	cfg.Server.PasetoSymmetricKey = testutils.TestTokenKey
 	cfg.Server.Issuer = testutils.TestIssuer
 	cfg.Server.WebSocketAllowedOrigins = e2eWSOrigin
@@ -89,6 +90,7 @@ func resetE2EDB(t *testing.T, db *bun.DB) {
 			teams,
 			room_participants,
 			rooms,
+			auth_password_reset_tokens,
 			oauth2_access_tokens,
 			oauth2_refresh_tokens,
 			oauth2_auth_codes,
@@ -115,23 +117,30 @@ func (a *e2eApp) loginAndGetAccessToken(t *testing.T, email, password string) st
 	codeVerifier := "verifier-" + uuid.NewString()
 	codeChallenge := generateCodeChallenge(codeVerifier)
 
-	form := url.Values{}
-	form.Set("email", email)
-	form.Set("password", password)
-	form.Set("client_id", a.clientID)
-	form.Set("redirect_uri", a.redirectURI)
-	form.Set("response_type", "code")
-	form.Set("scopes", "user")
-	form.Set("state", state)
-	form.Set("code_challenge", codeChallenge)
-	form.Set("code_challenge_method", "S256")
-	form.Set("nonce", nonce)
+	authorizeURL := a.server.URL + "/api/v1/oauth2/authorize?client_id=" + url.QueryEscape(a.clientID) +
+		"&redirect_uri=" + url.QueryEscape(a.redirectURI) +
+		"&response_type=code" +
+		"&scopes=user" +
+		"&state=" + url.QueryEscape(state) +
+		"&code_challenge=" + url.QueryEscape(codeChallenge) +
+		"&code_challenge_method=S256" +
+		"&nonce=" + url.QueryEscape(nonce)
 
-	loginReq, err := http.NewRequest(http.MethodPost, a.server.URL+"/api/v1/oauth2/login", strings.NewReader(form.Encode()))
+	loginBody := map[string]string{
+		"email":    email,
+		"password": password,
+		"continue": authorizeURL,
+	}
+	bodyBytes, err := json.Marshal(loginBody)
+	if err != nil {
+		t.Fatalf("failed to encode login request: %v", err)
+	}
+
+	loginReq, err := http.NewRequest(http.MethodPost, a.server.URL+"/api/v1/auth/login", bytes.NewReader(bodyBytes))
 	if err != nil {
 		t.Fatalf("failed to build login request: %v", err)
 	}
-	loginReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	loginReq.Header.Set("Content-Type", "application/json")
 
 	loginClient := &http.Client{
 		Transport: a.server.Client().Transport,
@@ -146,20 +155,46 @@ func (a *e2eApp) loginAndGetAccessToken(t *testing.T, email, password string) st
 	}
 	defer loginResp.Body.Close()
 
-	if loginResp.StatusCode != http.StatusFound {
+	if loginResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(loginResp.Body)
-		t.Fatalf("expected 302 from login, got %d: %s", loginResp.StatusCode, string(body))
+		t.Fatalf("expected 200 from auth login, got %d: %s", loginResp.StatusCode, string(body))
 	}
 
-	location := loginResp.Header.Get("Location")
+	authorizeReq, err := http.NewRequest(http.MethodGet, authorizeURL, nil)
+	if err != nil {
+		t.Fatalf("failed to build authorize request: %v", err)
+	}
+	for _, cookie := range loginResp.Cookies() {
+		authorizeReq.AddCookie(cookie)
+	}
+
+	authorizeClient := &http.Client{
+		Transport: a.server.Client().Transport,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	authorizeResp, err := authorizeClient.Do(authorizeReq)
+	if err != nil {
+		t.Fatalf("failed to call authorize endpoint: %v", err)
+	}
+	defer authorizeResp.Body.Close()
+
+	if authorizeResp.StatusCode != http.StatusFound {
+		body, _ := io.ReadAll(authorizeResp.Body)
+		t.Fatalf("expected 302 from authorize, got %d: %s", authorizeResp.StatusCode, string(body))
+	}
+
+	location := authorizeResp.Header.Get("Location")
 	redirectURL, err := url.Parse(location)
 	if err != nil {
-		t.Fatalf("failed to parse login redirect: %v", err)
+		t.Fatalf("failed to parse authorize redirect: %v", err)
 	}
 
 	code := strings.TrimSpace(redirectURL.Query().Get("code"))
 	if code == "" {
-		t.Fatalf("expected auth code in redirect URL, got %q", location)
+		t.Fatalf("expected auth code in authorize redirect URL, got %q", location)
 	}
 
 	tokenForm := url.Values{}
