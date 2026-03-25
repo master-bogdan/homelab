@@ -4,20 +4,22 @@ import { useAppDispatch } from '@/app/store/hooks';
 
 import { authService } from '../services';
 import { setSession } from '../store';
-import { isInvalidCredentialsError, resolveApiErrorMessage } from '../utils';
+import { isEmailAlreadyInUseError, resolveApiErrorMessage } from '../utils';
 
 import { useAuthContinuation } from './useAuthContinuation';
 
-interface LoginFormValues {
+interface RegisterFormValues {
+  readonly displayName: string;
   readonly email: string;
   readonly password: string;
 }
 
-export const useLoginPage = () => {
+export const useRegisterPage = () => {
   const dispatch = useAppDispatch();
   const { createPendingRequest } = useAuthContinuation();
-  const form = useForm<LoginFormValues>({
+  const form = useForm<RegisterFormValues>({
     defaultValues: {
+      displayName: '',
       email: '',
       password: ''
     }
@@ -28,8 +30,9 @@ export const useLoginPage = () => {
 
     try {
       const pendingRequest = await createPendingRequest();
-      const user = await authService.login({
+      const user = await authService.register({
         continue: pendingRequest.continueUrl,
+        displayName: values.displayName.trim(),
         email: values.email,
         password: values.password
       });
@@ -37,18 +40,22 @@ export const useLoginPage = () => {
       dispatch(setSession(user));
       window.location.assign(pendingRequest.continueUrl);
     } catch (error) {
-      const message = isInvalidCredentialsError(error)
-        ? 'Email or password is incorrect.'
-        : resolveApiErrorMessage(error, 'Unable to sign in right now.');
+      if (isEmailAlreadyInUseError(error)) {
+        form.setError('email', {
+          message: 'This email is already registered.',
+          type: 'server'
+        });
+        return;
+      }
 
       form.setError('root', {
-        message,
+        message: resolveApiErrorMessage(error, 'Unable to create your account right now.'),
         type: 'server'
       });
     }
   });
 
-  const signInWithGithub = async () => {
+  const signUpWithGithub = async () => {
     form.clearErrors();
 
     try {
@@ -66,6 +73,6 @@ export const useLoginPage = () => {
   return {
     form,
     onSubmit: submit,
-    onSubmitWithGithub: signInWithGithub
+    onSubmitWithGithub: signUpWithGithub
   };
 };

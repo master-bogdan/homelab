@@ -6,9 +6,9 @@ import { appRoutes } from '@/shared/constants/routes';
 import { AppButton, OverlineText } from '@/shared/ui';
 
 import { AuthActionDivider, AuthCard, AuthIntro, AuthShell } from './components';
-import { useLoginPage } from './hooks';
+import { useRegisterPage } from './hooks';
 
-export const LoginPage = () => {
+export const RegisterPage = () => {
   const {
     form: {
       formState: { errors, isSubmitting },
@@ -16,20 +16,39 @@ export const LoginPage = () => {
     },
     onSubmit,
     onSubmitWithGithub
-  } = useLoginPage();
+  } = useRegisterPage();
 
   return (
     <AuthShell>
       <AuthIntro
-        description="Access your precision estimation workspace."
-        title="Welcome Back"
+        description="Define your professional profile to start estimating."
+        title="Create Workspace"
       />
       <AuthCard>
         <Box component="form" noValidate onSubmit={onSubmit}>
           <Stack spacing={2.5}>
             {errors.root?.message ? <Alert severity="error">{errors.root.message}</Alert> : null}
+
             <Stack spacing={1}>
-              <OverlineText>Email Address</OverlineText>
+              <OverlineText>Full Name</OverlineText>
+              <TextField
+                autoComplete="name"
+                error={Boolean(errors.displayName)}
+                fullWidth
+                helperText={errors.displayName?.message}
+                placeholder="Jane Architect"
+                {...register('displayName', {
+                  maxLength: {
+                    message: 'Display name must be 100 characters or less.',
+                    value: 100
+                  },
+                  required: 'Full name is required.'
+                })}
+              />
+            </Stack>
+
+            <Stack spacing={1}>
+              <OverlineText>Work Email</OverlineText>
               <TextField
                 autoComplete="email"
                 error={Boolean(errors.email)}
@@ -47,20 +66,9 @@ export const LoginPage = () => {
             </Stack>
 
             <Stack spacing={1}>
-              <Stack alignItems="center" direction="row" justifyContent="space-between">
-                <OverlineText>Password</OverlineText>
-                <Link
-                  color="primary"
-                  component={RouterLink}
-                  to={appRoutes.forgotPassword}
-                  underline="none"
-                  variant="overline"
-                >
-                  Forgot?
-                </Link>
-              </Stack>
+              <OverlineText>Password</OverlineText>
               <TextField
-                autoComplete="current-password"
+                autoComplete="new-password"
                 error={Boolean(errors.password)}
                 fullWidth
                 helperText={errors.password?.message}
@@ -79,11 +87,11 @@ export const LoginPage = () => {
             <AppButton
               fullWidth
               loading={isSubmitting}
-              loadingText="Signing In..."
+              loadingText="Creating Account..."
               type="submit"
               variant="contained"
             >
-              Sign In
+              Initialize Account
             </AppButton>
 
             <AuthActionDivider />
@@ -99,15 +107,15 @@ export const LoginPage = () => {
               type="button"
               variant="contained"
             >
-              Continue with GitHub
+              Sign up with GitHub
             </AppButton>
           </Stack>
         </Box>
       </AuthCard>
       <Typography sx={{ mt: 3, textAlign: 'center' }} variant="body2">
-        Don&apos;t have an account?{' '}
-        <Link color="primary" component={RouterLink} to={appRoutes.register} underline="none">
-          Register now
+        Already have an account?{' '}
+        <Link color="primary" component={RouterLink} to={appRoutes.login} underline="none">
+          Sign In
         </Link>
       </Typography>
     </AuthShell>

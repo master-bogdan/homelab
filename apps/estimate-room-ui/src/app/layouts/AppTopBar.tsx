@@ -16,8 +16,8 @@ import {
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { toggleThemeMode } from '@/app/store/uiSlice';
 import { appConfig } from '@/shared/config/env';
+import { useLogout } from '@/modules/auth/hooks';
 import { selectAuthUser } from '@/modules/auth/selectors';
-import { logout } from '@/modules/auth/store';
 import { selectThemeMode } from '@/app/store/uiSelectors';
 
 export interface AppTopBarProps {
@@ -32,6 +32,7 @@ export const AppTopBar = ({
   onMenuClick
 }: AppTopBarProps) => {
   const dispatch = useAppDispatch();
+  const { isLoggingOut, logout } = useLogout();
   const user = useAppSelector(selectAuthUser);
   const themeMode = useAppSelector(selectThemeMode);
   const displayName = user?.displayName ?? 'Estimate Room';
@@ -107,11 +108,14 @@ export const AppTopBar = ({
           </Stack>
           <Button
             color="secondary"
-            onClick={() => dispatch(logout())}
+            disabled={isLoggingOut}
+            onClick={() => {
+              void logout();
+            }}
             startIcon={<LogoutRoundedIcon />}
             variant="contained"
           >
-            Logout
+            {isLoggingOut ? 'Logging Out...' : 'Logout'}
           </Button>
         </Stack>
       </Toolbar>

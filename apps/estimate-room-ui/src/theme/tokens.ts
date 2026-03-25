@@ -358,7 +358,7 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
         paddingInline: theme.spacing(2.75),
         transition: theme.transitions.create(['background-color', 'border-color', 'color'])
       }),
-      contained: ({ theme }) => ({
+      contained: () => ({
         boxShadow: 'none',
         '&:hover': {
           boxShadow: 'none'
