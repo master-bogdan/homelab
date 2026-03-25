@@ -56,13 +56,16 @@ export const AppTopBar = ({
         ml: { lg: `${drawerWidth}px` }
       }}
     >
-      <Toolbar sx={{ gap: 2, minHeight: 76 }}>
+      <Toolbar sx={{ gap: 2, minHeight: 76, px: { xs: 2, md: 3 } }}>
         {!isDesktop ? (
           <IconButton color="inherit" edge="start" onClick={onMenuClick}>
             <MenuRoundedIcon />
           </IconButton>
         ) : null}
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Typography color="text.secondary" noWrap variant="overline">
+            Workspace
+          </Typography>
           <Typography noWrap variant="h6">
             {appConfig.appName}
           </Typography>
@@ -74,7 +77,12 @@ export const AppTopBar = ({
           <IconButton
             color="inherit"
             onClick={() => dispatch(toggleThemeMode())}
-            sx={{ bgcolor: 'action.hover' }}
+            sx={{
+              bgcolor: (theme) =>
+                theme.palette.mode === 'light'
+                  ? theme.app.surfaces.inset
+                  : theme.palette.action.hover
+            }}
             title="Toggle theme"
           >
             {themeMode === 'light' ? <DarkModeRoundedIcon /> : <LightModeRoundedIcon />}
@@ -98,10 +106,10 @@ export const AppTopBar = ({
             </Box>
           </Stack>
           <Button
-            color="inherit"
+            color="secondary"
             onClick={() => dispatch(logout())}
             startIcon={<LogoutRoundedIcon />}
-            variant="outlined"
+            variant="contained"
           >
             Logout
           </Button>
