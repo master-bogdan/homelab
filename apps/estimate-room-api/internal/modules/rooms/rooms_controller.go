@@ -72,7 +72,7 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "create room dto accepted",
+	logger.FromRequest(r, c.logger).Info("create room dto accepted",
 		"path", r.URL.Path,
 		"name", dto.Name,
 		"invite_team_id_provided", dto.InviteTeamID != "",
@@ -175,7 +175,7 @@ func (c *roomsController) UpdateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "update room dto accepted",
+	logger.FromRequest(r, c.logger).Info("update room dto accepted",
 		"path", r.URL.Path,
 		"name_provided", dto.Name != nil,
 		"status", dto.Status,
@@ -216,7 +216,7 @@ func (c *roomsController) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "create task dto accepted",
+	logger.FromRequest(r, c.logger).Info("create task dto accepted",
 		"path", r.URL.Path,
 		"title", dto.Title,
 		"description_length", len(dto.Description),
@@ -296,7 +296,7 @@ func (c *roomsController) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "update task dto accepted",
+	logger.FromRequest(r, c.logger).Info("update task dto accepted",
 		"path", r.URL.Path,
 		"title_provided", dto.Title != nil,
 		"status", dto.Status,
@@ -354,7 +354,7 @@ func (c *roomsController) writeError(w http.ResponseWriter, r *http.Request, err
 		logArgs = append(logArgs, "err", cause)
 	}
 
-	c.logger.Error("request failed", logArgs...)
+	logger.FromRequest(r, c.logger).Error("request failed", logArgs...)
 
 	httputils.WriteResponseError(w, apperrors.CreateHttpError(
 		errType,

@@ -29,7 +29,7 @@ export const useResetPasswordPage = () => {
     useState<ResetPasswordValidationReason>('invalid');
   const [pageError, setPageError] = useState<string | null>(null);
   const form = useForm<ResetPasswordFormValues>({
-    mode: 'onBlur',
+    mode: 'onChange',
     defaultValues: {
       confirmPassword: '',
       password: ''

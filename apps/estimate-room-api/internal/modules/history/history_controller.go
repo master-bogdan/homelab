@@ -166,7 +166,7 @@ func (c *historyController) writeNotImplemented(w http.ResponseWriter, r *http.R
 		logArgs = append(logArgs, "err", cause)
 	}
 
-	c.logger.Error("request failed", logArgs...)
+	logger.FromRequest(r, c.logger).Error("request failed", logArgs...)
 
 	httputils.WriteResponseError(w, apperrors.HttpError{
 		Type:     "https://api.estimateroom.com/problems/not-implemented",
@@ -190,7 +190,7 @@ func (c *historyController) writeError(w http.ResponseWriter, r *http.Request, e
 		logArgs = append(logArgs, "err", cause)
 	}
 
-	c.logger.Error("request failed", logArgs...)
+	logger.FromRequest(r, c.logger).Error("request failed", logArgs...)
 
 	httputils.WriteResponseError(w, apperrors.CreateHttpError(
 		errType,

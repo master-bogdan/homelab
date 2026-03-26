@@ -13,6 +13,7 @@ export interface AppButtonProps extends ButtonProps {
 export const AppButton = ({
   children,
   disabled,
+  endIcon,
   loading = false,
   loadingIndicator,
   loadingText,
@@ -22,6 +23,7 @@ export const AppButton = ({
   <Button
     aria-busy={loading || undefined}
     disabled={disabled || loading}
+    endIcon={loading ? undefined : endIcon}
     startIcon={
       loading
         ? (loadingIndicator ?? <CircularProgress color="inherit" size={16} />)

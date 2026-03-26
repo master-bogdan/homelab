@@ -60,7 +60,7 @@ func (c *teamsController) CreateTeam(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "create team dto accepted",
+	logger.FromRequest(r, c.logger).Info("create team dto accepted",
 		"path", r.URL.Path,
 		"name", dto.Name,
 	)
@@ -129,7 +129,7 @@ func (c *teamsController) CreateInvites(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "create team invites dto accepted",
+	logger.FromRequest(r, c.logger).Info("create team invites dto accepted",
 		"path", r.URL.Path,
 		"emails_count", len(dto.Emails),
 	)
@@ -194,7 +194,7 @@ func (c *teamsController) writeError(w http.ResponseWriter, r *http.Request, err
 		logArgs = append(logArgs, "err", cause)
 	}
 
-	c.logger.Error("request failed", logArgs...)
+	logger.FromRequest(r, c.logger).Error("request failed", logArgs...)
 
 	httputils.WriteResponseError(w, apperrors.CreateHttpError(
 		errType,

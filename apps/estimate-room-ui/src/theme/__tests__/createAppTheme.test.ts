@@ -66,5 +66,21 @@ describe.each([
       expect(hoverStyles.filter).toBeUndefined();
       expect(hoverStyles.transform).toBeUndefined();
     });
+
+    it('applies shared accessibility defaults for focus and helper text', () => {
+      const theme = createAppTheme(mode);
+      const iconButtonOverrides = theme.components?.MuiIconButton?.styleOverrides;
+      const helperTextOverrides = theme.components?.MuiFormHelperText?.styleOverrides;
+      const iconButtonStyles = (
+        iconButtonOverrides?.root as (args: { theme: typeof theme }) => Record<string, unknown>
+      )({ theme });
+      const helperTextStyles = (
+        helperTextOverrides?.root as (args: { theme: typeof theme }) => Record<string, unknown>
+      )({ theme });
+
+      expect(iconButtonStyles['&:focus-visible']).toBeDefined();
+      expect(iconButtonStyles['&.Mui-disabled']).toBeDefined();
+      expect(helperTextStyles.minHeight).toBe(theme.spacing(2.5));
+    });
   }
 );

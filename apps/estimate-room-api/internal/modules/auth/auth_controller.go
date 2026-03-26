@@ -61,7 +61,7 @@ func (c *authController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "login dto accepted",
+	logger.FromRequest(r, c.logger).Info("login dto accepted",
 		"path", r.URL.Path,
 		"email", maskEmailForLog(dto.Email),
 		"continue", dto.ContinueURL,
@@ -100,7 +100,7 @@ func (c *authController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "register dto accepted",
+	logger.FromRequest(r, c.logger).Info("register dto accepted",
 		"path", r.URL.Path,
 		"email", maskEmailForLog(dto.Email),
 		"display_name_provided", dto.DisplayName != "",
@@ -141,7 +141,7 @@ func (c *authController) ForgotPassword(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "forgot password dto accepted",
+	logger.FromRequest(r, c.logger).Info("forgot password dto accepted",
 		"path", r.URL.Path,
 		"email", maskEmailForLog(dto.Email),
 	)
@@ -171,7 +171,7 @@ func (c *authController) ValidateResetPasswordToken(w http.ResponseWriter, r *ht
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "reset password token validation requested",
+	logger.FromRequest(r, c.logger).Info("reset password token validation requested",
 		"path", r.URL.Path,
 		"token_present", true,
 		"token_length", len(token),
@@ -211,7 +211,7 @@ func (c *authController) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "reset password dto accepted",
+	logger.FromRequest(r, c.logger).Info("reset password dto accepted",
 		"path", r.URL.Path,
 		"token_present", dto.Token != "",
 		"token_length", len(dto.Token),
@@ -285,7 +285,7 @@ func (c *authController) GetSession(w http.ResponseWriter, r *http.Request) {
 // @Router /api/v1/auth/github/login [get]
 func (c *authController) GithubLogin(w http.ResponseWriter, r *http.Request) {
 	continueURL := r.URL.Query().Get("continue")
-	c.logger.InfoContext(r.Context(), "github login requested",
+	logger.FromRequest(r, c.logger).Info("github login requested",
 		"path", r.URL.Path,
 		"continue", continueURL,
 	)
@@ -321,7 +321,7 @@ func (c *authController) GithubCallback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "github callback params accepted",
+	logger.FromRequest(r, c.logger).Info("github callback params accepted",
 		"path", r.URL.Path,
 		"code_present", true,
 		"state_present", true,
@@ -367,7 +367,7 @@ func (c *authController) writeError(w http.ResponseWriter, r *http.Request, errT
 		logArgs = append(logArgs, "err", cause)
 	}
 
-	c.logger.Error("request failed", logArgs...)
+	logger.FromRequest(r, c.logger).Error("request failed", logArgs...)
 
 	httputils.WriteResponseError(w, apperrors.CreateHttpError(
 		errType,

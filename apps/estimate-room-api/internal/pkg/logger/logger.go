@@ -14,7 +14,16 @@ import (
 
 type ctxKey string
 
-const requestIDKey ctxKey = "request_id"
+const (
+	requestIDKey     ctxKey = "request_id"
+	requestFieldsKey ctxKey = "request_fields"
+)
+
+type RequestFields struct {
+	RequestID string
+	Method    string
+	Path      string
+}
 
 var (
 	defaultLogger *slog.Logger
@@ -184,4 +193,68 @@ func GetRequestID(ctx context.Context) string {
 		return rid
 	}
 	return ""
+}
+
+func WithRequestFields(ctx context.Context, fields RequestFields) context.Context {
+	if ctx == nil {
+		return ctx
+	}
+
+	return context.WithValue(ctx, requestFieldsKey, fields)
+}
+
+func GetRequestFields(ctx context.Context) (RequestFields, bool) {
+	if ctx == nil {
+		return RequestFields{}, false
+	}
+
+	fields, ok := ctx.Value(requestFieldsKey).(RequestFields)
+	return fields, ok
+}
+
+func FromContext(ctx context.Context, base ...*slog.Logger) *slog.Logger {
+	log := fallbackLogger(base...)
+	if fields, ok := GetRequestFields(ctx); ok {
+		return log.With(fields.Attrs()...)
+	}
+
+	if requestID := GetRequestID(ctx); requestID != "" {
+		return log.With("request_id", requestID)
+	}
+
+	return log
+}
+
+func FromRequest(r interface{ Context() context.Context }, base ...*slog.Logger) *slog.Logger {
+	if r == nil {
+		return fallbackLogger(base...)
+	}
+
+	return FromContext(r.Context(), base...)
+}
+
+func (f RequestFields) Attrs() []any {
+	attrs := make([]any, 0, 6)
+
+	if f.RequestID != "" {
+		attrs = append(attrs, "request_id", f.RequestID)
+	}
+	if f.Method != "" {
+		attrs = append(attrs, "method", f.Method)
+	}
+	if f.Path != "" {
+		attrs = append(attrs, "path", f.Path)
+	}
+
+	return attrs
+}
+
+func fallbackLogger(base ...*slog.Logger) *slog.Logger {
+	for _, candidate := range base {
+		if candidate != nil {
+			return candidate
+		}
+	}
+
+	return L()
 }

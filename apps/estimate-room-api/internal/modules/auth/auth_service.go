@@ -104,6 +104,10 @@ func (s *authService) Login(ctx context.Context, dto *authdto.LoginDTO) (*usersm
 	_ = ctx
 
 	email := normalizeEmail(dto.Email)
+	query, err := s.parseContinueURL(dto.ContinueURL)
+	if err != nil {
+		return nil, "", err
+	}
 
 	user, err := s.userService.FindByEmail(email)
 	if err != nil {
@@ -120,12 +124,12 @@ func (s *authService) Login(ctx context.Context, dto *authdto.LoginDTO) (*usersm
 		return nil, "", ErrInvalidCredentials
 	}
 
-	if err := s.userService.UpdateLastLoginAt(user.UserID); err != nil {
+	sessionID, err := s.createContinueSessionFromQuery(user.UserID, query)
+	if err != nil {
 		return nil, "", err
 	}
 
-	sessionID, err := s.createContinueSession(user.UserID, dto.ContinueURL)
-	if err != nil {
+	if err := s.userService.UpdateLastLoginAt(user.UserID); err != nil {
 		return nil, "", err
 	}
 
@@ -156,6 +160,11 @@ func (s *authService) Register(ctx context.Context, dto *authdto.RegisterDTO) (*
 		return nil, "", ErrEmailAlreadyInUse
 	}
 
+	query, err := s.parseContinueURL(dto.ContinueURL)
+	if err != nil {
+		return nil, "", err
+	}
+
 	passwordHash, err := utils.HashPassword(dto.Password)
 	if err != nil {
 		return nil, "", err
@@ -176,12 +185,13 @@ func (s *authService) Register(ctx context.Context, dto *authdto.RegisterDTO) (*
 	if err != nil {
 		return nil, "", err
 	}
-	if err := s.userService.UpdateLastLoginAt(userID); err != nil {
+
+	sessionID, err := s.createContinueSessionFromQuery(userID, query)
+	if err != nil {
 		return nil, "", err
 	}
 
-	sessionID, err := s.createContinueSession(userID, dto.ContinueURL)
-	if err != nil {
+	if err := s.userService.UpdateLastLoginAt(userID); err != nil {
 		return nil, "", err
 	}
 
@@ -347,7 +357,7 @@ func (s *authService) HandleGithubCallback(ctx context.Context, code, stateToken
 
 	emails, err := oauth2utils.FetchGithubEmails(ctx, s.httpClient, accessToken)
 	if err != nil {
-		s.logger.Warn(logger.Prefix("MODULE", "AUTH", "GITHUB", "Failed to fetch GitHub emails"), "err", err)
+		logger.FromContext(ctx, s.logger).Warn(logger.Prefix("MODULE", "AUTH", "GITHUB", "Failed to fetch GitHub emails"), "err", err)
 	}
 
 	profile := oauth2utils.BuildGithubProfile(user, emails)
@@ -373,6 +383,10 @@ func (s *authService) createContinueSession(userID, continueURL string) (string,
 		return "", err
 	}
 
+	return s.createContinueSessionFromQuery(userID, query)
+}
+
+func (s *authService) createContinueSessionFromQuery(userID string, query *oauth2dto.AuthorizeQueryDTO) (string, error) {
 	oidcSessionDTO := &oauth2dto.CreateOidcSessionDTO{
 		UserID:   userID,
 		ClientID: query.ClientID,
@@ -386,13 +400,17 @@ func (s *authService) createContinueSession(userID, continueURL string) (string,
 }
 
 func (s *authService) parseContinueURL(continueURL string) (*oauth2dto.AuthorizeQueryDTO, error) {
-	parsedURL, err := url.Parse(strings.TrimSpace(continueURL))
+	trimmedContinueURL := strings.TrimSpace(continueURL)
+
+	parsedURL, err := url.Parse(trimmedContinueURL)
 	if err != nil {
+		s.logContinueURLRejection("parse_failed", nil, nil, err)
 		return nil, ErrInvalidContinueURL
 	}
 
 	normalizedPath := strings.TrimRight(parsedURL.Path, "/")
 	if normalizedPath != "/api/v1/oauth2/authorize" && normalizedPath != "/oauth2/authorize" {
+		s.logContinueURLRejection("unsupported_path", parsedURL, nil, errors.New("continue url path is not supported"))
 		return nil, ErrInvalidContinueURL
 	}
 
@@ -407,13 +425,48 @@ func (s *authService) parseContinueURL(continueURL string) (*oauth2dto.Authorize
 		Nonce:               parsedURL.Query().Get("nonce"),
 	}
 	if err := query.Validate(); err != nil {
+		s.logContinueURLRejection("invalid_query", parsedURL, query, err)
 		return nil, ErrInvalidContinueURL
 	}
 	if err := s.oauth2Service.ValidateClient(query); err != nil {
+		s.logContinueURLRejection("client_validation_failed", parsedURL, query, err)
 		return nil, ErrInvalidContinueURL
 	}
 
 	return query, nil
+}
+
+func (s *authService) logContinueURLRejection(
+	reason string,
+	parsedURL *url.URL,
+	query *oauth2dto.AuthorizeQueryDTO,
+	err error,
+) {
+	logArgs := []any{"reason", reason}
+
+	if parsedURL != nil {
+		logArgs = append(logArgs,
+			"continue_scheme", parsedURL.Scheme,
+			"continue_host", parsedURL.Host,
+			"continue_path", parsedURL.Path,
+		)
+	}
+
+	if query != nil {
+		logArgs = append(logArgs,
+			"client_id", query.ClientID,
+			"redirect_uri", query.RedirectURI,
+			"response_type", query.ResponseType,
+			"scopes", query.Scopes,
+			"code_challenge_method", query.CodeChallengeMethod,
+		)
+	}
+
+	if err != nil {
+		logArgs = append(logArgs, "err", err)
+	}
+
+	s.logger.Warn("continue url rejected", logArgs...)
 }
 
 func (s *authService) parseGithubState(stateToken string) (*githubState, error) {

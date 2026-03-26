@@ -60,19 +60,19 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 
 	err := query.Validate()
 	if err != nil {
-		c.logger.Error(err.Error())
+		logger.FromRequest(r, c.logger).Error(err.Error())
 		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: "invalid params"}))
 		return
 	}
 
 	err = c.service.ValidateClient(query)
 	if err != nil {
-		c.logger.Error(err.Error())
+		logger.FromRequest(r, c.logger).Error(err.Error())
 		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "authorize dto accepted",
+	logger.FromRequest(r, c.logger).Info("authorize dto accepted",
 		"path", r.URL.Path,
 		"client_id", query.ClientID,
 		"redirect_uri", query.RedirectURI,
@@ -89,7 +89,7 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 
 	session, err := c.authService.GetOidcSessionByID(sessionID)
 	if err != nil {
-		c.logger.Warn("session not found", "err", err)
+		logger.FromRequest(r, c.logger).Warn("session not found", "err", err)
 		c.redirectToFrontendLogin(w, r)
 		return
 	}
@@ -101,7 +101,7 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 			Nonce:    query.Nonce,
 		})
 		if createErr != nil {
-			c.logger.Error(createErr.Error())
+			logger.FromRequest(r, c.logger).Error(createErr.Error())
 			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: createErr.Error()}))
 			return
 		}
@@ -120,14 +120,14 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 		Scopes:              query.Scopes,
 	}
 	if err = createAuthCodeDTO.Validate(); err != nil {
-		c.logger.Error(err.Error())
+		logger.FromRequest(r, c.logger).Error(err.Error())
 		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
 	authCode, err := c.service.CreateAuthCode(createAuthCodeDTO)
 	if err != nil {
-		c.logger.Error(err.Error())
+		logger.FromRequest(r, c.logger).Error(err.Error())
 		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrInternal, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
@@ -137,7 +137,7 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 		redirectTo += "&state=" + query.State
 	}
 
-	c.logger.Info(fmt.Sprintf("redirect to: %s", redirectTo))
+	logger.FromRequest(r, c.logger).Info(fmt.Sprintf("redirect to: %s", redirectTo))
 
 	http.Redirect(w, r, redirectTo, http.StatusFound)
 }
@@ -167,12 +167,12 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = body.Validate(); err != nil {
-		c.logger.Error(fmt.Sprintf("invalid query %s", err.Error()))
+		logger.FromRequest(r, c.logger).Error(fmt.Sprintf("invalid query %s", err.Error()))
 		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: err.Error()}))
 		return
 	}
 
-	c.logger.InfoContext(r.Context(), "token dto accepted",
+	logger.FromRequest(r, c.logger).Info("token dto accepted",
 		"path", r.URL.Path,
 		"grant_type", body.GrantType,
 		"client_id", body.ClientID,
@@ -183,7 +183,7 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 	case "authorization_code":
 		tokens, err := c.service.GetAuthorizationTokens(r.Context(), body)
 		if err != nil {
-			c.logger.Error(err.Error())
+			logger.FromRequest(r, c.logger).Error(err.Error())
 			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: err.Error()}))
 			return
 		}
@@ -193,7 +193,7 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 	case "refresh_token":
 		tokens, err := c.service.GetRefreshTokens(r.Context(), body)
 		if err != nil {
-			c.logger.Error(err.Error())
+			logger.FromRequest(r, c.logger).Error(err.Error())
 			httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrUnauthorized, apperrors.HttpError{Detail: err.Error()}))
 			return
 		}
@@ -201,7 +201,7 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 		httputils.WriteResponse(w, tokens, httputils.WriteResponseOptions{Status: http.StatusOK})
 		return
 	default:
-		c.logger.Error("unsupported grant_type")
+		logger.FromRequest(r, c.logger).Error("unsupported grant_type")
 		httputils.WriteResponseError(w, apperrors.CreateHttpError(apperrors.ErrBadRequest, apperrors.HttpError{Detail: "unsupported grant_type"}))
 	}
 }
@@ -238,7 +238,7 @@ func parseTokenForm(r *http.Request) (*oauth2dto.GetTokenDTO, error) {
 func (c *oauth2Controller) redirectToFrontendLogin(w http.ResponseWriter, r *http.Request) {
 	loginURL, err := buildFrontendLoginURL(c.frontendBaseURL, currentRequestURL(r))
 	if err != nil {
-		c.logger.Error("failed to build frontend login redirect", "err", err)
+		logger.FromRequest(r, c.logger).Error("failed to build frontend login redirect", "err", err)
 		httputils.WriteResponseError(w, apperrors.CreateHttpError(
 			apperrors.ErrInternal,
 			apperrors.HttpError{Detail: "frontend auth redirect is not configured"},

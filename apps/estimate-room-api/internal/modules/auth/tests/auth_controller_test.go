@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,14 +62,48 @@ func setupAuthTest(t *testing.T) (*chi.Mux, *bun.DB, string, string) {
 }
 
 func continueURL(clientID, redirectURI, state, nonce, codeChallenge string) string {
-	return "http://api.estimateroom.test/api/v1/oauth2/authorize?client_id=" + url.QueryEscape(clientID) +
+	return continueURLWithScopes(
+		"http://api.estimateroom.test",
+		clientID,
+		redirectURI,
+		"user",
+		state,
+		nonce,
+		codeChallenge,
+	)
+}
+
+func continueURLWithScopes(baseURL, clientID, redirectURI, scopes, state, nonce, codeChallenge string) string {
+	return strings.TrimRight(baseURL, "/") + "/api/v1/oauth2/authorize?client_id=" + url.QueryEscape(clientID) +
 		"&redirect_uri=" + url.QueryEscape(redirectURI) +
 		"&response_type=code" +
-		"&scopes=user" +
+		"&scopes=" + url.QueryEscape(scopes) +
 		"&state=" + url.QueryEscape(state) +
 		"&code_challenge=" + url.QueryEscape(codeChallenge) +
 		"&code_challenge_method=S256" +
 		"&nonce=" + url.QueryEscape(nonce)
+}
+
+func seedNamedClient(t *testing.T, db *bun.DB, clientID, redirectURI string, scopes []string) {
+	t.Helper()
+
+	_, err := db.ExecContext(context.Background(), `
+		INSERT INTO oauth2_clients (
+			client_id, client_secret, redirect_uris, grant_types, response_types,
+			scopes, client_name, client_type, created_at
+		)
+		VALUES ($1, '', ARRAY[$2], ARRAY['authorization_code'], ARRAY['code'], $3, 'Estimate Room UI', 'public', NOW())
+		ON CONFLICT (client_id) DO UPDATE SET
+			redirect_uris = EXCLUDED.redirect_uris,
+			grant_types = EXCLUDED.grant_types,
+			response_types = EXCLUDED.response_types,
+			scopes = EXCLUDED.scopes,
+			client_name = EXCLUDED.client_name,
+			client_type = EXCLUDED.client_type
+	`, clientID, redirectURI, scopes)
+	if err != nil {
+		t.Fatalf("failed to seed named client: %v", err)
+	}
 }
 
 func TestLogin_ReturnsSessionCookieAndAuthenticatedPayload(t *testing.T) {
@@ -201,6 +236,98 @@ func TestRegister_PersistsProfessionalProfile(t *testing.T) {
 	}
 	if user.Occupation == nil || *user.Occupation != "Developer" {
 		t.Fatalf("expected occupation to be persisted, got %#v", user.Occupation)
+	}
+}
+
+func TestRegister_WithEstimateRoomUILocalContinueURL_ReturnsCreated(t *testing.T) {
+	router, db, _, _ := setupAuthTest(t)
+	defer db.Close()
+
+	clientID := "estimate-room-ui"
+	redirectURI := "http://localhost:5173/auth/callback"
+	seedNamedClient(t, db, clientID, redirectURI, []string{"openid", "user"})
+
+	body := map[string]string{
+		"email":       "local-register@example.com",
+		"password":    "password123",
+		"displayName": "Local Register",
+		"continue": continueURLWithScopes(
+			"http://localhost:8080",
+			clientID,
+			redirectURI,
+			"openid user",
+			"state-local-register",
+			"nonce-local-register",
+			"challenge-local-register",
+		),
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created, got %d", rr.Code)
+	}
+}
+
+func TestRegister_InvalidContinueURL_DoesNotPersistUser(t *testing.T) {
+	router, db, clientID, redirectURI := setupAuthTest(t)
+	defer db.Close()
+
+	body := map[string]string{
+		"email":       "retry-after-invalid-continue@example.com",
+		"password":    "password123",
+		"displayName": "Retry User",
+		"continue": continueURLWithScopes(
+			"http://api.estimateroom.test/invalid",
+			clientID,
+			redirectURI,
+			"user",
+			"state-invalid-continue",
+			"nonce-invalid-continue",
+			"challenge-invalid-continue",
+		),
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal invalid request: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d", rr.Code)
+	}
+
+	if _, err := usersrepositories.NewUserRepository(db).FindByEmail(body["email"]); err == nil {
+		t.Fatalf("expected no user to be persisted after invalid continue url")
+	}
+
+	body["continue"] = continueURL(clientID, redirectURI, "state-valid-retry", "nonce-valid-retry", "challenge-valid-retry")
+	payload, err = json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal retry request: %v", err)
+	}
+
+	retryReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewReader(payload))
+	retryReq.Header.Set("Content-Type", "application/json")
+
+	retryRR := httptest.NewRecorder()
+	router.ServeHTTP(retryRR, retryReq)
+
+	if retryRR.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created on retry, got %d", retryRR.Code)
 	}
 }
 

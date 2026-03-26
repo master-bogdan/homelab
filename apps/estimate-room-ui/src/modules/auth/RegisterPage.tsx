@@ -1,10 +1,10 @@
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import GitHubIcon from '@mui/icons-material/GitHub';
-import { Alert, Box, Link, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Link, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { AppButton, OverlineText } from '@/shared/ui';
+import { AppButton, AppTextField, OverlineText } from '@/shared/ui';
 
 import { createEmailValidationRules, createPasswordValidationRules } from './utils';
 import {
@@ -20,9 +20,10 @@ import { useRegisterPage } from './hooks';
 export const RegisterPage = () => {
   const {
     form: {
-      formState: { errors, isSubmitting },
+      formState: { errors, isSubmitting, isValid },
       register
     },
+    isGithubLoading,
     onSubmit,
     onSubmitWithGithub,
     password
@@ -41,10 +42,9 @@ export const RegisterPage = () => {
 
             <Stack spacing={1}>
               <OverlineText>Full Name</OverlineText>
-              <TextField
+              <AppTextField
                 autoComplete="name"
                 error={Boolean(errors.displayName)}
-                fullWidth
                 helperText={errors.displayName?.message}
                 placeholder="John Doe"
                 {...register('displayName', {
@@ -59,10 +59,9 @@ export const RegisterPage = () => {
 
             <Stack spacing={1}>
               <OverlineText>Work Email</OverlineText>
-              <TextField
+              <AppTextField
                 autoComplete="email"
                 error={Boolean(errors.email)}
-                fullWidth
                 helperText={errors.email?.message}
                 placeholder="name@company.com"
                 type="email"
@@ -85,8 +84,7 @@ export const RegisterPage = () => {
                     (optional)
                   </Typography>
                 </Stack>
-                <TextField
-                  fullWidth
+                <AppTextField
                   placeholder="Acme Corp"
                   {...register('organization')}
                 />
@@ -99,8 +97,7 @@ export const RegisterPage = () => {
                     (optional)
                   </Typography>
                 </Stack>
-                <TextField
-                  fullWidth
+                <AppTextField
                   placeholder="Developer"
                   {...register('occupation')}
                 />
@@ -138,6 +135,7 @@ export const RegisterPage = () => {
             <PasswordRecommendations password={password} />
 
             <AppButton
+              disabled={!isValid || isGithubLoading}
               fullWidth
               loading={isSubmitting}
               loadingText="Creating Account..."
@@ -152,8 +150,10 @@ export const RegisterPage = () => {
 
             <AppButton
               color="secondary"
+              disabled={isSubmitting}
               fullWidth
-              loading={isSubmitting}
+              loading={isGithubLoading}
+              loadingText="Redirecting to GitHub..."
               onClick={() => {
                 void onSubmitWithGithub();
               }}

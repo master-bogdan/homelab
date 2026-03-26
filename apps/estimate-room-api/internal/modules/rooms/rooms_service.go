@@ -198,7 +198,7 @@ func (s *roomsService) CreateRoom(ctx context.Context, input CreateRoomInput) (*
 	}
 
 	metrics.RecordRoomLifecycle("created")
-	s.logger.Info(roomsServiceLog("Room created"), "room_id", result.Room.RoomID, "admin_user_id", input.AdminUserID, "team_id", result.Room.TeamID)
+	logger.FromContext(ctx, s.logger).Info(roomsServiceLog("Room created"), "room_id", result.Room.RoomID, "admin_user_id", input.AdminUserID, "team_id", result.Room.TeamID)
 
 	return result, nil
 }

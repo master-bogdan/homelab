@@ -11,10 +11,10 @@ type Oauth2ClientModel struct {
 
 	ClientID      string    `bun:"client_id,pk"`
 	ClientSecret  string    `bun:"client_secret"`
-	RedirectURIs  []string  `bun:"redirect_uris"`
-	GrantTypes    []string  `bun:"grant_types"`
-	ResponseTypes []string  `bun:"response_types"`
-	Scopes        []string  `bun:"scopes"`
+	RedirectURIs  []string  `bun:"redirect_uris,array"`
+	GrantTypes    []string  `bun:"grant_types,array"`
+	ResponseTypes []string  `bun:"response_types,array"`
+	Scopes        []string  `bun:"scopes,array"`
 	ClientName    string    `bun:"client_name"`
 	ClientType    string    `bun:"client_type"`
 	CreatedAt     time.Time `bun:"created_at"`

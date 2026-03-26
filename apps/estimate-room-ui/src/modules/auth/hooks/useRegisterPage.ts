@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { useAppDispatch } from '@/app/store/hooks';
@@ -27,8 +27,9 @@ const normalizeOptionalField = (value: string) => {
 export const useRegisterPage = () => {
   const dispatch = useAppDispatch();
   const { createPendingRequest } = useAuthContinuation();
+  const [isGithubLoading, setIsGithubLoading] = useState(false);
   const form = useForm<RegisterFormValues>({
-    mode: 'onBlur',
+    mode: 'onChange',
     defaultValues: {
       confirmPassword: '',
       displayName: '',
@@ -86,13 +87,19 @@ export const useRegisterPage = () => {
   });
 
   const signUpWithGithub = async () => {
+    if (isGithubLoading) {
+      return;
+    }
+
     form.clearErrors();
+    setIsGithubLoading(true);
 
     try {
       const pendingRequest = await createPendingRequest();
 
       window.location.assign(authService.getGithubLoginUrl(pendingRequest.continueUrl));
     } catch (error) {
+      setIsGithubLoading(false);
       form.setError('root', {
         message: resolveApiErrorMessage(error, 'Unable to start GitHub sign-in.'),
         type: 'server'
@@ -102,6 +109,7 @@ export const useRegisterPage = () => {
 
   return {
     form,
+    isGithubLoading,
     onSubmit: submit,
     onSubmitWithGithub: signUpWithGithub,
     password

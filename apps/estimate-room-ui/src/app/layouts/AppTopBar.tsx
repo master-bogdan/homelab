@@ -6,7 +6,6 @@ import {
   AppBar,
   Avatar,
   Box,
-  Button,
   IconButton,
   Stack,
   Toolbar,
@@ -16,6 +15,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
 import { toggleThemeMode } from '@/app/store/uiSlice';
 import { appConfig } from '@/shared/config/env';
+import { AppButton } from '@/shared/ui';
 import { useLogout } from '@/modules/auth/hooks';
 import { selectAuthUser } from '@/modules/auth/selectors';
 import { selectThemeMode } from '@/app/store/uiSelectors';
@@ -106,17 +106,19 @@ export const AppTopBar = ({
               </Typography>
             </Box>
           </Stack>
-          <Button
+          <AppButton
             color="secondary"
             disabled={isLoggingOut}
+            loading={isLoggingOut}
+            loadingText="Logging Out..."
             onClick={() => {
               void logout();
             }}
             startIcon={<LogoutRoundedIcon />}
             variant="contained"
           >
-            {isLoggingOut ? 'Logging Out...' : 'Logout'}
-          </Button>
+            Logout
+          </AppButton>
         </Stack>
       </Toolbar>
     </AppBar>

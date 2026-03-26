@@ -1,10 +1,10 @@
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import MailOutlineRoundedIcon from '@mui/icons-material/MailOutlineRounded';
-import { Alert, Box, Link, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, CircularProgress, Link, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { AppButton, OverlineText } from '@/shared/ui';
+import { AppButton, AppTextField, OverlineText } from '@/shared/ui';
 
 import { createEmailValidationRules } from './utils';
 import { AuthCard, AuthIntro, AuthShell } from './components';
@@ -13,7 +13,7 @@ import { useForgotPasswordPage } from './hooks';
 export const ForgotPasswordPage = () => {
   const {
     form: {
-      formState: { errors, isSubmitting },
+      formState: { errors, isSubmitting, isValid },
       register
     },
     isResending,
@@ -75,10 +75,9 @@ export const ForgotPasswordPage = () => {
               {errors.root?.message ? <Alert severity="error">{errors.root.message}</Alert> : null}
               <Stack spacing={1}>
                 <OverlineText>Email Address</OverlineText>
-                <TextField
+                <AppTextField
                   autoComplete="email"
                   error={Boolean(errors.email)}
-                  fullWidth
                   helperText={errors.email?.message}
                   placeholder="name@company.com"
                   type="email"
@@ -86,6 +85,7 @@ export const ForgotPasswordPage = () => {
                 />
               </Stack>
               <AppButton
+                disabled={!isValid}
                 fullWidth
                 loading={isSubmitting}
                 loadingText="Sending Link..."
@@ -119,10 +119,19 @@ export const ForgotPasswordPage = () => {
             onClick={() => {
               void onResend();
             }}
-            sx={{ background: 'none', border: 0, cursor: 'pointer', p: 0 }}
+            sx={{
+              alignItems: 'center',
+              background: 'none',
+              border: 0,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              gap: 0.75,
+              p: 0
+            }}
             type="button"
             underline="none"
           >
+            {isResending ? <CircularProgress color="inherit" size={14} /> : null}
             {isResending ? 'Resending...' : 'Click to resend link'}
           </Link>
         </Typography>

@@ -258,7 +258,7 @@ func (s *oauth2Service) GetOrCreateUserFromGithub(profile oauth2utils.GithubProf
 }
 
 func (s *oauth2Service) GetAuthorizationTokens(ctx context.Context, dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error) {
-	s.logger.Info(oauth2Log("Issuing authorization tokens"))
+	logger.FromContext(ctx, s.logger).Info(oauth2Log("Issuing authorization tokens"))
 	authCode, err := s.authCodeRepo.FindByCode(dto.Code)
 	if err != nil {
 		return oauth2dto.TokenResponseDTO{}, errors.New("invalid auth code")
@@ -301,7 +301,7 @@ func (s *oauth2Service) GetAuthorizationTokens(ctx context.Context, dto *oauth2d
 }
 
 func (s *oauth2Service) GetRefreshTokens(ctx context.Context, dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error) {
-	s.logger.Info(oauth2Log("Refreshing tokens"))
+	logger.FromContext(ctx, s.logger).Info(oauth2Log("Refreshing tokens"))
 	refreshToken, err := s.refreshTokenRepo.FindByToken(ctx, dto.RefreshToken)
 	if err != nil || refreshToken.IsRevoked || refreshToken.ExpiresAt.Before(time.Now()) {
 		return oauth2dto.TokenResponseDTO{}, errors.New("invalid or expired refresh token")
@@ -320,7 +320,7 @@ func (s *oauth2Service) GetRefreshTokens(ctx context.Context, dto *oauth2dto.Get
 }
 
 func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID, oidcSessionID string, scopes []string) (oauth2dto.TokenResponseDTO, error) {
-	s.logger.Info(oauth2Log("Generating token pair"))
+	logger.FromContext(ctx, s.logger).Info(oauth2Log("Generating token pair"))
 	accessTokenDuration := time.Minute * 15     // 15 minutes
 	refreshTokenDuration := time.Hour * 24 * 30 // 30 days
 	idTokenDuration := time.Minute * 15         // 15 minutes

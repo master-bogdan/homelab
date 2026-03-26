@@ -64,7 +64,7 @@ func (c *gamificationController) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	response, err := c.service.GetMe(r.Context(), userID)
 	if err != nil {
-		c.logger.Error("failed to get gamification profile", "err", err)
+		logger.FromRequest(r, c.logger).Error("failed to get gamification profile", "err", err)
 		httputils.WriteResponseError(w, apperrors.CreateHttpError(
 			apperrors.ErrInternal,
 			apperrors.HttpError{

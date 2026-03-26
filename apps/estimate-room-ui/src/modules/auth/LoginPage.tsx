@@ -1,9 +1,9 @@
 import GitHubIcon from '@mui/icons-material/GitHub';
-import { Alert, Box, Link, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Link, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { AppButton, OverlineText } from '@/shared/ui';
+import { AppButton, AppTextField, OverlineText } from '@/shared/ui';
 
 import { createEmailValidationRules } from './utils';
 import { AuthActionDivider, AuthCard, AuthIntro, AuthShell, PasswordField } from './components';
@@ -12,9 +12,10 @@ import { useLoginPage } from './hooks';
 export const LoginPage = () => {
   const {
     form: {
-      formState: { errors, isSubmitting },
+      formState: { errors, isSubmitting, isValid },
       register
     },
+    isGithubLoading,
     onSubmit,
     onSubmitWithGithub
   } = useLoginPage();
@@ -31,10 +32,9 @@ export const LoginPage = () => {
             {errors.root?.message ? <Alert severity="error">{errors.root.message}</Alert> : null}
             <Stack spacing={1}>
               <OverlineText>Email Address</OverlineText>
-              <TextField
+              <AppTextField
                 autoComplete="email"
                 error={Boolean(errors.email)}
-                fullWidth
                 helperText={errors.email?.message}
                 placeholder="name@company.com"
                 type="email"
@@ -72,6 +72,7 @@ export const LoginPage = () => {
             </Stack>
 
             <AppButton
+              disabled={!isValid || isGithubLoading}
               fullWidth
               loading={isSubmitting}
               loadingText="Signing In..."
@@ -85,8 +86,10 @@ export const LoginPage = () => {
 
             <AppButton
               color="secondary"
+              disabled={isSubmitting}
               fullWidth
-              loading={isSubmitting}
+              loading={isGithubLoading}
+              loadingText="Redirecting to GitHub..."
               onClick={() => {
                 void onSubmitWithGithub();
               }}

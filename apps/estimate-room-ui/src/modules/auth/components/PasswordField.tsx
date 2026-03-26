@@ -1,8 +1,10 @@
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
-import { IconButton, InputAdornment, TextField } from '@mui/material';
+import { IconButton, InputAdornment } from '@mui/material';
 import type { TextFieldProps } from '@mui/material';
 import { useState, type MouseEvent } from 'react';
+
+import { AppTextField } from '@/shared/ui';
 
 export interface PasswordFieldProps extends Omit<TextFieldProps, 'type'> {
   readonly hideLabel?: string;
@@ -26,7 +28,7 @@ export const PasswordField = ({
   };
 
   return (
-    <TextField
+    <AppTextField
       {...textFieldProps}
       InputProps={{
         ...InputProps,

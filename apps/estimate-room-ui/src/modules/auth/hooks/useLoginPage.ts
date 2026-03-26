@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { useAppDispatch } from '@/app/store/hooks';
@@ -16,8 +17,9 @@ interface LoginFormValues {
 export const useLoginPage = () => {
   const dispatch = useAppDispatch();
   const { createPendingRequest } = useAuthContinuation();
+  const [isGithubLoading, setIsGithubLoading] = useState(false);
   const form = useForm<LoginFormValues>({
-    mode: 'onBlur',
+    mode: 'onChange',
     defaultValues: {
       email: '',
       password: ''
@@ -51,13 +53,19 @@ export const useLoginPage = () => {
   });
 
   const signInWithGithub = async () => {
+    if (isGithubLoading) {
+      return;
+    }
+
     form.clearErrors();
+    setIsGithubLoading(true);
 
     try {
       const pendingRequest = await createPendingRequest();
 
       window.location.assign(authService.getGithubLoginUrl(pendingRequest.continueUrl));
     } catch (error) {
+      setIsGithubLoading(false);
       form.setError('root', {
         message: resolveApiErrorMessage(error, 'Unable to start GitHub sign-in.'),
         type: 'server'
@@ -67,6 +75,7 @@ export const useLoginPage = () => {
 
   return {
     form,
+    isGithubLoading,
     onSubmit: submit,
     onSubmitWithGithub: signInWithGithub
   };

@@ -59,10 +59,14 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rec := &responseRecorder{ResponseWriter: w}
+		r = r.WithContext(WithRequestFields(r.Context(), RequestFields{
+			RequestID: GetRequestID(r.Context()),
+			Method:    r.Method,
+			Path:      r.URL.Path,
+		}))
+		reqLogger := FromRequest(r)
 
-		L().InfoContext(r.Context(), Prefix("MW", "HTTP", "REQUEST", "Request started"),
-			"method", r.Method,
-			"path", r.URL.Path,
+		reqLogger.Info(Prefix("MW", "HTTP", "REQUEST", "Request started"),
 			"headers", requestHeaders(r),
 			"content_length", r.ContentLength,
 			"remote_ip", clientIP(r),
@@ -92,16 +96,22 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 		}
 		metrics.RecordHTTPRequest(r.Method, routePattern, status, duration)
 
-		L().Log(r.Context(), level, Prefix("MW", "HTTP", "REQUEST", "Request ended"),
-			"method", r.Method,
-			"path", r.URL.Path,
+		endArgs := []any{
 			"route", routePattern,
 			"status", status,
 			"duration_ms", duration.Milliseconds(),
 			"bytes", rec.bytes,
 			"remote_ip", clientIP(r),
 			"user_agent", r.UserAgent(),
-		)
+		}
+		switch level {
+		case slog.LevelError:
+			reqLogger.Error(Prefix("MW", "HTTP", "REQUEST", "Request ended"), endArgs...)
+		case slog.LevelWarn:
+			reqLogger.Warn(Prefix("MW", "HTTP", "REQUEST", "Request ended"), endArgs...)
+		default:
+			reqLogger.Info(Prefix("MW", "HTTP", "REQUEST", "Request ended"), endArgs...)
+		}
 	})
 }
 

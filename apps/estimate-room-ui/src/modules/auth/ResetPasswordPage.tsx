@@ -3,7 +3,7 @@ import { Alert, Box, Link, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { AppButton, OverlineText } from '@/shared/ui';
+import { AppButton, AppPageState, OverlineText } from '@/shared/ui';
 
 import { createPasswordValidationRules } from './utils';
 import {
@@ -18,7 +18,7 @@ import { useResetPasswordPage } from './hooks';
 export const ResetPasswordPage = () => {
   const {
     form: {
-      formState: { errors, isSubmitting },
+      formState: { errors, isSubmitting, isValid },
       register
     },
     invalidLinkCopy,
@@ -69,9 +69,11 @@ export const ResetPasswordPage = () => {
       />
       <AuthCard>
         {pageState === 'validating' ? (
-          <Typography align="center" color="text.secondary" variant="body2">
-            Confirming your password reset link...
-          </Typography>
+          <AppPageState
+            description="Confirming your password reset link before you choose a new password."
+            isLoading
+            title="Validating Link"
+          />
         ) : (
           <Box component="form" noValidate onSubmit={onSubmit}>
             <Stack spacing={2.5}>
@@ -104,6 +106,7 @@ export const ResetPasswordPage = () => {
               </Stack>
               <PasswordRecommendations password={password} />
               <AppButton
+                disabled={!isValid}
                 fullWidth
                 loading={isSubmitting}
                 loadingText="Resetting Password..."

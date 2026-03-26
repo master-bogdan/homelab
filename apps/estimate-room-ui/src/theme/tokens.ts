@@ -5,6 +5,13 @@ import type { AppThemeTokens, ThemeMode } from './types';
 
 const baseShadows = createTheme().shadows;
 
+const getInteractiveFocusRing = (theme: Theme) =>
+  theme.palette.mode === 'light'
+    ? `0 0 0 3px ${alpha(theme.palette.primary.main, 0.16)}`
+    : `0 0 0 2px ${theme.app.borders.focusRing}`;
+
+const getDisabledOpacity = (theme: Theme) => (theme.palette.mode === 'light' ? 0.52 : 0.44);
+
 const lightAppTokens: AppThemeTokens = {
   surfaces: {
     base: '#f8f9ff',
@@ -357,10 +364,18 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
         minHeight: 40,
         paddingBlock: theme.spacing(1),
         paddingInline: theme.spacing(2.75),
+        position: 'relative',
         transition: theme.transitions.create(
           ['background-color', 'border-color', 'box-shadow', 'color', 'opacity'],
           { duration: theme.transitions.duration.shorter }
-        )
+        ),
+        '&:focus-visible': {
+          boxShadow: getInteractiveFocusRing(theme),
+          outline: 'none'
+        },
+        '&.Mui-disabled': {
+          opacity: getDisabledOpacity(theme)
+        }
       }),
       contained: () => ({
         boxShadow: 'none',
@@ -478,9 +493,20 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
             ? 'radial-gradient(circle at top left, rgba(81, 72, 215, 0.12), transparent 30%), linear-gradient(180deg, #f8f9ff 0%, #eef4ff 100%)'
             : 'radial-gradient(circle at top left, rgba(37, 99, 235, 0.24), transparent 34%), linear-gradient(180deg, #0b1326 0%, #10182d 100%)'
       },
+      '*, *::before, *::after': {
+        boxSizing: 'border-box'
+      },
       '::selection': {
         backgroundColor:
           mode === 'light' ? alpha('#5148d7', 0.16) : alpha('#b4c5ff', 0.24)
+      },
+      '@media (prefers-reduced-motion: reduce)': {
+        '*, *::before, *::after': {
+          animationDuration: '0.01ms !important',
+          animationIterationCount: '1 !important',
+          scrollBehavior: 'auto !important',
+          transitionDuration: '0.01ms !important'
+        }
       }
     }
   },
@@ -507,7 +533,46 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
   MuiInputBase: {
     styleOverrides: {
       input: ({ theme }) => ({
-        paddingBlock: theme.spacing(1.5)
+        paddingBlock: theme.spacing(1.5),
+        '&::placeholder': {
+          color: theme.palette.text.secondary,
+          opacity: 0.88
+        }
+      })
+    }
+  },
+  MuiFormHelperText: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        marginLeft: 0,
+        marginRight: 0,
+        marginTop: theme.spacing(0.75),
+        minHeight: theme.spacing(2.5)
+      })
+    }
+  },
+  MuiIconButton: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        borderRadius: theme.shape.borderRadius,
+        minHeight: 40,
+        minWidth: 40,
+        transition: theme.transitions.create(['background-color', 'box-shadow', 'color']),
+        '@media (hover: hover)': {
+          '&:hover': {
+            backgroundColor:
+              theme.palette.mode === 'light'
+                ? theme.app.surfaces.section
+                : alpha(theme.palette.common.white, 0.08)
+          }
+        },
+        '&:focus-visible': {
+          boxShadow: getInteractiveFocusRing(theme),
+          outline: 'none'
+        },
+        '&.Mui-disabled': {
+          opacity: getDisabledOpacity(theme)
+        }
       })
     }
   },
@@ -532,6 +597,10 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
                 ? theme.app.surfaces.well
                 : theme.app.surfaces.card
           }
+        },
+        '&:focus-visible': {
+          boxShadow: getInteractiveFocusRing(theme),
+          outline: 'none'
         },
         '&:hover': {
           backgroundColor: theme.app.surfaces.rowAlternate
@@ -566,10 +635,7 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
         },
         '&.Mui-focused': {
           backgroundColor: theme.app.surfaces.card,
-          boxShadow:
-            theme.palette.mode === 'light'
-              ? `0 0 0 3px ${alpha(theme.palette.primary.main, 0.12)}`
-              : `0 0 0 2px ${theme.app.borders.focusRing}`
+          boxShadow: getInteractiveFocusRing(theme)
         },
         '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
           borderColor:
@@ -582,6 +648,32 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
             theme.palette.mode === 'light'
               ? theme.palette.error.main
               : alpha(theme.palette.error.main, 0.7)
+        },
+        '&.Mui-disabled': {
+          backgroundColor:
+            theme.palette.mode === 'light'
+              ? alpha(theme.app.surfaces.section, 0.72)
+              : alpha(theme.app.surfaces.section, 0.8)
+        }
+      })
+    }
+  },
+  MuiLink: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        borderRadius: Math.max(Number(theme.shape.borderRadius) / 2, 4),
+        textDecorationColor: 'transparent',
+        textUnderlineOffset: '0.2em',
+        transition: theme.transitions.create(['box-shadow', 'color', 'text-decoration-color']),
+        '@media (hover: hover)': {
+          '&:hover': {
+            textDecorationColor: 'currentColor'
+          }
+        },
+        '&:focus-visible': {
+          boxShadow: getInteractiveFocusRing(theme),
+          outline: 'none',
+          textDecorationColor: 'currentColor'
         }
       })
     }
