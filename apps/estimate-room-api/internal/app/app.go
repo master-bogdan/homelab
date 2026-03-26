@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/httprate"
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/email"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
@@ -105,6 +106,14 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 	deps.Router.Handle("/metrics", metrics.Handler())
 
 	deps.Router.Route("/api/v1", func(r chi.Router) {
+		emailClient := email.NewSMTPClient(email.SMTPConfig{
+			From:     deps.Cfg.Email.From,
+			Host:     deps.Cfg.Email.SMTPHost,
+			Port:     deps.Cfg.Email.SMTPPort,
+			Username: deps.Cfg.Email.SMTPUsername,
+			Password: deps.Cfg.Email.SMTPPassword,
+		})
+
 		health.NewHealthModule(health.HealthModuleDeps{
 			Router:             r,
 			DB:                 deps.DB,
@@ -125,11 +134,13 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		})
 
 		auth.NewAuthModule(auth.AuthModuleDeps{
-			Router:         r,
-			DB:             deps.DB,
-			UserService:    userService,
-			Oauth2Service:  oauth2Module.Service,
-			SessionService: oauth2Module.AuthService,
+			Router:          r,
+			DB:              deps.DB,
+			UserService:     userService,
+			Oauth2Service:   oauth2Module.Service,
+			SessionService:  oauth2Module.AuthService,
+			FrontendBaseURL: deps.Cfg.Frontend.BaseURL,
+			EmailClient:     emailClient,
 			Github: oauth2utils.GithubConfig{
 				ClientID:     deps.Cfg.Github.ClientID,
 				ClientSecret: deps.Cfg.Github.ClientSecret,

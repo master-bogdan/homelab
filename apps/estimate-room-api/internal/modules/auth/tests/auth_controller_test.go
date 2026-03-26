@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	emailinfra "github.com/master-bogdan/estimate-room-api/internal/infra/email"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	authdto "github.com/master-bogdan/estimate-room-api/internal/modules/auth/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
@@ -24,7 +25,20 @@ import (
 	"github.com/uptrace/bun"
 )
 
+type fakeEmailClient struct {
+	sent []emailinfra.Message
+}
+
+func (f *fakeEmailClient) Send(_ context.Context, msg emailinfra.Message) error {
+	f.sent = append(f.sent, msg)
+	return nil
+}
+
 func setupAuthTest(t *testing.T) (*chi.Mux, *bun.DB, string, string) {
+	return setupAuthTestWithEmailClient(t, emailinfra.NewNoopClient())
+}
+
+func setupAuthTestWithEmailClient(t *testing.T, emailClient emailinfra.Client) (*chi.Mux, *bun.DB, string, string) {
 	t.Helper()
 
 	db := testutils.SetupTestDB(t)
@@ -47,11 +61,13 @@ func setupAuthTest(t *testing.T) (*chi.Mux, *bun.DB, string, string) {
 		})
 
 		auth.NewAuthModule(auth.AuthModuleDeps{
-			Router:         r,
-			DB:             db,
-			UserService:    userService,
-			Oauth2Service:  oauth2Module.Service,
-			SessionService: oauth2Module.AuthService,
+			Router:          r,
+			DB:              db,
+			UserService:     userService,
+			Oauth2Service:   oauth2Module.Service,
+			SessionService:  oauth2Module.AuthService,
+			FrontendBaseURL: "http://localhost:5173",
+			EmailClient:     emailClient,
 		})
 	})
 
@@ -59,6 +75,40 @@ func setupAuthTest(t *testing.T) (*chi.Mux, *bun.DB, string, string) {
 	clientID := testutils.SeedClient(t, db, redirectURI, []string{"user"})
 
 	return router, db, clientID, redirectURI
+}
+
+func TestForgotPassword_ExistingUser_SendsResetEmail(t *testing.T) {
+	emailClient := &fakeEmailClient{}
+	router, db, _, _ := setupAuthTestWithEmailClient(t, emailClient)
+	defer db.Close()
+
+	testutils.SeedUser(t, db, "resetme@example.com", "password123")
+
+	payload := []byte(`{"email":"resetme@example.com"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/forgot-password", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", rr.Code)
+	}
+
+	if len(emailClient.sent) != 1 {
+		t.Fatalf("expected one email to be sent, got %d", len(emailClient.sent))
+	}
+
+	sent := emailClient.sent[0]
+	if len(sent.To) != 1 || sent.To[0] != "resetme@example.com" {
+		t.Fatalf("expected reset email recipient, got %#v", sent.To)
+	}
+	if sent.Subject != "Reset your EstimateRoom password" {
+		t.Fatalf("unexpected email subject %q", sent.Subject)
+	}
+	if !strings.Contains(sent.TextBody, "http://localhost:5173/reset-password?token=") {
+		t.Fatalf("expected reset-password URL in email body, got %q", sent.TextBody)
+	}
 }
 
 func continueURL(clientID, redirectURI, state, nonce, codeChallenge string) string {

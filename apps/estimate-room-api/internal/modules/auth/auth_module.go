@@ -2,6 +2,7 @@ package auth
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/email"
 	authrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/auth/repositories"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	oauth2repositories "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/repositories"
@@ -16,12 +17,14 @@ type AuthModule struct {
 }
 
 type AuthModuleDeps struct {
-	Router         chi.Router
-	DB             *bun.DB
-	UserService    users.UsersService
-	Oauth2Service  oauth2.Oauth2Service
-	SessionService oauth2.AuthService
-	Github         oauth2utils.GithubConfig
+	Router          chi.Router
+	DB              *bun.DB
+	UserService     users.UsersService
+	Oauth2Service   oauth2.Oauth2Service
+	SessionService  oauth2.AuthService
+	FrontendBaseURL string
+	EmailClient     email.Client
+	Github          oauth2utils.GithubConfig
 }
 
 func NewAuthModule(deps AuthModuleDeps) *AuthModule {
@@ -35,6 +38,8 @@ func NewAuthModule(deps AuthModuleDeps) *AuthModule {
 		UserService:            deps.UserService,
 		Oauth2Service:          deps.Oauth2Service,
 		SessionService:         deps.SessionService,
+		FrontendBaseURL:        deps.FrontendBaseURL,
+		EmailClient:            deps.EmailClient,
 		PasswordResetTokenRepo: passwordResetTokenRepo,
 		AuthCodeRepo:           authCodeRepo,
 		AccessTokenRepo:        accessTokenRepo,

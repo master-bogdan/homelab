@@ -31,6 +31,7 @@ Optional but recommended:
 - `HTTP_RATE_LIMIT_PER_MINUTE`
 - `WS_RATE_LIMIT_PER_MINUTE`
 - GitHub OAuth variables if GitHub login is required
+- Email SMTP variables if local password reset emails should be delivered
 
 `FRONTEND_BASE_URL` is used by `/api/v1/oauth2/authorize` to redirect unauthenticated users to the frontend login page with a `continue` URL.
 
@@ -40,6 +41,8 @@ The checked-in local defaults are aligned to the dev compose stack:
 - Frontend: `http://localhost:5173`
 - PostgreSQL: `postgres://postgres:password@localhost:5432/estimate_room?sslmode=disable`
 - Redis: `redis://localhost:6379/0`
+- SMTP: `localhost:1025`
+- Mail inbox UI: `http://localhost:8025`
 
 ## Start Dependencies
 
@@ -51,6 +54,7 @@ This starts the local PostgreSQL and Redis stack from `docker-compose.dev.yaml`,
 
 - pgAdmin: `http://localhost:5050`
 - RedisInsight: `http://localhost:5540`
+- Mailpit: `http://localhost:8025`
 
 Default pgAdmin login:
 
@@ -69,6 +73,12 @@ When connecting from RedisInsight to the Redis container, use:
 
 - Host: `redis`
 - Port: `6379`
+
+When connecting the API to the local mail inbox, use:
+
+- SMTP host: `localhost`
+- SMTP port: `1025`
+- Mailpit UI: `http://localhost:8025`
 
 ## Run the API
 

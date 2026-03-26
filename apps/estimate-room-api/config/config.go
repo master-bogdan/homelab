@@ -40,6 +40,13 @@ type Config struct {
 		StateSecret  string `env:"GITHUB_STATE_SECRET"`
 		Scopes       string `env:"GITHUB_SCOPES"`
 	}
+	Email struct {
+		From         string `env:"EMAIL_FROM"`
+		SMTPHost     string `env:"EMAIL_SMTP_HOST"`
+		SMTPPort     int    `env:"EMAIL_SMTP_PORT" envDefault:"1025"`
+		SMTPUsername string `env:"EMAIL_SMTP_USERNAME"`
+		SMTPPassword string `env:"EMAIL_SMTP_PASSWORD"`
+	}
 }
 
 func LoadConfig() (*Config, error) {

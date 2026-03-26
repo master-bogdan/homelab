@@ -29,6 +29,7 @@ The backend is implemented as a single Go service with PostgreSQL for persistenc
 
 - PostgreSQL
 - Redis
+- SMTP mail transport for product emails
 - GitHub OAuth endpoints
 
 ## High-Level Request Flow

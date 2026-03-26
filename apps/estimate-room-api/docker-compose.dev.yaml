@@ -44,6 +44,13 @@ services:
     volumes:
       - redisinsight-data:/data
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: estimate-room-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
 volumes:
   redis-data:
     driver: local

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	emailinfra "github.com/master-bogdan/estimate-room-api/internal/infra/email"
 	authdto "github.com/master-bogdan/estimate-room-api/internal/modules/auth/dto"
 	authmodels "github.com/master-bogdan/estimate-room-api/internal/modules/auth/models"
 	authrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/auth/repositories"
@@ -55,6 +56,8 @@ type AuthServiceDeps struct {
 	UserService            users.UsersService
 	Oauth2Service          oauth2.Oauth2Service
 	SessionService         oauth2.AuthService
+	FrontendBaseURL        string
+	EmailClient            emailinfra.Client
 	PasswordResetTokenRepo authrepositories.PasswordResetTokenRepository
 	AuthCodeRepo           oauth2repositories.Oauth2AuthCodeRepository
 	AccessTokenRepo        oauth2repositories.AccessTokenRepository
@@ -67,6 +70,8 @@ type authService struct {
 	userService            users.UsersService
 	oauth2Service          oauth2.Oauth2Service
 	sessionService         oauth2.AuthService
+	frontendBaseURL        string
+	emailClient            emailinfra.Client
 	passwordResetTokenRepo authrepositories.PasswordResetTokenRepository
 	authCodeRepo           oauth2repositories.Oauth2AuthCodeRepository
 	accessTokenRepo        oauth2repositories.AccessTokenRepository
@@ -84,10 +89,17 @@ type githubState struct {
 }
 
 func NewAuthService(deps AuthServiceDeps) AuthService {
+	emailClient := deps.EmailClient
+	if emailClient == nil {
+		emailClient = emailinfra.NewNoopClient()
+	}
+
 	return &authService{
 		userService:            deps.UserService,
 		oauth2Service:          deps.Oauth2Service,
 		sessionService:         deps.SessionService,
+		frontendBaseURL:        deps.FrontendBaseURL,
+		emailClient:            emailClient,
 		passwordResetTokenRepo: deps.PasswordResetTokenRepo,
 		authCodeRepo:           deps.AuthCodeRepo,
 		accessTokenRepo:        deps.AccessTokenRepo,
@@ -204,9 +216,9 @@ func (s *authService) Register(ctx context.Context, dto *authdto.RegisterDTO) (*
 }
 
 func (s *authService) ForgotPassword(ctx context.Context, dto *authdto.ForgotPasswordDTO) error {
-	email := normalizeEmail(dto.Email)
+	normalizedEmail := normalizeEmail(dto.Email)
 
-	user, err := s.userService.FindByEmail(email)
+	user, err := s.userService.FindByEmail(normalizedEmail)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrUserNotFound) {
 			return nil
@@ -229,6 +241,21 @@ func (s *authService) ForgotPassword(ctx context.Context, dto *authdto.ForgotPas
 		ExpiresAt: time.Now().Add(passwordResetTokenTTL),
 	})
 	if err != nil {
+		return err
+	}
+
+	resetURL, err := s.buildResetPasswordURL(rawToken)
+	if err != nil {
+		return err
+	}
+
+	if err := s.emailClient.Send(ctx, emailinfra.Message{
+		To:      []string{normalizedEmail},
+		Subject: "Reset your EstimateRoom password",
+		TextBody: "We received a request to reset your EstimateRoom password.\n\n" +
+			"Use this link to choose a new password:\n" + resetURL + "\n\n" +
+			"This link expires in 1 hour. If you did not request a password reset, you can ignore this email.\n",
+	}); err != nil {
 		return err
 	}
 
@@ -524,6 +551,24 @@ func (s *authService) revokeAllUserSessions(ctx context.Context, userID string) 
 
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func (s *authService) buildResetPasswordURL(token string) (string, error) {
+	trimmedBaseURL := strings.TrimRight(strings.TrimSpace(s.frontendBaseURL), "/")
+	if trimmedBaseURL == "" {
+		return "", ErrInvalidContinueURL
+	}
+
+	resetURL, err := url.Parse(trimmedBaseURL + "/reset-password")
+	if err != nil {
+		return "", err
+	}
+
+	query := resetURL.Query()
+	query.Set("token", token)
+	resetURL.RawQuery = query.Encode()
+
+	return resetURL.String(), nil
 }
 
 func defaultDisplayName(email string) string {
