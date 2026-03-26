@@ -15,6 +15,8 @@ type Oauth2AuthCodeRepository interface {
 	Create(model *oauth2models.Oauth2AuthCodeModel) error
 	FindByCode(code string) (*oauth2models.Oauth2AuthCodeModel, error)
 	MarkUsed(authCodeID string) error
+	MarkUsedByOidcSessionID(oidcSessionID string) error
+	MarkUsedByUserID(userID string) error
 }
 
 type oauth2AuthCodeRepository struct {
@@ -26,59 +28,36 @@ func NewOauth2AuthCodeRepository(db *bun.DB) *oauth2AuthCodeRepository {
 }
 
 func (r *oauth2AuthCodeRepository) Create(model *oauth2models.Oauth2AuthCodeModel) error {
-	const query = `
-		INSERT INTO oauth2_auth_codes (
-			auth_code_id, client_id, user_id, oidc_session_id, code,
-			redirect_uri, scopes, code_challenge, code_challenge_method, is_used, expires_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-	`
-
 	if model.AuthCodeID == "" {
 		model.AuthCodeID = uuid.NewString()
 	}
 
-	_, err := r.db.ExecContext(
-		context.Background(),
-		query,
-		model.AuthCodeID,
-		model.ClientID,
-		model.UserID,
-		model.OidcSessionID,
-		model.Code,
-		model.RedirectURI,
-		model.Scopes,
-		model.CodeChallenge,
-		model.CodeChallengeMethod,
-		model.IsUsed,
-		model.ExpiresAt,
-	)
+	_, err := r.db.NewInsert().
+		Model(model).
+		Column(
+			"auth_code_id",
+			"client_id",
+			"user_id",
+			"oidc_session_id",
+			"code",
+			"redirect_uri",
+			"scopes",
+			"code_challenge",
+			"code_challenge_method",
+			"is_used",
+			"expires_at",
+		).
+		Exec(context.Background())
 	return err
 }
 
 func (r *oauth2AuthCodeRepository) FindByCode(code string) (*oauth2models.Oauth2AuthCodeModel, error) {
-	const query = `
-		SELECT auth_code_id, client_id, user_id, oidc_session_id, code,
-			redirect_uri, scopes, code_challenge, code_challenge_method, is_used, expires_at, created_at
-		FROM oauth2_auth_codes
-		WHERE code = $1
-	`
-
-	var model oauth2models.Oauth2AuthCodeModel
-	row := r.db.QueryRowContext(context.Background(), query, code)
-	err := row.Scan(
-		&model.AuthCodeID,
-		&model.ClientID,
-		&model.UserID,
-		&model.OidcSessionID,
-		&model.Code,
-		&model.RedirectURI,
-		&model.Scopes,
-		&model.CodeChallenge,
-		&model.CodeChallengeMethod,
-		&model.IsUsed,
-		&model.ExpiresAt,
-		&model.CreatedAt,
-	)
+	model := new(oauth2models.Oauth2AuthCodeModel)
+	err := r.db.NewSelect().
+		Model(model).
+		Where("oac.code = ?", code).
+		Limit(1).
+		Scan(context.Background())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperrors.ErrAuthCodeNotFound
@@ -86,16 +65,34 @@ func (r *oauth2AuthCodeRepository) FindByCode(code string) (*oauth2models.Oauth2
 		return nil, err
 	}
 
-	return &model, nil
+	return model, nil
 }
 
 func (r *oauth2AuthCodeRepository) MarkUsed(authCodeID string) error {
-	const query = `
-		UPDATE oauth2_auth_codes
-		SET is_used = true
-		WHERE auth_code_id = $1
-	`
+	_, err := r.db.NewUpdate().
+		Model((*oauth2models.Oauth2AuthCodeModel)(nil)).
+		Set("is_used = ?", true).
+		Where("auth_code_id = ?", authCodeID).
+		Exec(context.Background())
+	return err
+}
 
-	_, err := r.db.ExecContext(context.Background(), query, authCodeID)
+func (r *oauth2AuthCodeRepository) MarkUsedByOidcSessionID(oidcSessionID string) error {
+	_, err := r.db.NewUpdate().
+		Model((*oauth2models.Oauth2AuthCodeModel)(nil)).
+		Set("is_used = ?", true).
+		Where("oidc_session_id = ?", oidcSessionID).
+		Where("is_used = ?", false).
+		Exec(context.Background())
+	return err
+}
+
+func (r *oauth2AuthCodeRepository) MarkUsedByUserID(userID string) error {
+	_, err := r.db.NewUpdate().
+		Model((*oauth2models.Oauth2AuthCodeModel)(nil)).
+		Set("is_used = ?", true).
+		Where("user_id = ?", userID).
+		Where("is_used = ?", false).
+		Exec(context.Background())
 	return err
 }

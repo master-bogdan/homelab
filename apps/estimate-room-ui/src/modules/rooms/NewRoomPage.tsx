@@ -1,6 +1,6 @@
-import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Stack, Typography } from '@mui/material';
 
-import { SectionCard } from '@/shared/ui';
+import { AppButton, AppTextField, SectionCard } from '@/shared/ui';
 
 import { useNewRoomForm } from './hooks/useNewRoomForm';
 import styles from './NewRoomPage.module.scss';
@@ -8,7 +8,7 @@ import styles from './NewRoomPage.module.scss';
 export const NewRoomPage = () => {
   const {
     form: {
-      formState: { errors, isSubmitting },
+      formState: { errors, isSubmitting, isValid },
       register
     },
     onSubmit,
@@ -34,7 +34,7 @@ export const NewRoomPage = () => {
         <Box component="form" noValidate onSubmit={onSubmit}>
           <Stack spacing={3}>
             <div className={styles.formGrid}>
-              <TextField
+              <AppTextField
                 error={Boolean(errors.name)}
                 helperText={errors.name?.message}
                 label="Room name"
@@ -46,13 +46,13 @@ export const NewRoomPage = () => {
                   required: 'Room name is required.'
                 })}
               />
-              <TextField
+              <AppTextField
                 error={Boolean(errors.teamId)}
                 helperText={errors.teamId?.message ?? 'Optional team identifier from the backend.'}
                 label="Team ID"
                 {...register('teamId')}
               />
-              <TextField
+              <AppTextField
                 error={Boolean(errors.length)}
                 helperText={errors.length?.message}
                 inputProps={{ min: 1, step: 0.1 }}
@@ -66,7 +66,7 @@ export const NewRoomPage = () => {
                   valueAsNumber: true
                 })}
               />
-              <TextField
+              <AppTextField
                 error={Boolean(errors.width)}
                 helperText={errors.width?.message}
                 inputProps={{ min: 1, step: 0.1 }}
@@ -80,7 +80,7 @@ export const NewRoomPage = () => {
                   valueAsNumber: true
                 })}
               />
-              <TextField
+              <AppTextField
                 error={Boolean(errors.height)}
                 helperText={errors.height?.message}
                 inputProps={{ min: 2, step: 0.1 }}
@@ -99,9 +99,15 @@ export const NewRoomPage = () => {
             {submitMessage ? <Alert severity="success">{submitMessage}</Alert> : null}
 
             <Box>
-              <Button disabled={isSubmitting} type="submit" variant="contained">
-                {isSubmitting ? 'Creating room...' : 'Create room scaffold'}
-              </Button>
+              <AppButton
+                disabled={!isValid}
+                loading={isSubmitting}
+                loadingText="Creating room..."
+                type="submit"
+                variant="contained"
+              >
+                Create room scaffold
+              </AppButton>
             </Box>
           </Stack>
         </Box>

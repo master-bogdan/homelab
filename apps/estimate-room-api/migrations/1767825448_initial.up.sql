@@ -53,6 +53,8 @@ CREATE TABLE "users" (
   "password_hash" text,
   "github_id" text,
   "display_name" text NOT NULL DEFAULT '',
+  "organization" text,
+  "occupation" text,
   "avatar_url" text,
   "created_at" timestamptz NOT NULL DEFAULT (now()),
   "updated_at" timestamptz NOT NULL DEFAULT (now()),
@@ -244,7 +246,8 @@ CREATE TABLE "oauth2_oidc_sessions" (
   "user_id" text NOT NULL,
   "client_id" text NOT NULL,
   "nonce" text NOT NULL,
-  "created_at" timestamptz NOT NULL DEFAULT (now())
+  "created_at" timestamptz NOT NULL DEFAULT (now()),
+  "revoked_at" timestamptz
 );
 
 CREATE TABLE "oauth2_auth_codes" (
@@ -290,6 +293,15 @@ CREATE TABLE "oauth2_access_tokens" (
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 
+CREATE TABLE "auth_password_reset_tokens" (
+  "password_reset_token_id" text PRIMARY KEY,
+  "user_id" text NOT NULL,
+  "token_hash" text UNIQUE NOT NULL,
+  "expires_at" timestamptz NOT NULL,
+  "used_at" timestamptz,
+  "created_at" timestamptz NOT NULL DEFAULT (now())
+);
+
 INSERT INTO "decks" ("deck_id", "name", "kind", "values")
 VALUES
   (
@@ -322,6 +334,8 @@ CREATE INDEX "idx_oauth2_auth_codes_code" ON "oauth2_auth_codes" ("code");
 CREATE INDEX "idx_oauth2_refresh_tokens_token" ON "oauth2_refresh_tokens" ("token");
 
 CREATE INDEX "idx_oauth2_access_tokens_token" ON "oauth2_access_tokens" ("token");
+CREATE INDEX "idx_oauth2_oidc_sessions_active_user_id" ON "oauth2_oidc_sessions" ("user_id") WHERE "revoked_at" IS NULL;
+CREATE INDEX "idx_auth_password_reset_tokens_user_id" ON "auth_password_reset_tokens" ("user_id");
 
 COMMENT ON COLUMN "rooms"."code" IS 'short unique string used in URLs';
 
@@ -404,3 +418,5 @@ ALTER TABLE "oauth2_access_tokens" ADD FOREIGN KEY ("client_id") REFERENCES "oau
 ALTER TABLE "oauth2_access_tokens" ADD FOREIGN KEY ("oidc_session_id") REFERENCES "oauth2_oidc_sessions" ("oidc_session_id");
 
 ALTER TABLE "oauth2_access_tokens" ADD FOREIGN KEY ("refresh_token_id") REFERENCES "oauth2_refresh_tokens" ("refresh_token_id") ON DELETE SET NULL;
+
+ALTER TABLE "auth_password_reset_tokens" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id");

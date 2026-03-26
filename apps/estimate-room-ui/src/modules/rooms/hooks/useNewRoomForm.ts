@@ -19,7 +19,8 @@ export const useNewRoomForm = () => {
 
   const form = useForm<NewRoomFormValues>({
     defaultValues: newRoomDefaultValues,
-    mode: 'onBlur'
+    mode: 'onChange',
+    reValidateMode: 'onChange'
   });
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
 

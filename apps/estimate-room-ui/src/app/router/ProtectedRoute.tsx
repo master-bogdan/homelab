@@ -1,8 +1,8 @@
-import { Box, CircularProgress } from '@mui/material';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import { useAppSelector } from '@/app/store/hooks';
 import { appRoutes } from '@/shared/constants/routes';
+import { AppPageState } from '@/shared/ui';
 import { selectAuthStatus, selectIsAuthenticated } from '@/modules/auth/selectors';
 
 export const ProtectedRoute = () => {
@@ -12,15 +12,13 @@ export const ProtectedRoute = () => {
 
   if (authStatus === 'unknown') {
     return (
-      <Box
-        sx={{
-          display: 'grid',
-          placeItems: 'center',
-          minHeight: '100vh'
-        }}
-      >
-        <CircularProgress />
-      </Box>
+      <AppPageState
+        description="Checking your current session before opening the workspace."
+        isLoading
+        minHeight="100vh"
+        title="Loading workspace"
+        titleComponent="h1"
+      />
     );
   }
 

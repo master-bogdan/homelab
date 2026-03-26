@@ -1,5 +1,5 @@
 import { appConfig } from '@/shared/config/env';
-import type { ApiError } from '@/shared/types';
+import type { ApiError, ApiErrorItem } from '@/shared/types';
 
 type QueryValue = boolean | number | string | null | undefined;
 
@@ -78,13 +78,24 @@ const parseError = async (response: Response): Promise<ApiError> => {
   }
 
   try {
-    const payload = (await response.json()) as Partial<ApiError>;
+    const payload = (await response.json()) as Partial<ApiError> & {
+      readonly detail?: string;
+      readonly errors?: ApiErrorItem[];
+      readonly instance?: string;
+      readonly title?: string;
+      readonly type?: string;
+    };
 
     return {
       code: payload.code,
+      detail: payload.detail,
+      errors: payload.errors,
+      instance: payload.instance,
       details: payload.details,
-      message: payload.message ?? fallbackError.message,
-      status: payload.status ?? fallbackError.status
+      message: payload.detail ?? payload.message ?? payload.title ?? fallbackError.message,
+      status: payload.status ?? fallbackError.status,
+      title: payload.title,
+      type: payload.type
     };
   } catch {
     const rawText = await readResponseText(fallbackResponse);

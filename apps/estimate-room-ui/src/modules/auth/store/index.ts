@@ -1,1 +1,1 @@
-export { authReducer, clearSession, hydrateSession, logout, setSession } from './authSlice';
+export { authReducer, clearSession, hydrateSession, setSession } from './authSlice';

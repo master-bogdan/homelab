@@ -185,7 +185,7 @@ type roomSnapshotPayload struct {
 func (g *roomsGateway) handleRoomJoin(client ws.ClientInfo, event ws.Event) {
 	roomID := resolveRoomID(event)
 	if roomID == "" {
-		logger.L().Warn("room join ignored: missing room id", "user_id", client.UserID, "conn_id", client.ConnID)
+		logger.L().Warn(roomsGatewayLog("Room join ignored: missing room ID"), "user_id", client.UserID, "conn_id", client.ConnID)
 		return
 	}
 
@@ -196,13 +196,13 @@ func (g *roomsGateway) handleRoomJoin(client ws.ClientInfo, event ws.Event) {
 	}
 
 	if err := g.wsService.SetParticipantID(client.ConnID, participant.RoomParticipantID); err != nil {
-		logger.L().Error("failed to bind ws participant", "err", err, "room_id", roomID, "conn_id", client.ConnID)
+		logger.L().Error(roomsGatewayLog("Failed to bind WS participant"), "err", err, "room_id", roomID, "conn_id", client.ConnID)
 		return
 	}
 
 	joinResult, err := g.wsService.JoinRoom(client.ConnID, roomID)
 	if err != nil {
-		logger.L().Error("room join failed", "err", err, "room_id", roomID, "conn_id", client.ConnID)
+		logger.L().Error(roomsGatewayLog("Room join failed"), "err", err, "room_id", roomID, "conn_id", client.ConnID)
 		return
 	}
 
@@ -215,42 +215,42 @@ func (g *roomsGateway) handleRoomJoin(client ws.ClientInfo, event ws.Event) {
 			GuestName:     participant.GuestName,
 			Role:          participant.Role,
 		}); err != nil {
-			logger.L().Error("failed to broadcast participant joined", "err", err, "room_id", roomID)
+			logger.L().Error(roomsGatewayLog("Failed to broadcast participant joined"), "err", err, "room_id", roomID)
 		}
 	}
 
 	snapshot, err := g.buildSnapshot(roomID)
 	if err != nil {
-		logger.L().Error("failed to build room snapshot", "err", err, "room_id", roomID, "conn_id", client.ConnID)
+		logger.L().Error(roomsGatewayLog("Failed to build room snapshot"), "err", err, "room_id", roomID, "conn_id", client.ConnID)
 		return
 	}
 
 	if err := g.sendSnapshot(client.ConnID, roomID, snapshot); err != nil {
-		logger.L().Error("failed to send room snapshot", "err", err, "room_id", roomID, "conn_id", client.ConnID)
+		logger.L().Error(roomsGatewayLog("Failed to send room snapshot"), "err", err, "room_id", roomID, "conn_id", client.ConnID)
 		return
 	}
 
-	logger.L().Info("room join accepted", "room_id", roomID, "user_id", client.UserID, "conn_id", client.ConnID)
+	logger.L().Info(roomsGatewayLog("Room join accepted"), "room_id", roomID, "user_id", client.UserID, "conn_id", client.ConnID)
 }
 
 func (g *roomsGateway) handleTaskSetCurrent(client ws.ClientInfo, event ws.Event) {
 	roomID := strings.TrimSpace(event.RoomID)
 	if roomID == "" {
-		logger.L().Warn("task set current ignored: missing room id", "user_id", client.UserID, "conn_id", client.ConnID)
+		logger.L().Warn(roomsGatewayLog("Task set current ignored: missing room ID"), "user_id", client.UserID, "conn_id", client.ConnID)
 		return
 	}
 
 	payload := roomSetCurrentTaskPayload{}
 	if len(event.Payload) > 0 {
 		if err := json.Unmarshal(event.Payload, &payload); err != nil {
-			logger.L().Warn("task set current ignored: invalid payload", "err", err, "room_id", roomID, "conn_id", client.ConnID)
+			logger.L().Warn(roomsGatewayLog("Task set current ignored: invalid payload"), "err", err, "room_id", roomID, "conn_id", client.ConnID)
 			return
 		}
 	}
 
 	taskID := strings.TrimSpace(payload.TaskID)
 	if taskID == "" {
-		logger.L().Warn("task set current ignored: missing task id", "room_id", roomID, "conn_id", client.ConnID)
+		logger.L().Warn(roomsGatewayLog("Task set current ignored: missing task ID"), "room_id", roomID, "conn_id", client.ConnID)
 		return
 	}
 
@@ -260,23 +260,23 @@ func (g *roomsGateway) handleTaskSetCurrent(client ws.ClientInfo, event ws.Event
 		return
 	}
 	if participant.Role != roomsmodels.RoomParticipantRoleAdmin {
-		logger.L().Warn("task set current denied: admin only", "room_id", roomID, "conn_id", client.ConnID)
+		logger.L().Warn(roomsGatewayLog("Task set current denied: admin only"), "room_id", roomID, "conn_id", client.ConnID)
 		return
 	}
 
 	eligibleParticipantIDs, err := g.currentEligibleParticipantIDs(roomID)
 	if err != nil {
-		logger.L().Error("task set current failed: eligible participants lookup failed", "room_id", roomID, "task_id", taskID, "err", err)
+		logger.L().Error(roomsGatewayLog("Task set current failed: eligible participants lookup failed"), "room_id", roomID, "task_id", taskID, "err", err)
 		return
 	}
 
 	currentTask, previousTask, roundState, err := g.voteService.SetCurrentTask(roomID, taskID, client.UserID, eligibleParticipantIDs)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrForbidden) || errors.Is(err, apperrors.ErrBadRequest) {
-			logger.L().Warn("task set current denied", "room_id", roomID, "task_id", taskID, "reason", err.Error())
+			logger.L().Warn(roomsGatewayLog("Task set current denied"), "room_id", roomID, "task_id", taskID, "reason", err.Error())
 			return
 		}
-		logger.L().Error("task set current failed", "room_id", roomID, "task_id", taskID, "err", err)
+		logger.L().Error(roomsGatewayLog("Task set current failed"), "room_id", roomID, "task_id", taskID, "err", err)
 		return
 	}
 
@@ -293,31 +293,31 @@ func (g *roomsGateway) handleTaskSetCurrent(client ws.ClientInfo, event ws.Event
 		RoundStatus:            string(roundState.Status),
 		EligibleParticipantIDs: append([]string(nil), roundState.EligibleParticipantIDs...),
 	}); err != nil {
-		logger.L().Error("failed to broadcast current task changed", "room_id", roomID, "task_id", taskID, "err", err)
+		logger.L().Error(roomsGatewayLog("Failed to broadcast current task changed"), "room_id", roomID, "task_id", taskID, "err", err)
 		return
 	}
 
-	logger.L().Info("task current changed", "room_id", roomID, "task_id", currentTask.TaskID, "conn_id", client.ConnID)
+	logger.L().Info(roomsGatewayLog("Task current changed"), "room_id", roomID, "task_id", currentTask.TaskID, "conn_id", client.ConnID)
 }
 
 func (g *roomsGateway) handleVoteCast(client ws.ClientInfo, event ws.Event) {
 	roomID := strings.TrimSpace(event.RoomID)
 	if roomID == "" {
-		logger.L().Warn("vote cast ignored: missing room id", "user_id", client.UserID, "conn_id", client.ConnID)
+		logger.L().Warn(roomsGatewayLog("Vote cast ignored: missing room ID"), "user_id", client.UserID, "conn_id", client.ConnID)
 		return
 	}
 
 	payload := roomVoteCastPayload{}
 	if len(event.Payload) > 0 {
 		if err := json.Unmarshal(event.Payload, &payload); err != nil {
-			logger.L().Warn("vote cast ignored: invalid payload", "err", err, "room_id", roomID, "conn_id", client.ConnID)
+			logger.L().Warn(roomsGatewayLog("Vote cast ignored: invalid payload"), "err", err, "room_id", roomID, "conn_id", client.ConnID)
 			return
 		}
 	}
 
 	voteValue := strings.TrimSpace(payload.Value)
 	if voteValue == "" {
-		logger.L().Warn("vote cast ignored: empty vote value", "room_id", roomID, "conn_id", client.ConnID)
+		logger.L().Warn(roomsGatewayLog("Vote cast ignored: empty vote value"), "room_id", roomID, "conn_id", client.ConnID)
 		return
 	}
 
@@ -331,9 +331,9 @@ func (g *roomsGateway) handleVoteCast(client ws.ClientInfo, event ws.Event) {
 	if err != nil {
 		switch {
 		case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrForbidden), errors.Is(err, apperrors.ErrBadRequest):
-			logger.L().Warn("vote cast denied", "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
+			logger.L().Warn(roomsGatewayLog("Vote cast denied"), "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
 		default:
-			logger.L().Error("vote cast failed", "room_id", roomID, "conn_id", client.ConnID, "err", err)
+			logger.L().Error(roomsGatewayLog("Vote cast failed"), "room_id", roomID, "conn_id", client.ConnID, "err", err)
 		}
 		return
 	}
@@ -344,7 +344,7 @@ func (g *roomsGateway) handleVoteCast(client ws.ClientInfo, event ws.Event) {
 		RoundNumber:   result.Round.RoundNumber,
 		Voted:         true,
 	}); err != nil {
-		logger.L().Error("failed to broadcast vote status changed", "room_id", roomID, "task_id", result.Task.TaskID, "err", err)
+		logger.L().Error(roomsGatewayLog("Failed to broadcast vote status changed"), "room_id", roomID, "task_id", result.Task.TaskID, "err", err)
 		return
 	}
 
@@ -355,7 +355,7 @@ func (g *roomsGateway) handleVoteCast(client ws.ClientInfo, event ws.Event) {
 			EligibleParticipantIDs: append([]string(nil), result.EligibleParticipantIDs...),
 			VotedParticipantIDs:    append([]string(nil), result.VotedParticipantIDs...),
 		}); err != nil {
-			logger.L().Error("failed to broadcast votes all cast", "room_id", roomID, "task_id", result.Task.TaskID, "err", err)
+			logger.L().Error(roomsGatewayLog("Failed to broadcast votes all cast"), "room_id", roomID, "task_id", result.Task.TaskID, "err", err)
 		}
 	}
 }
@@ -363,7 +363,7 @@ func (g *roomsGateway) handleVoteCast(client ws.ClientInfo, event ws.Event) {
 func (g *roomsGateway) handleVoteReveal(client ws.ClientInfo, event ws.Event) {
 	roomID := strings.TrimSpace(event.RoomID)
 	if roomID == "" {
-		logger.L().Warn("vote reveal ignored: missing room id", "user_id", client.UserID, "conn_id", client.ConnID)
+		logger.L().Warn(roomsGatewayLog("Vote reveal ignored: missing room ID"), "user_id", client.UserID, "conn_id", client.ConnID)
 		return
 	}
 
@@ -373,7 +373,7 @@ func (g *roomsGateway) handleVoteReveal(client ws.ClientInfo, event ws.Event) {
 		return
 	}
 	if participant.Role != roomsmodels.RoomParticipantRoleAdmin {
-		logger.L().Warn("vote reveal denied: admin only", "room_id", roomID, "conn_id", client.ConnID)
+		logger.L().Warn(roomsGatewayLog("Vote reveal denied: admin only"), "room_id", roomID, "conn_id", client.ConnID)
 		return
 	}
 
@@ -381,9 +381,9 @@ func (g *roomsGateway) handleVoteReveal(client ws.ClientInfo, event ws.Event) {
 	if err != nil {
 		switch {
 		case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrForbidden), errors.Is(err, apperrors.ErrBadRequest):
-			logger.L().Warn("vote reveal denied", "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
+			logger.L().Warn(roomsGatewayLog("Vote reveal denied"), "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
 		default:
-			logger.L().Error("vote reveal failed", "room_id", roomID, "conn_id", client.ConnID, "err", err)
+			logger.L().Error(roomsGatewayLog("Vote reveal failed"), "room_id", roomID, "conn_id", client.ConnID, "err", err)
 		}
 		return
 	}
@@ -400,7 +400,7 @@ func (g *roomsGateway) handleVoteReveal(client ws.ClientInfo, event ws.Event) {
 	}
 
 	if err := g.broadcastVotesRevealed(roomID, payload); err != nil {
-		logger.L().Error("failed to broadcast votes revealed", "room_id", roomID, "task_id", result.Task.TaskID, "round", result.Round.RoundNumber, "err", err)
+		logger.L().Error(roomsGatewayLog("Failed to broadcast votes revealed"), "room_id", roomID, "task_id", result.Task.TaskID, "round", result.Round.RoundNumber, "err", err)
 		return
 	}
 }
@@ -408,7 +408,7 @@ func (g *roomsGateway) handleVoteReveal(client ws.ClientInfo, event ws.Event) {
 func (g *roomsGateway) handleRoundNext(client ws.ClientInfo, event ws.Event) {
 	roomID := strings.TrimSpace(event.RoomID)
 	if roomID == "" {
-		logger.L().Warn("round next ignored: missing room id", "user_id", client.UserID, "conn_id", client.ConnID)
+		logger.L().Warn(roomsGatewayLog("Round next ignored: missing room ID"), "user_id", client.UserID, "conn_id", client.ConnID)
 		return
 	}
 
@@ -418,13 +418,13 @@ func (g *roomsGateway) handleRoundNext(client ws.ClientInfo, event ws.Event) {
 		return
 	}
 	if participant.Role != roomsmodels.RoomParticipantRoleAdmin {
-		logger.L().Warn("round next denied: admin only", "room_id", roomID, "conn_id", client.ConnID)
+		logger.L().Warn(roomsGatewayLog("Round next denied: admin only"), "room_id", roomID, "conn_id", client.ConnID)
 		return
 	}
 
 	eligibleParticipantIDs, err := g.currentEligibleParticipantIDs(roomID)
 	if err != nil {
-		logger.L().Error("round next failed: eligible participants lookup failed", "room_id", roomID, "conn_id", client.ConnID, "err", err)
+		logger.L().Error(roomsGatewayLog("Round next failed: eligible participants lookup failed"), "room_id", roomID, "conn_id", client.ConnID, "err", err)
 		return
 	}
 
@@ -432,9 +432,9 @@ func (g *roomsGateway) handleRoundNext(client ws.ClientInfo, event ws.Event) {
 	if err != nil {
 		switch {
 		case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrForbidden), errors.Is(err, apperrors.ErrBadRequest):
-			logger.L().Warn("round next denied", "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
+			logger.L().Warn(roomsGatewayLog("Round next denied"), "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
 		default:
-			logger.L().Error("round next failed", "room_id", roomID, "conn_id", client.ConnID, "err", err)
+			logger.L().Error(roomsGatewayLog("Round next failed"), "room_id", roomID, "conn_id", client.ConnID, "err", err)
 		}
 		return
 	}
@@ -445,21 +445,21 @@ func (g *roomsGateway) handleRoundNext(client ws.ClientInfo, event ws.Event) {
 		RoundStatus:            string(nextRound.Status),
 		EligibleParticipantIDs: append([]string(nil), nextRound.EligibleParticipantIDs...),
 	}); err != nil {
-		logger.L().Error("failed to broadcast round changed", "room_id", roomID, "task_id", currentTask.TaskID, "err", err)
+		logger.L().Error(roomsGatewayLog("Failed to broadcast round changed"), "room_id", roomID, "task_id", currentTask.TaskID, "err", err)
 	}
 }
 
 func (g *roomsGateway) handleTaskFinalize(client ws.ClientInfo, event ws.Event) {
 	roomID := strings.TrimSpace(event.RoomID)
 	if roomID == "" {
-		logger.L().Warn("task finalize ignored: missing room id", "user_id", client.UserID, "conn_id", client.ConnID)
+		logger.L().Warn(roomsGatewayLog("Task finalize ignored: missing room ID"), "user_id", client.UserID, "conn_id", client.ConnID)
 		return
 	}
 
 	payload := roomTaskFinalizePayload{}
 	if len(event.Payload) > 0 {
 		if err := json.Unmarshal(event.Payload, &payload); err != nil {
-			logger.L().Warn("task finalize ignored: invalid payload", "err", err, "room_id", roomID, "conn_id", client.ConnID)
+			logger.L().Warn(roomsGatewayLog("Task finalize ignored: invalid payload"), "err", err, "room_id", roomID, "conn_id", client.ConnID)
 			return
 		}
 	}
@@ -468,9 +468,9 @@ func (g *roomsGateway) handleTaskFinalize(client ws.ClientInfo, event ws.Event) 
 	if err != nil {
 		switch {
 		case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrForbidden), errors.Is(err, apperrors.ErrBadRequest):
-			logger.L().Warn("task finalize denied", "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
+			logger.L().Warn(roomsGatewayLog("Task finalize denied"), "room_id", roomID, "conn_id", client.ConnID, "reason", err.Error())
 		default:
-			logger.L().Error("task finalize failed", "room_id", roomID, "conn_id", client.ConnID, "err", err)
+			logger.L().Error(roomsGatewayLog("Task finalize failed"), "room_id", roomID, "conn_id", client.ConnID, "err", err)
 		}
 		return
 	}
@@ -480,7 +480,7 @@ func (g *roomsGateway) handleTaskFinalize(client ws.ClientInfo, event ws.Event) 
 		FinalEstimateValue: strings.TrimSpace(*updatedTask.FinalEstimateValue),
 		Status:             updatedTask.Status,
 	}); err != nil {
-		logger.L().Error("failed to broadcast task finalized", "room_id", roomID, "task_id", updatedTask.TaskID, "err", err)
+		logger.L().Error(roomsGatewayLog("Failed to broadcast task finalized"), "room_id", roomID, "task_id", updatedTask.TaskID, "err", err)
 	}
 }
 
@@ -501,7 +501,7 @@ func (g *roomsGateway) handleDisconnect(info ws.DisconnectInfo) {
 	}
 
 	if err := g.broadcastPresence(roomID, RoomsParticipantLeft, payload); err != nil {
-		logger.L().Error("failed to broadcast participant left", "err", err, "room_id", roomID)
+		logger.L().Error(roomsGatewayLog("Failed to broadcast participant left"), "err", err, "room_id", roomID)
 	}
 
 	g.expiryService.TouchActivity(roomID)
@@ -824,8 +824,12 @@ func isDeckValueAllowed(values []string, value string) bool {
 func logJoinDenied(client ws.ClientInfo, roomID string, err error) {
 	switch {
 	case errors.Is(err, apperrors.ErrForbidden), errors.Is(err, apperrors.ErrUnauthorized), errors.Is(err, apperrors.ErrNotFound):
-		logger.L().Warn("room join denied", "room_id", roomID, "user_id", client.UserID, "conn_id", client.ConnID, "reason", err.Error())
+		logger.L().Warn(roomsGatewayLog("Room join denied"), "room_id", roomID, "user_id", client.UserID, "conn_id", client.ConnID, "reason", err.Error())
 	default:
-		logger.L().Error("room join failed", "room_id", roomID, "user_id", client.UserID, "conn_id", client.ConnID, "err", err)
+		logger.L().Error(roomsGatewayLog("Room join failed"), "room_id", roomID, "user_id", client.UserID, "conn_id", client.ConnID, "err", err)
 	}
+}
+
+func roomsGatewayLog(message string) string {
+	return logger.Prefix("MODULE", "ROOMS", "WS", message)
 }

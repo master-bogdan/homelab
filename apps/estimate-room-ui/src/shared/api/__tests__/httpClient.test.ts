@@ -42,4 +42,34 @@ describe('HttpClient', () => {
       status: 502
     });
   });
+
+  it('maps backend problem details into the thrown ApiError message', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          detail: 'invalid credentials',
+          status: 401,
+          title: 'Unauthorized',
+          type: 'https://api.estimateroom.com/problems/unauthorized'
+        }),
+        {
+          headers: {
+            'content-type': 'application/problem+json'
+          },
+          status: 401
+        }
+      )
+    );
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new HttpClient('/api');
+
+    await expect(client.get('/auth/session')).rejects.toMatchObject({
+      detail: 'invalid credentials',
+      message: 'invalid credentials',
+      status: 401,
+      title: 'Unauthorized'
+    });
+  });
 });

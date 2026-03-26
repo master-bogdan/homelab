@@ -78,26 +78,18 @@ export const AppSidebar = ({ isDesktop }: AppSidebarProps) => {
               }
             }}
             selected={location.pathname === to}
-            sx={{
-              position: 'relative',
-              '&.Mui-selected::before': {
-                backgroundColor: 'primary.main',
-                borderRadius: 999,
-                content: '""',
-                height: 22,
-                left: 10,
-                position: 'absolute',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 4
-              }
-            }}
             to={to}
           >
             <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
               <Icon />
             </ListItemIcon>
-            <ListItemText primary={label} />
+            <ListItemText
+              primary={label}
+              primaryTypographyProps={{
+                fontWeight: location.pathname === to ? 700 : 600,
+                variant: 'body2'
+              }}
+            />
           </ListItemButton>
         ))}
       </List>

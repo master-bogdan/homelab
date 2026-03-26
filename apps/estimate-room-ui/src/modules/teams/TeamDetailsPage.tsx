@@ -1,6 +1,6 @@
 import { Stack, Typography } from '@mui/material';
 
-import { SectionCard } from '@/shared/ui';
+import { AppPageState, SectionCard } from '@/shared/ui';
 
 import { useTeamDetailsPage } from './hooks/useTeamDetailsPage';
 
@@ -23,9 +23,11 @@ export const TeamDetailsPage = () => {
           </Typography>
         </Stack>
       ) : (
-        <Typography color="text.secondary" variant="body2">
-          No team data is available for this route yet.
-        </Typography>
+        <AppPageState
+          description="Connect the team details API to show membership, access, and activity here."
+          title="No team data yet"
+          titleVariant="body1"
+        />
       )}
     </SectionCard>
   );

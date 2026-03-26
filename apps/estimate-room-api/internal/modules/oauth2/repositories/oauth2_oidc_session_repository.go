@@ -14,6 +14,8 @@ import (
 type OidcSessionRepository interface {
 	Create(model *oauth2models.OidcSessionModel) (string, error)
 	FindByID(sessionID string) (*oauth2models.OidcSessionModel, error)
+	Revoke(sessionID string) error
+	RevokeByUserID(userID string) error
 }
 
 type oauth2OidcSessionRepository struct {
@@ -31,7 +33,7 @@ func (r *oauth2OidcSessionRepository) Create(model *oauth2models.OidcSessionMode
 
 	_, err := r.db.NewInsert().
 		Model(model).
-		Column("oidc_session_id", "user_id", "client_id", "nonce").
+		Column("oidc_session_id", "user_id", "client_id", "nonce", "revoked_at").
 		Exec(context.Background())
 	if err != nil {
 		return "", err
@@ -45,6 +47,7 @@ func (r *oauth2OidcSessionRepository) FindByID(sessionID string) (*oauth2models.
 	err := r.db.NewSelect().
 		Model(model).
 		Where("os.oidc_session_id = ?", sessionID).
+		Where("os.revoked_at IS NULL").
 		Limit(1).
 		Scan(context.Background())
 	if err != nil {
@@ -55,4 +58,25 @@ func (r *oauth2OidcSessionRepository) FindByID(sessionID string) (*oauth2models.
 	}
 
 	return model, nil
+}
+
+func (r *oauth2OidcSessionRepository) Revoke(sessionID string) error {
+	_, err := r.db.NewUpdate().
+		Model((*oauth2models.OidcSessionModel)(nil)).
+		Set("revoked_at = COALESCE(revoked_at, NOW())").
+		Where("oidc_session_id = ?", sessionID).
+		Exec(context.Background())
+
+	return err
+}
+
+func (r *oauth2OidcSessionRepository) RevokeByUserID(userID string) error {
+	_, err := r.db.NewUpdate().
+		Model((*oauth2models.OidcSessionModel)(nil)).
+		Set("revoked_at = COALESCE(revoked_at, NOW())").
+		Where("user_id = ?", userID).
+		Where("revoked_at IS NULL").
+		Exec(context.Background())
+
+	return err
 }

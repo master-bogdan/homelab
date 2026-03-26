@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS auth_password_reset_tokens;
 DROP TABLE IF EXISTS oauth2_access_tokens;
 DROP TABLE IF EXISTS oauth2_refresh_tokens;
 DROP TABLE IF EXISTS oauth2_auth_codes;

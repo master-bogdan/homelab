@@ -15,7 +15,7 @@ type Oauth2AuthCodeModel struct {
 	OidcSessionID       string    `bun:"oidc_session_id"`
 	Code                string    `bun:"code"`
 	RedirectURI         string    `bun:"redirect_uri"`
-	Scopes              []string  `bun:"scopes"`
+	Scopes              []string  `bun:"scopes,array"`
 	CodeChallenge       string    `bun:"code_challenge"`
 	CodeChallengeMethod string    `bun:"code_challenge_method"`
 	IsUsed              bool      `bun:"is_used"`
