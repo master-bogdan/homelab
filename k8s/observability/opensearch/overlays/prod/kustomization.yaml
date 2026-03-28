@@ -4,6 +4,7 @@ kind: Kustomization
 namespace: prod-observability
 resources:
   - external-secret.yaml
+  - oidc-ca-certificate.yaml
 
 helmCharts:
   - name: opensearch

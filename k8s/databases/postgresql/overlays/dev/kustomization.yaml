@@ -4,3 +4,4 @@ kind: Kustomization
 namespace: dev-db
 resources:
   - ../../base
+  - bootstrap-n8n-job.yaml

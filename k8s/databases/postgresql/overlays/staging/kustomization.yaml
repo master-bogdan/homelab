@@ -5,6 +5,7 @@ namespace: staging-db
 resources:
   - ../../base
   - external-secret.yaml
+  - bootstrap-n8n-job.yaml
 
 patches:
   - target:

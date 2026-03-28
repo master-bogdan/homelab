@@ -128,13 +128,15 @@ make deploy-secrets ENV=staging
        kubectl config view --raw --minify -o jsonpath='{.clusters[0].cluster.server}'; echo
        ```
      - `Kubernetes CA Certificate`:
+       - Optional for this cluster. Vault runs inside Kubernetes and can default to the pod-mounted CA cert.
+       - If the UI rejects the PEM from the command below, leave this field empty.
        ```bash
        kubectl -n staging-secrets get configmap kube-root-ca.crt -o jsonpath='{.data.ca\.crt}'; echo
        ```
      - `Token Reviewer JWT`:
-       ```bash
-       kubectl -n staging-secrets create token external-secrets
-       ```
+       - Leave this empty.
+       - Do not paste `kubectl create token ...` output here. On modern Kubernetes that token is short-lived, and Vault auth will later fail once it expires.
+       - In this repo, Vault runs as the `vault` service account in `staging-secrets` and already has `system:auth-delegator`, so it can use its own pod token for TokenReview.
    - Click `Save`
 
 7. Create policy for External Secrets:
@@ -224,8 +226,6 @@ Paths and keys required:
 **`kv/staging/opensearch-dashboards`**
 - `dashboards_username`
 - `dashboards_password`
-- `oidc_client_id`
-- `oidc_client_secret`
 
 **`kv/staging/fluent-bit`**
 - `opensearch_username`
@@ -283,6 +283,7 @@ Note: TLS is issued by the internal `homelab-ca`, so your browser will warn unle
 
 - If pods are stuck waiting for secrets, check ESO logs: `kubectl -n staging-secrets logs deploy/external-secrets`.
 - If HTTPS fails, re-check the `sslip.io` IP in staging overlays and `k8s/networking/cert-manager/overlays/staging/certificate-gateway.yaml`.
+- If OpenSearch Dashboards returns `401` after a successful Authentik redirect, check OpenSearch logs for IdP TLS errors. The usual cause is missing OIDC CA trust in the OpenSearch security plugin, not a bad Dashboards redirect.
 - For local access without HTTPS, use port-forward:
 
 ```bash

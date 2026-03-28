@@ -98,7 +98,8 @@ export APPS_DIR KUBECTL UI_PUBLIC_BUCKET UI_BUILD_OUTPUT_DIRS SEAWEEDFS_NAMESPAC
 define is_ui_app
 $(shell \
 	if printf "%s" "$(1)" | grep -qi "$(UI_NAME_PATTERN)"; then \
-		if [ ! -f "$(APPS_DIR)/$(1)/Dockerfile" ] && \
+		if [ -f "$(APPS_DIR)/$(1)/package.json" ] && \
+		   [ ! -f "$(APPS_DIR)/$(1)/Dockerfile" ] && \
 		   [ ! -f "$(APPS_DIR)/$(1)/deployments/docker/Dockerfile" ]; then \
 			echo "yes"; \
 		fi; \
@@ -516,6 +517,8 @@ validate-networking:
 deploy-secrets: deploy-namespaces
 	$(call k8s_apply_helm_list,$(SECRETS_HELM_DIRS))
 	@if [ -d "$(SECRET_STORES_DIR)/overlays/$(ENV)" ]; then \
+		echo "⏳ Waiting for External Secrets controller rollout in $(ENV)-secrets..."; \
+		$(KUBECTL) -n "$(ENV)-secrets" rollout status deploy/external-secrets --timeout=180s; \
 		echo "⏳ Waiting for External Secrets CRDs to become Established..."; \
 		$(KUBECTL) wait --for=condition=Established --timeout=180s crd/clustersecretstores.external-secrets.io; \
 		echo "⏳ Waiting for External Secrets API discovery..."; \
@@ -532,6 +535,19 @@ deploy-secrets: deploy-namespaces
 		done; \
 	fi
 	$(call k8s_apply_list,$(SECRETS_DIRS))
+	@if [ -d "$(SECRET_STORES_DIR)/overlays/$(ENV)" ]; then \
+		STORES="$$( $(KUBECTL) kustomize "$(SECRET_STORES_DIR)/overlays/$(ENV)" | awk '/^kind: ClusterSecretStore$$/{want=1; next} want && /^  name: /{print $$2; want=0}' )"; \
+		if [ -n "$$STORES" ]; then \
+			for store in $$STORES; do \
+				echo "⏳ Waiting for ClusterSecretStore/$$store to become Ready..."; \
+				if ! $(KUBECTL) wait --for=condition=Ready=true "clustersecretstore/$$store" --timeout=120s; then \
+					echo "❌ ClusterSecretStore/$$store did not become Ready"; \
+					$(KUBECTL) describe "clustersecretstore/$$store"; \
+					exit 1; \
+				fi; \
+			done; \
+		fi; \
+	fi
 	@echo "✅ Secrets deployed"
 
 delete-secrets:

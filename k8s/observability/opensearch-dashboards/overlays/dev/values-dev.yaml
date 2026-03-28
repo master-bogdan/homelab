@@ -21,7 +21,7 @@ config:
     opensearch_security.openid.connect_url: "http://auth.apps.192-168-58-2.sslip.io:30080/application/o/opensearch/.well-known/openid-configuration"
     opensearch_security.openid.client_id: "dNgxJIOxOrEExrV3Pxnd1eqsZJLU1aOTnzBoAux3"
     opensearch_security.openid.client_secret: "mqe85y4dvgC3BuyZeAQ8egnxp3DS72zpwQzHcqp607Pt3rSMAZPNnXYWtyDia61aT6IOzCCgURsrm7F7jX2nl5k69uajXbK8DXixl85a1zflByxjimisBspFECTerqgU"
-    opensearch_security.openid.scope: "openid profile email"
+    opensearch_security.openid.scope: "openid profile email groups"
     opensearch_security.openid.base_redirect_url: "http://opensearch.apps.192-168-58-2.sslip.io:30080"
 
     # IMPORTANT when Dashboards is served over plain HTTP

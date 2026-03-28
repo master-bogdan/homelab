@@ -37,6 +37,12 @@ envValueFrom:
       name: grafana-auth-prod
       key: client_secret
 
+extraSecretMounts:
+  - name: oidc-ca
+    secretName: grafana-oidc-ca
+    mountPath: /etc/grafana/oidc-ca
+    readOnly: true
+
 grafana.ini:
   server:
     root_url: "https://grafana.example.invalid"
@@ -58,3 +64,4 @@ grafana.ini:
     auth_url: "https://auth.example.invalid/application/o/authorize/"
     token_url: "https://auth.example.invalid/application/o/token/"
     api_url: "https://auth.example.invalid/application/o/userinfo/"
+    tls_client_ca: /etc/grafana/oidc-ca/ca.crt

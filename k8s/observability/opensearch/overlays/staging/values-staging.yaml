@@ -27,6 +27,11 @@ extraEnvs:
         name: opensearch-oidc-staging
         key: client_secret
 
+secretMounts:
+  - name: oidc-ca
+    secretName: opensearch-oidc-ca
+    path: /usr/share/opensearch/config/oidc-ca
+
 opensearchJavaOpts: "-Xms1g -Xmx1g"
 
 persistence:
@@ -77,6 +82,10 @@ securityConfig:
                     openid_connect_url: "https://auth.apps.10-96-11-221.sslip.io/application/o/opensearch/.well-known/openid-configuration"
                     client_id: "${OPENSEARCH_OPENID_CLIENT_ID}"
                     client_secret: "${OPENSEARCH_OPENID_CLIENT_SECRET}"
+                    openid_connect_idp:
+                      enable_ssl: true
+                      verify_hostnames: true
+                      pemtrustedcas_filepath: "/usr/share/opensearch/config/oidc-ca/ca.crt"
                 authentication_backend:
                   type: noop
               basic_internal_auth_domain:

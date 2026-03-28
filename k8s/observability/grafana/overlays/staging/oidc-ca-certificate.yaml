@@ -1,0 +1,11 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana-oidc-ca
+spec:
+  secretName: grafana-oidc-ca
+  dnsNames:
+    - grafana-oidc-ca.staging-observability.svc.cluster.local
+  issuerRef:
+    kind: ClusterIssuer
+    name: homelab-ca

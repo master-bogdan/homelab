@@ -6,6 +6,7 @@ resources:
   - ../../base
 
   - external-secret.yaml
+  - oidc-ca-certificate.yaml
 patches:
   - target:
       kind: HTTPRoute

@@ -202,7 +202,7 @@ Right now both components point at:
 So the simplest correct setup is:
 
 - create one Authentik OIDC app/provider for `opensearch`
-- reuse the same client ID and client secret in both Vault paths
+- store that client ID and client secret in `kv/staging/opensearch`
 
 ### Create it in Authentik UI
 
@@ -236,18 +236,30 @@ This is required because the staging OpenSearch config maps roles from:
 
 So the Authentik provider must emit the `groups` claim.
 
-### Store the same client in both staging Vault paths
+### Store the OpenSearch OIDC client in one staging Vault path
 
-Put the same values in both places:
+Put these values here:
 
 - `kv/staging/opensearch`
   - `oidc_client_id`
   - `oidc_client_secret`
-- `kv/staging/opensearch-dashboards`
-  - `oidc_client_id`
-  - `oidc_client_secret`
 
-If you put different values in those two Vault paths, the current staging manifests become inconsistent.
+The current staging manifests make both OpenSearch and OpenSearch Dashboards read the same Kubernetes secret sourced from `kv/staging/opensearch`.
+
+### Important TLS note for OpenSearch and Dashboards
+
+Authentik in staging is served with a certificate chained to the internal `homelab-ca`.
+
+That means both components need a namespace-local CA bundle:
+
+- OpenSearch Dashboards trusts the IdP with `opensearch_security.openid.root_ca`
+- OpenSearch itself does not use that Dashboards setting
+- OpenSearch must trust the IdP through the security plugin OIDC TLS block:
+  - `openid_connect_idp.enable_ssl: true`
+  - `openid_connect_idp.verify_hostnames: true`
+  - `openid_connect_idp.pemtrustedcas_filepath: /usr/share/opensearch/config/oidc-ca/ca.crt`
+
+If Dashboards redirects back from Authentik and then returns `401`, check OpenSearch logs first. The common failure is OpenSearch being unable to fetch IdP metadata or JWKS because the IdP CA is not configured correctly.
 
 ## Step 5: Create the proxy app for n8n
 
@@ -537,7 +549,25 @@ Usually:
 
 - the token does not contain `groups`
 - the user is not in `opensearch-users` or `opensearch-admins`
-- you used different client credentials in `kv/staging/opensearch` and `kv/staging/opensearch-dashboards`
+- the `oidc_client_id` or `oidc_client_secret` in `kv/staging/opensearch` does not match the Authentik `opensearch` provider
+
+### OpenSearch login returns from Authentik and then shows `401`
+
+Usually:
+
+- OpenSearch cannot validate the IdP TLS certificate
+- the OIDC CA secret is missing in `staging-observability`
+- the OpenSearch security config is missing `openid_connect_idp.pemtrustedcas_filepath`
+
+Check:
+
+- `kubectl -n staging-observability logs statefulset/homelab-opensearch-staging-master`
+- `kubectl -n staging-observability get secret opensearch-oidc-ca`
+
+The failure in logs usually looks like:
+
+- `PKIX path building failed`
+- `unable to find valid certification path to requested target`
 
 ### n8n login works but webhooks fail
 

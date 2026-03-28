@@ -1,7 +1,6 @@
 fullnameOverride: opensearch-dashboards-prod
 
-opensearchHosts:
-  - "https://opensearch-cluster-master.prod-observability.svc.cluster.local:9200"
+opensearchHosts: '[\"https://opensearch-cluster-master.prod-observability.svc.cluster.local:9200\"]'
 
 opensearchUsername: "${OPENSEARCH_DASHBOARDS_USERNAME}"
 opensearchPassword: "${OPENSEARCH_DASHBOARDS_PASSWORD}"
@@ -20,16 +19,21 @@ extraEnvs:
   - name: OPENSEARCH_DASHBOARDS_OIDC_CLIENT_ID
     valueFrom:
       secretKeyRef:
-        name: opensearch-dashboards-oidc-prod
+        name: opensearch-oidc-prod
         key: client_id
   - name: OPENSEARCH_DASHBOARDS_OIDC_CLIENT_SECRET
     valueFrom:
       secretKeyRef:
-        name: opensearch-dashboards-oidc-prod
+        name: opensearch-oidc-prod
         key: client_secret
 
 opensearchSecurity:
   enabled: true
+
+secretMounts:
+  - name: oidc-ca
+    secretName: opensearch-dashboards-oidc-ca
+    path: /usr/share/opensearch-dashboards/config/oidc-ca
 
 config:
   opensearch_dashboards.yml: |
@@ -44,8 +48,9 @@ config:
     opensearch_security.openid.connect_url: "https://auth.example.invalid/application/o/opensearch/.well-known/openid-configuration"
     opensearch_security.openid.client_id: "${OPENSEARCH_DASHBOARDS_OIDC_CLIENT_ID}"
     opensearch_security.openid.client_secret: "${OPENSEARCH_DASHBOARDS_OIDC_CLIENT_SECRET}"
-    opensearch_security.openid.scope: "openid profile email"
+    opensearch_security.openid.scope: "openid profile email groups"
     opensearch_security.openid.base_redirect_url: "https://opensearch.example.invalid"
+    opensearch_security.openid.root_ca: "/usr/share/opensearch-dashboards/config/oidc-ca/ca.crt"
 
     opensearch_security.cookie.secure: true
 

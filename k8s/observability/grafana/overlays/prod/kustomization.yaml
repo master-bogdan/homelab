@@ -5,6 +5,7 @@ namespace: prod-observability
 resources:
   - ../../base
   - external-secret.yaml
+  - oidc-ca-certificate.yaml
 
 patches:
   - target:

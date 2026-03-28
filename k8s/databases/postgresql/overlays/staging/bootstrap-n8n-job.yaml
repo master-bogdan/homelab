@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgresql-bootstrap-n8n
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap-n8n
+          image: postgres:15
+          envFrom:
+            - secretRef:
+                name: postgresql-staging-secret
+          command:
+            - sh
+            - -ceu
+            - |
+              : "${POSTGRES_USER:?POSTGRES_USER is required}"
+              : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+              : "${POSTGRES_DB:?POSTGRES_DB is required}"
+              : "${N8N_PASSWORD:?N8N_PASSWORD is required}"
+
+              N8N_USER="${N8N_USER:-n8n_staging}"
+              N8N_DB="${N8N_DB:-n8n_staging}"
+              export PGPASSWORD="${POSTGRES_PASSWORD}"
+
+              until pg_isready -h postgresql-service -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; do
+                sleep 1
+              done
+
+              psql -h postgresql-service -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+                -v n8n_user="$N8N_USER" \
+                -v n8n_password="$N8N_PASSWORD" \
+                -v n8n_db="$N8N_DB" <<'EOSQL'
+              DO
+              $do$
+              BEGIN
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'n8n_user') THEN
+                  EXECUTE format(
+                    'CREATE ROLE %I LOGIN ENCRYPTED PASSWORD %L',
+                    :'n8n_user',
+                    :'n8n_password'
+                  );
+                END IF;
+              END
+              $do$;
+
+              SELECT format('CREATE DATABASE %I OWNER %I', :'n8n_db', :'n8n_user')
+              WHERE NOT EXISTS (
+                SELECT FROM pg_database WHERE datname = :'n8n_db'
+              )
+              \gexec
+              EOSQL

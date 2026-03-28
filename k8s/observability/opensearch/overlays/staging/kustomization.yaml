@@ -4,6 +4,7 @@ kind: Kustomization
 namespace: staging-observability
 resources:
   - external-secret.yaml
+  - oidc-ca-certificate.yaml
 helmCharts:
   - name: opensearch
     repo: https://opensearch-project.github.io/helm-charts/
