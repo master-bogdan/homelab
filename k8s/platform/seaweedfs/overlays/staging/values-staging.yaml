@@ -52,7 +52,7 @@ networkPolicy:
     - from:
         - namespaceSelector:
             matchLabels:
-              name: networking
+              name: staging-networking
       ports:
         - protocol: TCP
           port: 8333

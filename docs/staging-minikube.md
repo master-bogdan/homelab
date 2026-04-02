@@ -218,6 +218,10 @@ Paths and keys required:
 - `oidc_client_id`
 - `oidc_client_secret`
 
+**`kv/staging/headlamp`**
+- `oidc_client_id`
+- `oidc_client_secret`
+
 **`kv/staging/opensearch`**
 - `admin_password`
 - `oidc_client_id`
@@ -240,6 +244,7 @@ Paths and keys required:
 ## 6) Deploy core stacks
 
 ```bash
+make deploy-system ENV=staging
 make deploy-auth ENV=staging
 make deploy-databases ENV=staging
 make deploy-platform ENV=staging
@@ -259,6 +264,8 @@ make deploy-ui-all ENV=staging
 kubectl get pods -A
 kubectl get httproutes -A
 kubectl get gateways -A
+kubectl top nodes
+kubectl top pods -A
 ```
 
 Staging example URLs (HTTPS):
@@ -272,6 +279,7 @@ IP_DASH=${IP//./-}
 
 echo "https://auth.apps.${IP_DASH}.sslip.io"
 echo "https://grafana.apps.${IP_DASH}.sslip.io"
+echo "https://headlamp.apps.${IP_DASH}.sslip.io"
 echo "https://opensearch.apps.${IP_DASH}.sslip.io"
 echo "https://n8n.apps.${IP_DASH}.sslip.io"
 echo "https://storage.apps.${IP_DASH}.sslip.io"
@@ -284,10 +292,12 @@ Note: TLS is issued by the internal `homelab-ca`, so your browser will warn unle
 - If pods are stuck waiting for secrets, check ESO logs: `kubectl -n staging-secrets logs deploy/external-secrets`.
 - If HTTPS fails, re-check the `sslip.io` IP in staging overlays and `k8s/networking/cert-manager/overlays/staging/certificate-gateway.yaml`.
 - If OpenSearch Dashboards returns `401` after a successful Authentik redirect, check OpenSearch logs for IdP TLS errors. The usual cause is missing OIDC CA trust in the OpenSearch security plugin, not a bad Dashboards redirect.
+- If Headlamp login succeeds but the UI returns `403`, the Headlamp OIDC client is fine but Kubernetes API-side OIDC/RBAC still needs to allow the same Authentik identity outside this repo.
 - For local access without HTTPS, use port-forward:
 
 ```bash
 kubectl -n staging-observability port-forward svc/grafana 3000:3000
+kubectl -n staging-observability port-forward svc/headlamp 4466:80
 kubectl -n staging-observability port-forward svc/prometheus 9090:9090
 kubectl -n staging-platform port-forward svc/n8n 5678:5678
 kubectl -n staging-auth port-forward svc/authentik 8000:8000

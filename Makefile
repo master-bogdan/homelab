@@ -52,6 +52,7 @@ CERT_MANAGER_DIR      := $(NETWORKING_DIR)/cert-manager
 GATEWAY_DIR           := $(NETWORKING_DIR)/gateway
 CERTIFICATES_DIR      := $(NETWORKING_DIR)/certificates
 DATABASES_DIR         := $(KUBERNETES_DIR)/databases
+SYSTEM_DIR            := $(KUBERNETES_DIR)/system
 REDIS_DIR             := $(DATABASES_DIR)/redis
 POSTGRESQL_DIR        := $(DATABASES_DIR)/postgresql
 PLATFORM_DIR          := $(KUBERNETES_DIR)/platform
@@ -64,8 +65,10 @@ VAULT_DIR             := $(SECRETS_DIR)/vault
 N8N_DIR               := $(PLATFORM_DIR)/n8n
 SEAWEEDFS_DIR          := $(PLATFORM_DIR)/seaweedfs
 OBSERVABILITY_DIR     := $(KUBERNETES_DIR)/observability
+METRICS_SERVER_DIR    := $(SYSTEM_DIR)/metrics-server
 FLUENTBIT_DIR         := $(OBSERVABILITY_DIR)/fluent-bit
 GRAFANA_DIR           := $(OBSERVABILITY_DIR)/grafana
+HEADLAMP_DIR          := $(OBSERVABILITY_DIR)/headlamp
 PROMETHEUS_DIR        := $(OBSERVABILITY_DIR)/prometheus
 OPENSEARCH_DIR        := $(OBSERVABILITY_DIR)/opensearch
 OPENSEARCH_DASH_DIR   := $(OBSERVABILITY_DIR)/opensearch-dashboards
@@ -73,12 +76,14 @@ OPENSEARCH_DASH_DIR   := $(OBSERVABILITY_DIR)/opensearch-dashboards
 # ---- Layer Groups ----
 NETWORKING_DIRS       := $(CERTIFICATES_DIR) $(GATEWAY_DIR)
 NETWORKING_HELM_DIRS  := $(CERT_MANAGER_DIR) $(TRAEFIK_DIR)
+SYSTEM_HELM_DIRS      := $(METRICS_SERVER_DIR)
+SYSTEM_HELM_DELETE_DIRS := $(METRICS_SERVER_DIR)
 AUTH_HELM_DIRS        := $(AUTHENTIK_DIR)
 PLATFORM_HELM_DIRS    := $(AUTHENTIK_DIR) $(N8N_DIR) $(SEAWEEDFS_DIR)
 SECRETS_HELM_DIRS     := $(VAULT_DIR) $(EXTERNAL_SECRETS_DIR)
 SECRETS_DIRS          := $(SECRET_STORES_DIR)
-OBS_HELM_DIRS         := $(FLUENTBIT_DIR) $(PROMETHEUS_DIR) $(GRAFANA_DIR) $(OPENSEARCH_DIR) $(OPENSEARCH_DASH_DIR)
-OBS_HELM_DELETE_DIRS  := $(OPENSEARCH_DASH_DIR) $(OPENSEARCH_DIR) $(GRAFANA_DIR) $(PROMETHEUS_DIR) $(FLUENTBIT_DIR)
+OBS_HELM_DIRS         := $(FLUENTBIT_DIR) $(PROMETHEUS_DIR) $(GRAFANA_DIR) $(OPENSEARCH_DIR) $(OPENSEARCH_DASH_DIR) $(HEADLAMP_DIR)
+OBS_HELM_DELETE_DIRS  := $(HEADLAMP_DIR) $(OPENSEARCH_DASH_DIR) $(OPENSEARCH_DIR) $(GRAFANA_DIR) $(PROMETHEUS_DIR) $(FLUENTBIT_DIR)
 DATABASE_DIRS         := $(REDIS_DIR) $(POSTGRESQL_DIR)
 DATABASE_DELETE_DIRS  := $(POSTGRESQL_DIR) $(REDIS_DIR)
 
@@ -317,6 +322,7 @@ endef
 	deploy-namespaces delete-namespaces validate-namespaces \
 	deploy-app deploy-apps delete-app delete-apps validate-app validate-apps \
 	deploy-networking delete-networking validate-networking \
+	deploy-system delete-system validate-system \
 	deploy-secrets delete-secrets validate-secrets \
 	deploy-auth delete-auth validate-auth \
 	deploy-platform delete-platform validate-platform \
@@ -358,6 +364,7 @@ help:
 	@echo "  ENV=staging uses overlays/staging when present, otherwise falls back to prod"
 	@echo "  deploy-namespaces   / delete-namespaces   / validate-namespaces"
 	@echo "  deploy-networking   / delete-networking   / validate-networking"
+	@echo "  deploy-system       / delete-system       / validate-system"
 	@echo "  deploy-secrets      / delete-secrets      / validate-secrets"
 	@echo "  deploy-auth         / delete-auth         / validate-auth"
 	@echo "  deploy-platform     / delete-platform     / validate-platform"
@@ -583,6 +590,18 @@ validate-platform:
 	$(call k8s_dry_run_helm_list,$(PLATFORM_HELM_DIRS))
 	@echo "✅ Platform validated"
 
+# ---- System ----
+deploy-system: deploy-networking
+	$(call k8s_apply_helm_list,$(SYSTEM_HELM_DIRS))
+	@echo "✅ System components deployed"
+
+delete-system:
+	$(call k8s_delete_helm_list,$(SYSTEM_HELM_DELETE_DIRS))
+
+validate-system:
+	$(call k8s_dry_run_helm_list,$(SYSTEM_HELM_DIRS))
+	@echo "✅ System components validated"
+
 # ---- Observability ----
 deploy-observability: deploy-namespaces deploy-secrets
 	$(call k8s_apply_helm_list,$(OBS_HELM_DIRS))
@@ -697,6 +716,7 @@ validate-all: clean-charts
 	@echo "🧪 Validating all manifests (ENV=$(ENV))..."
 	@$(MAKE) --no-print-directory validate-namespaces
 	@$(MAKE) --no-print-directory validate-networking
+	@$(MAKE) --no-print-directory validate-system
 	@$(MAKE) --no-print-directory validate-secrets
 	@$(MAKE) --no-print-directory validate-auth
 	@$(MAKE) --no-print-directory validate-platform
@@ -709,10 +729,10 @@ validate-all: clean-charts
 # ============================
 # High-Level Operations
 # ============================
-deploy-all: validate-all deploy-namespaces deploy-networking deploy-secrets deploy-auth deploy-databases deploy-platform deploy-observability deploy-apps deploy-ui-all
+deploy-all: validate-all deploy-namespaces deploy-networking deploy-system deploy-secrets deploy-auth deploy-databases deploy-platform deploy-observability deploy-apps deploy-ui-all
 	@echo "🎉 Full stack deployed (ENV=$(ENV))"
 
-delete-all: delete-apps delete-observability delete-platform delete-databases delete-auth delete-secrets delete-networking delete-namespaces
+delete-all: delete-apps delete-observability delete-platform delete-databases delete-auth delete-secrets delete-system delete-networking delete-namespaces
 	@echo "✅ Full stack deleted (ENV=$(ENV))"
 
 # ---- Minikube Helpers ----

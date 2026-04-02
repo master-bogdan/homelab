@@ -1,0 +1,11 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: headlamp-oidc-ca
+spec:
+  secretName: headlamp-oidc-ca
+  dnsNames:
+    - headlamp-oidc-ca.staging-observability.svc.cluster.local
+  issuerRef:
+    kind: ClusterIssuer
+    name: homelab-ca

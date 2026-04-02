@@ -1,0 +1,13 @@
+fullnameOverride: metrics-server
+
+apiService:
+  create: true
+  insecureSkipTLSVerify: true
+
+args:
+  - --kubelet-insecure-tls
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 200Mi

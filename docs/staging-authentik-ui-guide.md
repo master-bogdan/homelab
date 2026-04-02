@@ -10,6 +10,7 @@ This guide covers:
 
 - Authentik in staging
 - Grafana in staging
+- Headlamp in staging
 - OpenSearch and OpenSearch Dashboards in staging
 - n8n in staging
 - Prometheus in staging
@@ -29,6 +30,7 @@ These are the hostnames currently committed in the staging overlays:
 
 - Authentik: `https://auth.apps.10-96-11-221.sslip.io`
 - Grafana: `https://grafana.apps.10-96-11-221.sslip.io`
+- Headlamp: `https://headlamp.apps.10-96-11-221.sslip.io`
 - OpenSearch Dashboards: `https://opensearch.apps.10-96-11-221.sslip.io`
 - n8n: `https://n8n.apps.10-96-11-221.sslip.io`
 - Prometheus: `https://prometheus.apps.10-96-11-221.sslip.io`
@@ -50,6 +52,7 @@ For this repo, staging should look like this:
 | App | Authentik pattern | Needs outpost? |
 | --- | --- | --- |
 | Grafana | OIDC | No |
+| Headlamp | OIDC | No |
 | OpenSearch + OpenSearch Dashboards | OIDC | No |
 | n8n | Proxy | Yes |
 | Prometheus | Proxy | Yes |
@@ -260,6 +263,60 @@ That means both components need a namespace-local CA bundle:
   - `openid_connect_idp.pemtrustedcas_filepath: /usr/share/opensearch/config/oidc-ca/ca.crt`
 
 If Dashboards redirects back from Authentik and then returns `401`, check OpenSearch logs first. The common failure is OpenSearch being unable to fetch IdP metadata or JWKS because the IdP CA is not configured correctly.
+
+## Step 4b: Create the OIDC app for Headlamp
+
+Headlamp in staging is configured to expect Authentik OIDC client credentials from:
+
+- Vault path: `kv/staging/headlamp`
+- keys:
+  - `oidc_client_id`
+  - `oidc_client_secret`
+
+Relevant repo files:
+
+- `k8s/observability/headlamp/overlays/staging/values-staging.yaml`
+- `k8s/observability/headlamp/overlays/staging/external-secret.yaml`
+
+### Create it in Authentik UI
+
+1. Open `Applications -> Applications`.
+2. Click `Create with provider`.
+3. In the application section, set:
+   - Name: `Headlamp Staging`
+   - Slug: `headlamp`
+   - Launch URL: `https://headlamp.apps.10-96-11-221.sslip.io`
+4. Choose provider type:
+   - `OAuth2/OpenID Connect`
+5. In the provider section, set:
+   - Name: `Headlamp Staging Provider`
+   - Redirect URI: `https://headlamp.apps.10-96-11-221.sslip.io/oidc-callback`
+   - Client type: `Confidential`
+6. Save and copy the client ID and client secret.
+
+### Bind access
+
+Allow these users or groups:
+
+- `staging-internal-users`
+
+If your Kubernetes API authorization uses Authentik groups, make sure the provider also emits the `groups` claim.
+
+### Store the secret in Vault
+
+Put these values here:
+
+- `kv/staging/headlamp`
+  - `oidc_client_id`
+  - `oidc_client_secret`
+
+Do not create a Kubernetes secret by hand. The repo syncs this through External Secrets.
+
+### Important Headlamp note
+
+This repo only wires the Headlamp app to Authentik OIDC.
+
+If login works but Headlamp shows `403` while loading cluster resources, the missing piece is not the app secret. It means your Kubernetes API server OIDC and cluster RBAC for that Authentik identity still need to be configured outside these manifests.
 
 ## Step 5: Create the proxy app for n8n
 
@@ -568,6 +625,20 @@ The failure in logs usually looks like:
 
 - `PKIX path building failed`
 - `unable to find valid certification path to requested target`
+
+### Headlamp login works but the UI returns `403`
+
+Usually:
+
+- the Authentik OIDC login succeeded
+- but the Kubernetes API server does not trust that issuer or audience yet
+- or cluster RBAC for the returned user or groups does not exist yet
+
+Check:
+
+- the Headlamp Authentik provider redirect URI is `https://headlamp.apps.10-96-11-221.sslip.io/oidc-callback`
+- `kubectl -n staging-observability get externalsecret headlamp-auth-staging`
+- your Kubernetes API server OIDC config and cluster RBAC outside this repo
 
 ### n8n login works but webhooks fail
 
