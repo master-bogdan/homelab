@@ -36,9 +36,19 @@ fi
 IP_DASH="${MINIKUBE_IP//./-}"
 echo "Updating sslip host IP to ${IP_DASH} for ENV=${ENV} (PROFILE=${PROFILE})"
 
+if command -v rg >/dev/null 2>&1; then
+  has_sslip_host() {
+    rg -q '\.sslip\.io' "$1"
+  }
+else
+  has_sslip_host() {
+    grep -q '\.sslip\.io' "$1"
+  }
+fi
+
 updated=0
 while IFS= read -r file; do
-  if rg -q '\.sslip\.io' "${file}"; then
+  if has_sslip_host "${file}"; then
     before="$(cksum "${file}" | awk '{print $1}')"
     perl -i -pe "s/(?:\\d{1,3}-){3}\\d{1,3}(?=\\.sslip\\.io)/${IP_DASH}/g" "${file}"
     perl -i -pe "s/(^\\s*ip:\\s*\")\\d{1,3}(?:\\.\\d{1,3}){3}(\")/\$1${MINIKUBE_IP}\$2/g" "${file}"

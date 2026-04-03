@@ -131,13 +131,6 @@ define require_app
 	@test -n "$(APP)" || (echo "❌ APP is required"; exit 1)
 endef
 
-# Guard for k8s manifests on APP
-define require_app_k8s
-	@if [ ! -d "$(KUBERNETES_DIR)/apps/$(APP)" ]; then \
-		echo "⚠️  No k8s manifests for $(APP)"; exit 0; \
-	fi
-endef
-
 # Generic function to iterate over apps with a target
 define for_each_app
 	@set -e; for app in $(APPS); do \
@@ -655,10 +648,14 @@ endif
 # ---- Apps ----
 deploy-app:
 	$(call require_app)
-	$(call require_app_k8s)
-	@$(MAKE) --no-print-directory docker-build-push APP=$(APP)
-	$(call k8s_apply_or_base,$(KUBERNETES_DIR)/apps/$(APP))
-	@echo "✅ Deployed $(APP)"
+	@set -e; APP_ROOT="$(KUBERNETES_DIR)/apps/$(APP)"; \
+	if [ ! -d "$$APP_ROOT" ]; then \
+		echo "⚠️  No k8s manifests for $(APP)"; \
+	else \
+		$(MAKE) --no-print-directory docker-build-push APP=$(APP); \
+		$(call k8s_apply_or_base,$$APP_ROOT); \
+		echo "✅ Deployed $(APP)"; \
+	fi
 
 deploy-apps:
 	$(call for_each_k8s_app,deploy-app)
@@ -666,38 +663,46 @@ deploy-apps:
 
 delete-app:
 	$(call require_app)
-	$(call require_app_k8s)
-	$(call k8s_delete_or_base,$(KUBERNETES_DIR)/apps/$(APP))
+	@set -e; APP_ROOT="$(KUBERNETES_DIR)/apps/$(APP)"; \
+	if [ ! -d "$$APP_ROOT" ]; then \
+		echo "⚠️  No k8s manifests for $(APP)"; \
+	else \
+		$(call k8s_delete_or_base,$$APP_ROOT); \
+	fi
 
 delete-apps:
 	$(call for_each_k8s_app,delete-app)
 
 validate-app:
 	$(call require_app)
-	$(call require_app_k8s)
-	@set -e; ROOT="$(KUBERNETES_DIR)/apps/$(APP)"; \
-	OVERLAY="$${ROOT}/overlays/$(ENV)"; \
-	FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
-	if [ -d "$$OVERLAY" ]; then \
-		TARGET="$$OVERLAY"; \
-	elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
-		TARGET="$$FALLBACK"; \
-	elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
-		TARGET="$${ROOT}"; \
+	@set -e; APP_ROOT="$(KUBERNETES_DIR)/apps/$(APP)"; \
+	if [ ! -d "$$APP_ROOT" ]; then \
+		echo "⚠️  No k8s manifests for $(APP)"; \
 	else \
-		TARGET="$${ROOT}/base"; \
-	fi; \
-	if $(KUBECTL) api-resources --api-group=external-secrets.io 2>/dev/null | grep -qi '^externalsecrets' && \
-	   $(KUBECTL) api-resources --api-group=gateway.networking.k8s.io 2>/dev/null | grep -qi '^httproutes'; then \
-		echo "🧪 Dry-run: $$TARGET"; \
-		$(KUBECTL) apply -k "$$TARGET" --dry-run=client --validate=false -o yaml >/dev/null 2>/dev/null || \
-		$(KUBECTL) apply -f "$$TARGET" --dry-run=client --validate=false -o yaml >/dev/null; \
-	else \
-		echo "⚠️  App CRDs not discoverable yet; build-only validation for $(APP)"; \
-		echo "🧪 Build-only: $$TARGET"; \
-		$(KUBECTL) kustomize "$$TARGET" >/dev/null; \
+		ROOT="$$APP_ROOT"; \
+		OVERLAY="$${ROOT}/overlays/$(ENV)"; \
+		FALLBACK="$${ROOT}/overlays/$(ENV_FALLBACK)"; \
+		if [ -d "$$OVERLAY" ]; then \
+			TARGET="$$OVERLAY"; \
+		elif [ -n "$(ENV_FALLBACK)" ] && [ -d "$$FALLBACK" ]; then \
+			TARGET="$$FALLBACK"; \
+		elif [ -f "$${ROOT}/kustomization.yaml" ]; then \
+			TARGET="$${ROOT}"; \
+		else \
+			TARGET="$${ROOT}/base"; \
+		fi; \
+		if $(KUBECTL) api-resources --api-group=external-secrets.io 2>/dev/null | grep -qi '^externalsecrets' && \
+		   $(KUBECTL) api-resources --api-group=gateway.networking.k8s.io 2>/dev/null | grep -qi '^httproutes'; then \
+			echo "🧪 Dry-run: $$TARGET"; \
+			$(KUBECTL) apply -k "$$TARGET" --dry-run=client --validate=false -o yaml >/dev/null 2>/dev/null || \
+			$(KUBECTL) apply -f "$$TARGET" --dry-run=client --validate=false -o yaml >/dev/null; \
+		else \
+			echo "⚠️  App CRDs not discoverable yet; build-only validation for $(APP)"; \
+			echo "🧪 Build-only: $$TARGET"; \
+			$(KUBECTL) kustomize "$$TARGET" >/dev/null; \
+		fi; \
+		echo "✅ $(APP) validated"; \
 	fi
-	@echo "✅ $(APP) validated"
 
 validate-apps:
 	$(call for_each_k8s_app,validate-app)
