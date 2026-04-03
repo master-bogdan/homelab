@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init-sql
+data:
+  $patch: replace
+  10-n8n.sh: |
+    #!/bin/sh
+    set -eu
+
+    if [ -z "${N8N_PASSWORD:-}" ]; then
+      echo "N8N_PASSWORD is not set" >&2
+      exit 1
+    fi
+    if [ -z "${POSTGRES_PASSWORD:-}" ]; then
+      echo "POSTGRES_PASSWORD is not set" >&2
+      exit 1
+    fi
+
+    N8N_USER="${N8N_USER:-n8n_staging}"
+    N8N_DB="${N8N_DB:-n8n_staging}"
+    export PGPASSWORD="${POSTGRES_PASSWORD}"
+
+    psql -h 127.0.0.1 -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+      -v n8n_user="$N8N_USER" \
+      -v n8n_password="$N8N_PASSWORD" \
+      -v n8n_db="$N8N_DB" <<-'EOSQL'
+    DO
+    $do$
+    BEGIN
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'n8n_user') THEN
+        EXECUTE format(
+          'CREATE ROLE %I LOGIN ENCRYPTED PASSWORD %L',
+          :'n8n_user',
+          :'n8n_password'
+        );
+      END IF;
+    END
+    $do$;
+
+    SELECT format('CREATE DATABASE %I OWNER %I', :'n8n_db', :'n8n_user')
+    WHERE NOT EXISTS (
+      SELECT FROM pg_database WHERE datname = :'n8n_db'
+    )
+    \gexec
+    EOSQL

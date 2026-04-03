@@ -1,7 +1,7 @@
-image:
-  repository: chrislusf/seaweedfs
-  tag: "3.92"
-  pullPolicy: IfNotPresent
+global:
+  extraEnvironmentVars:
+    WEED_CLUSTER_SW_MASTER: "seaweedfs-master.prod-platform:9333"
+    WEED_CLUSTER_SW_FILER: "seaweedfs-filer-client.prod-platform:8888"
 
 master:
   enabled: true
@@ -26,24 +26,24 @@ filer:
     enabled: true
     storageClass: hcloud-volumes
     size: 10Gi
-  extraArgs:
-    - "-s3"
+  s3:
+    enabled: true
+    enableAuth: false
+    createBuckets:
+      - name: personal-website
+        anonymousRead: true
+        collections:
+          - name: public
+      - name: internal-artifacts
+        anonymousRead: false
 
-s3:
+admin:
   enabled: true
-  service:
-    type: ClusterIP
-    port: 8333
+  port: 23646
+  grpcPort: 33646
 
-  extraEnvVarsSecret:
-
-  createBuckets:
-    - name: personal-website
-      anonymousRead: true
-      collections:
-        - name: public
-    - name: internal-artifacts
-      anonymousRead: false
+metrics:
+  enabled: true
 
 # --- Network Policies ---
 networkPolicy:

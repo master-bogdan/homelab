@@ -1,0 +1,11 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: opensearch-dashboards-oidc-ca
+spec:
+  secretName: opensearch-dashboards-oidc-ca
+  dnsNames:
+    - opensearch-dashboards-oidc-ca.staging-observability.svc.cluster.local
+  issuerRef:
+    kind: ClusterIssuer
+    name: homelab-ca
