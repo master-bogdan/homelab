@@ -1,0 +1,35 @@
+// Package users provides users endpoints
+package users
+
+import (
+	"github.com/go-chi/chi/v5"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
+	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
+	"github.com/uptrace/bun"
+)
+
+type UsersModule struct {
+	Controller UsersController
+	Service    UsersService
+}
+
+type UsersModuleDeps struct {
+	Router      chi.Router
+	DB          *bun.DB
+	AuthService oauth2.AuthService
+}
+
+func NewUsersModule(deps UsersModuleDeps) *UsersModule {
+	userRepo := usersrepositories.NewUserRepository(deps.DB)
+	svc := NewUsersService(userRepo)
+	ctrl := NewUsersController(svc, deps.AuthService)
+
+	deps.Router.Route("/users", func(r chi.Router) {
+		r.Get("/me", ctrl.GetMe)
+	})
+
+	return &UsersModule{
+		Controller: ctrl,
+		Service:    svc,
+	}
+}

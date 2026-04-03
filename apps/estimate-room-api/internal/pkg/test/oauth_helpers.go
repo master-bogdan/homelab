@@ -1,0 +1,139 @@
+package testutils
+
+import (
+	"context"
+	"os"
+	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/db/postgresql"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
+	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/utils"
+	"github.com/uptrace/bun"
+)
+
+const (
+	TestTokenKey = "0123456789abcdef0123456789abcdef"
+	TestIssuer   = "http://localhost:8000"
+)
+
+func SetupTestDB(t *testing.T) *bun.DB {
+	t.Helper()
+
+	dbURL := os.Getenv("TEST_DATABASE_URL")
+	if dbURL == "" {
+		dbURL = os.Getenv("DATABASE_URL")
+	}
+	if dbURL == "" {
+		t.Skip("TEST_DATABASE_URL or DATABASE_URL is required")
+		return nil
+	}
+
+	if err := postgresql.MigrateUp(dbURL); err != nil {
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+
+	db, err := postgresql.Connect(dbURL)
+	if err != nil {
+		t.Fatalf("failed to connect to database: %v", err)
+	}
+
+	return db
+}
+
+func ResetOauthTables(t *testing.T, db *bun.DB) {
+	t.Helper()
+
+	_, err := db.ExecContext(context.Background(), `
+		TRUNCATE TABLE
+			oauth2_access_tokens,
+			oauth2_refresh_tokens,
+			oauth2_auth_codes,
+			oauth2_oidc_sessions,
+			users,
+			oauth2_clients
+		RESTART IDENTITY CASCADE
+	`)
+	if err != nil {
+		t.Fatalf("failed to truncate oauth tables: %v", err)
+	}
+}
+
+func NewOauth2Service(db *bun.DB) oauth2.Oauth2Service {
+	authService := oauth2.NewAuthServiceFromDB(TestTokenKey, db)
+
+	usersModule := users.NewUsersModule(users.UsersModuleDeps{
+		Router:      chi.NewRouter(),
+		DB:          db,
+		AuthService: authService,
+	})
+
+	oauth2Module := oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
+		Router:      chi.NewRouter(),
+		DB:          db,
+		TokenKey:    TestTokenKey,
+		Issuer:      TestIssuer,
+		UserService: usersModule.Service,
+		AuthService: authService,
+		Github:      oauth2utils.GithubConfig{},
+	})
+
+	return oauth2Module.Service
+}
+
+func SeedClient(t *testing.T, db *bun.DB, redirectURI string, scopes []string) string {
+	t.Helper()
+
+	clientID := uuid.NewString()
+	_, err := db.ExecContext(context.Background(), `
+		INSERT INTO oauth2_clients (
+			client_id, client_secret, redirect_uris, grant_types, response_types,
+			scopes, client_name, client_type, created_at
+		)
+		VALUES ($1, '', ARRAY[$2], ARRAY['authorization_code'], ARRAY['code'], $3, 'Test Client', 'public', NOW())
+	`, clientID, redirectURI, scopes)
+	if err != nil {
+		t.Fatalf("failed to insert client: %v", err)
+	}
+
+	return clientID
+}
+
+func SeedUser(t *testing.T, db *bun.DB, email, password string) string {
+	t.Helper()
+
+	userID := uuid.NewString()
+	passwordHash, err := utils.HashPassword(password)
+	if err != nil {
+		t.Fatalf("failed to hash password: %v", err)
+	}
+
+	_, err = db.ExecContext(context.Background(), `
+		INSERT INTO users (user_id, email, password_hash)
+		VALUES ($1, $2, $3)
+		ON CONFLICT DO NOTHING
+	`, userID, email, passwordHash)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	return userID
+}
+
+func SeedSession(t *testing.T, db *bun.DB, userID, clientID, nonce string) string {
+	t.Helper()
+
+	sessionID := uuid.NewString()
+	_, err := db.ExecContext(context.Background(), `
+		INSERT INTO oauth2_oidc_sessions (oidc_session_id, user_id, client_id, nonce)
+		VALUES ($1, $2, $3, $4)
+	`, sessionID, userID, clientID, nonce)
+	if err != nil {
+		t.Fatalf("failed to insert session: %v", err)
+	}
+
+	return sessionID
+}
