@@ -7,34 +7,10 @@ service:
 ingress:
   enabled: false
 
-env:
-  - name: OIDC_CLIENT_ID
-    valueFrom:
-      secretKeyRef:
-        name: headlamp-auth-dev
-        key: client_id
-  - name: OIDC_CLIENT_SECRET
-    valueFrom:
-      secretKeyRef:
-        name: headlamp-auth-dev
-        key: client_secret
-  - name: OIDC_ISSUER_URL
-    value: "http://auth.apps.192-168-58-2.sslip.io:30080/application/o/headlamp/"
-  - name: OIDC_SCOPES
-    value: "openid profile email groups"
-  - name: OIDC_CALLBACK_URL
-    value: "http://headlamp.apps.192-168-58-2.sslip.io:30080/oidc-callback"
-
 config:
   oidc:
     secret:
       create: false
-  extraArgs:
-    - -oidc-client-id=$(OIDC_CLIENT_ID)
-    - -oidc-client-secret=$(OIDC_CLIENT_SECRET)
-    - -oidc-idp-issuer-url=$(OIDC_ISSUER_URL)
-    - -oidc-scopes=$(OIDC_SCOPES)
-    - -oidc-callback-url=$(OIDC_CALLBACK_URL)
 
 clusterRoleBinding:
   create: false

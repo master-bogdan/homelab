@@ -4,7 +4,7 @@ kind: Kustomization
 namespace: dev-observability
 resources:
   - ../../base
-  - external-secret.yaml
+  - clusterrolebinding.yaml
 
 patches:
   - target:

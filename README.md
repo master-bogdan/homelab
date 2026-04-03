@@ -54,7 +54,7 @@ kubectl logs -f -n <env>-<namespace> <pod>
 ## Networking & access control
 
 - **Gateway API + Traefik:** `k8s/networking/gateway` defines `homelab-gw` per environment. Dev overlays ride the HTTP listener for speed, while staging/prod HTTPRoutes bind to the HTTPS listener with TLS terminated by the `homelab-gw-tls` secret.
-- **Authentik protected routes:** proxy-protected internal routes use the shared Authentik outpost for apps like Prometheus, n8n, Vault UI, and the SeaweedFS dashboard. OIDC-capable dashboards like Grafana, OpenSearch Dashboards, and Headlamp authenticate directly against Authentik and authorize inside the application.
+- **Authentik protected routes:** proxy-protected internal routes use the shared Authentik outpost for apps like Prometheus, Headlamp, n8n, Vault UI, and the SeaweedFS dashboard. OIDC-capable dashboards like Grafana and OpenSearch Dashboards authenticate directly against Authentik and authorize inside the application.
 - **SeaweedFS routing:** `/personal-website` and `/internal-artifacts` continue to flow through the S3 route, while the filer UI now uses `http-seaweedfs-filer` and is SSO-protected. This avoids exposing the filer/console without Authentik.
 - **Namespace scoping:** Each environment uses prefixed namespaces (e.g., `staging-networking`, `prod-platform`), and routes explicitly reference the env-specific gateway.
 
@@ -217,7 +217,9 @@ echo "$(minikube ip --profile homelab-staging) storage.homelab.local" | sudo tee
 # https://storage.apps.$IP_DASH.sslip.io/internal-artifacts
 ```
 
-> Note: proxy-protected routes like Prometheus, n8n, Vault UI, and the SeaweedFS dashboard redirect through the shared Authentik outpost. OIDC apps like Grafana, OpenSearch Dashboards, and Headlamp redirect directly to Authentik for login. Staging uses the HTTPS listener (TLS) by default.
+> Note: proxy-protected routes like Prometheus, Headlamp, n8n, Vault UI, and the SeaweedFS dashboard redirect through the shared Authentik outpost. OIDC apps like Grafana and OpenSearch Dashboards redirect directly to Authentik for login. Staging uses the HTTPS listener (TLS) by default.
+
+> Headlamp runs in-cluster with its own service account. If the UI still prompts for Kubernetes credentials after the Authentik gate, generate a token with `kubectl -n <env>-observability create token headlamp` and use `Use A Token`.
 
 ## Configuration
 

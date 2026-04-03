@@ -9,3 +9,12 @@ spec:
       sectionName: https
   hostnames:
     - headlamp.example.invalid
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ak-outpost-shared-outpost
+          namespace: prod-auth
+          port: 9000

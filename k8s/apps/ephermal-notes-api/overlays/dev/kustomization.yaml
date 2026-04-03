@@ -6,9 +6,12 @@ namespace: dev-apps
 resources:
   - ../../base
   - secret.yaml
-  - configmap.yaml
 
 patches:
+  - target:
+      kind: ConfigMap
+      name: ephermal-notes-api-config
+    path: configmap-patch.yaml
   - target:
       kind: HTTPRoute
       name: http-ephermal-notes-api

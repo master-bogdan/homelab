@@ -4,8 +4,7 @@ kind: Kustomization
 namespace: staging-observability
 resources:
   - ../../base
-  - external-secret.yaml
-  - oidc-ca-certificate.yaml
+  - clusterrolebinding.yaml
 
 patches:
   - target:

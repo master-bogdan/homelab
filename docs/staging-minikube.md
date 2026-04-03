@@ -218,10 +218,6 @@ Paths and keys required:
 - `oidc_client_id`
 - `oidc_client_secret`
 
-**`kv/staging/headlamp`**
-- `oidc_client_id`
-- `oidc_client_secret`
-
 **`kv/staging/opensearch`**
 - `admin_password`
 - `oidc_client_id`
@@ -236,9 +232,6 @@ Paths and keys required:
 - `opensearch_password`
 
 **`kv/staging/ephermal-notes-api`**
-- `server_host`
-- `server_port`
-- `redis_addr`
 - `redis_password`
 
 ## 6) Deploy core stacks
@@ -292,7 +285,8 @@ Note: TLS is issued by the internal `homelab-ca`, so your browser will warn unle
 - If pods are stuck waiting for secrets, check ESO logs: `kubectl -n staging-secrets logs deploy/external-secrets`.
 - If HTTPS fails, re-check the `sslip.io` IP in staging overlays and `k8s/networking/cert-manager/overlays/staging/certificate-gateway.yaml`.
 - If OpenSearch Dashboards returns `401` after a successful Authentik redirect, check OpenSearch logs for IdP TLS errors. The usual cause is missing OIDC CA trust in the OpenSearch security plugin, not a bad Dashboards redirect.
-- If Headlamp login succeeds but the UI returns `403`, the Headlamp OIDC client is fine but Kubernetes API-side OIDC/RBAC still needs to allow the same Authentik identity outside this repo.
+- Headlamp is fronted by the shared Authentik outpost, not direct OIDC. If it still asks for Kubernetes credentials after the Authentik redirect, generate a token with `kubectl -n staging-observability create token headlamp` and use `Use A Token`.
+- If that Headlamp token works but the UI is missing data you expect, the repo currently binds the `headlamp` service account to the built-in `view` ClusterRole. Broaden that role only if you intentionally want more access.
 - For local access without HTTPS, use port-forward:
 
 ```bash

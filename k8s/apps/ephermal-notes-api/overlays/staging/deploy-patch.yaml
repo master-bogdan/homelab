@@ -8,5 +8,7 @@ spec:
       containers:
         - name: ephermal-notes-api-container
           envFrom:
-            - secretRef:
+            - configMapRef:
                 name: ephermal-notes-api-config
+            - secretRef:
+                name: ephermal-notes-api-secret

@@ -41,6 +41,7 @@ while IFS= read -r file; do
   if rg -q '\.sslip\.io' "${file}"; then
     before="$(cksum "${file}" | awk '{print $1}')"
     perl -i -pe "s/(?:\\d{1,3}-){3}\\d{1,3}(?=\\.sslip\\.io)/${IP_DASH}/g" "${file}"
+    perl -i -pe "s/(^\\s*ip:\\s*\")\\d{1,3}(?:\\.\\d{1,3}){3}(\")/\$1${MINIKUBE_IP}\$2/g" "${file}"
     after="$(cksum "${file}" | awk '{print $1}')"
     if [[ "${before}" != "${after}" ]]; then
       echo "updated ${file}"

@@ -9,3 +9,12 @@ spec:
       sectionName: http
   hostnames:
     - headlamp.apps.192-168-58-2.sslip.io
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ak-outpost-shared-outpost
+          namespace: dev-auth
+          port: 9000

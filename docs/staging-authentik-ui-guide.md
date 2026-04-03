@@ -52,7 +52,7 @@ For this repo, staging should look like this:
 | App | Authentik pattern | Needs outpost? |
 | --- | --- | --- |
 | Grafana | OIDC | No |
-| Headlamp | OIDC | No |
+| Headlamp | Proxy | Yes |
 | OpenSearch + OpenSearch Dashboards | OIDC | No |
 | n8n | Proxy | Yes |
 | Prometheus | Proxy | Yes |
@@ -111,6 +111,7 @@ Your Git-managed staging routes already point to:
 
 So do not invent another outpost name unless you also plan to update these files:
 
+- `k8s/observability/headlamp/overlays/staging/httproute-patch.yaml`
 - `k8s/platform/n8n/overlays/staging/httproute-patch.yaml`
 - `k8s/observability/prometheus/overlays/staging/httproute-patch.yaml`
 - `k8s/secrets/vault/overlays/staging/httproute-ui-patch.yaml`
@@ -264,19 +265,21 @@ That means both components need a namespace-local CA bundle:
 
 If Dashboards redirects back from Authentik and then returns `401`, check OpenSearch logs first. The common failure is OpenSearch being unable to fetch IdP metadata or JWKS because the IdP CA is not configured correctly.
 
-## Step 4b: Create the OIDC app for Headlamp
-
-Headlamp in staging is configured to expect Authentik OIDC client credentials from:
-
-- Vault path: `kv/staging/headlamp`
-- keys:
-  - `oidc_client_id`
-  - `oidc_client_secret`
+## Step 4b: Create the proxy app for Headlamp
 
 Relevant repo files:
 
+- `k8s/observability/headlamp/overlays/staging/clusterrolebinding.yaml`
 - `k8s/observability/headlamp/overlays/staging/values-staging.yaml`
-- `k8s/observability/headlamp/overlays/staging/external-secret.yaml`
+- `k8s/observability/headlamp/overlays/staging/httproute-patch.yaml`
+
+Public URL:
+
+- `https://headlamp.apps.10-96-11-221.sslip.io`
+
+Expected internal service URL in this repo:
+
+- `http://headlamp.staging-observability.svc.cluster.local`
 
 ### Create it in Authentik UI
 
@@ -284,39 +287,36 @@ Relevant repo files:
 2. Click `Create with provider`.
 3. In the application section, set:
    - Name: `Headlamp Staging`
-   - Slug: `headlamp`
+   - Slug: `headlamp-staging`
    - Launch URL: `https://headlamp.apps.10-96-11-221.sslip.io`
 4. Choose provider type:
-   - `OAuth2/OpenID Connect`
+   - `Proxy`
 5. In the provider section, set:
-   - Name: `Headlamp Staging Provider`
-   - Redirect URI: `https://headlamp.apps.10-96-11-221.sslip.io/oidc-callback`
-   - Client type: `Confidential`
-6. Save and copy the client ID and client secret.
+   - Name: `Headlamp Staging Proxy`
+   - External host: `https://headlamp.apps.10-96-11-221.sslip.io`
+   - Internal host: `http://headlamp.staging-observability.svc.cluster.local`
+6. Save.
+7. If `shared-outpost` already exists, attach `Headlamp Staging` to it now.
 
 ### Bind access
 
-Allow these users or groups:
+Bind access to:
 
 - `staging-internal-users`
 
-If your Kubernetes API authorization uses Authentik groups, make sure the provider also emits the `groups` claim.
-
-### Store the secret in Vault
-
-Put these values here:
-
-- `kv/staging/headlamp`
-  - `oidc_client_id`
-  - `oidc_client_secret`
-
-Do not create a Kubernetes secret by hand. The repo syncs this through External Secrets.
-
 ### Important Headlamp note
 
-This repo only wires the Headlamp app to Authentik OIDC.
+This repo no longer uses Authentik OIDC for Headlamp.
 
-If login works but Headlamp shows `403` while loading cluster resources, the missing piece is not the app secret. It means your Kubernetes API server OIDC and cluster RBAC for that Authentik identity still need to be configured outside these manifests.
+The shared outpost protects the public route, and this repo runs Headlamp in-cluster with its own `headlamp` service account bound to the built-in Kubernetes `view` ClusterRole.
+
+If Headlamp still prompts for a token after the Authentik redirect, generate one with:
+
+```bash
+kubectl -n staging-observability create token headlamp
+```
+
+Then use `Use A Token` in the Headlamp UI.
 
 ## Step 5: Create the proxy app for n8n
 
@@ -502,6 +502,7 @@ Only do this once for staging.
 
 When you create the outpost, add these applications:
 
+- `Headlamp Staging`
 - `n8n Staging`
 - `Prometheus Staging`
 - `Vault UI Staging`
@@ -518,6 +519,7 @@ In Authentik UI:
    - Type: `Proxy`
    - Integration: Kubernetes
 4. Under `Applications`, select:
+   - `Headlamp Staging`
    - `n8n Staging`
    - `Prometheus Staging`
    - `Vault UI Staging`
@@ -572,7 +574,7 @@ Check:
 
 ```bash
 kubectl -n staging-auth get svc
-kubectl get httproutes -A | rg 'n8n|prometheus|vault|seaweedfs'
+kubectl get httproutes -A | rg 'headlamp|n8n|prometheus|vault|seaweedfs'
 ```
 
 Then:
@@ -626,19 +628,19 @@ The failure in logs usually looks like:
 - `PKIX path building failed`
 - `unable to find valid certification path to requested target`
 
-### Headlamp login works but the UI returns `403`
+### Headlamp passes Authentik but still asks for a token or shows limited data
 
 Usually:
 
-- the Authentik OIDC login succeeded
-- but the Kubernetes API server does not trust that issuer or audience yet
-- or cluster RBAC for the returned user or groups does not exist yet
+- the shared outpost is working, but Headlamp still needs Kubernetes credentials
+- you have not provided the `headlamp` service account token yet
+- or the built-in `view` ClusterRole is too limited for what you expect to see
 
 Check:
 
-- the Headlamp Authentik provider redirect URI is `https://headlamp.apps.10-96-11-221.sslip.io/oidc-callback`
-- `kubectl -n staging-observability get externalsecret headlamp-auth-staging`
-- your Kubernetes API server OIDC config and cluster RBAC outside this repo
+- `kubectl -n staging-observability create token headlamp`
+- `kubectl get clusterrolebinding staging-headlamp-view`
+- `k8s/observability/headlamp/overlays/staging/clusterrolebinding.yaml`
 
 ### n8n login works but webhooks fail
 
@@ -658,6 +660,7 @@ Official docs used for the UI flow and provider types:
 - Authentik proxy providers: https://docs.goauthentik.io/add-secure-apps/providers/proxy/
 - Authentik outposts: https://docs.goauthentik.io/add-secure-apps/outposts/
 - Authentik Kubernetes integration: https://docs.goauthentik.io/add-secure-apps/outposts/integrations/kubernetes/
+- Headlamp in-cluster access: https://headlamp.dev/docs/latest/installation/in-cluster/
 - n8n OIDC setup and edition limits: https://docs.n8n.io/user-management/oidc/setup/
 - n8n community edition features: https://docs.n8n.io/hosting/community-edition-features/
 - n8n webhook behavior: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook/workflow-development/

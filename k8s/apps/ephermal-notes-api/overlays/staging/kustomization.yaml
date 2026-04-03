@@ -9,6 +9,10 @@ resources:
 
 patches:
   - target:
+      kind: ConfigMap
+      name: ephermal-notes-api-config
+    path: configmap-patch.yaml
+  - target:
       kind: HTTPRoute
       name: http-ephermal-notes-api
     path: httproute-patch.yaml

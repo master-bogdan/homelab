@@ -9,3 +9,12 @@ spec:
       sectionName: https
   hostnames:
     - headlamp.apps.10-96-11-221.sslip.io
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ak-outpost-shared-outpost
+          namespace: staging-auth
+          port: 9000

@@ -523,27 +523,26 @@ validate-networking:
 # ---- Secrets (External Secrets Operator) ----
 deploy-secrets: deploy-namespaces
 	$(call k8s_apply_helm_list,$(SECRETS_HELM_DIRS))
-	@if [ -d "$(SECRET_STORES_DIR)/overlays/$(ENV)" ]; then \
-		echo "⏳ Waiting for External Secrets controller rollout in $(ENV)-secrets..."; \
-		$(KUBECTL) -n "$(ENV)-secrets" rollout status deploy/external-secrets --timeout=180s; \
-		echo "⏳ Waiting for External Secrets CRDs to become Established..."; \
-		$(KUBECTL) wait --for=condition=Established --timeout=180s crd/clustersecretstores.external-secrets.io; \
-		echo "⏳ Waiting for External Secrets API discovery..."; \
-		for i in $$(seq 1 45); do \
-			if $(KUBECTL) api-resources --api-group=external-secrets.io 2>/dev/null | grep -q '^clustersecretstores[[:space:]]'; then \
-				echo "✅ external-secrets API ready"; \
-				break; \
-			fi; \
-			if [ "$$i" -eq 45 ]; then \
-				echo "❌ external-secrets API (external-secrets.io) did not become discoverable in time"; \
-				exit 1; \
-			fi; \
-			sleep 2; \
-		done; \
-	fi
+	@echo "⏳ Waiting for External Secrets controller rollout in $(ENV)-secrets..."; \
+	$(KUBECTL) -n "$(ENV)-secrets" rollout status deploy/external-secrets --timeout=180s; \
+	echo "⏳ Waiting for External Secrets CRDs to become Established..."; \
+	$(KUBECTL) wait --for=condition=Established --timeout=180s crd/clustersecretstores.external-secrets.io; \
+	$(KUBECTL) wait --for=condition=Established --timeout=180s crd/externalsecrets.external-secrets.io; \
+	echo "⏳ Waiting for External Secrets API discovery..."; \
+	for i in $$(seq 1 45); do \
+		if $(KUBECTL) api-resources --api-group=external-secrets.io 2>/dev/null | grep -q '^clustersecretstores[[:space:]]'; then \
+			echo "✅ external-secrets API ready"; \
+			break; \
+		fi; \
+		if [ "$$i" -eq 45 ]; then \
+			echo "❌ external-secrets API (external-secrets.io) did not become discoverable in time"; \
+			exit 1; \
+		fi; \
+		sleep 2; \
+	done
 	$(call k8s_apply_list,$(SECRETS_DIRS))
 	@if [ -d "$(SECRET_STORES_DIR)/overlays/$(ENV)" ]; then \
-		STORES="$$( $(KUBECTL) kustomize "$(SECRET_STORES_DIR)/overlays/$(ENV)" | awk '/^kind: ClusterSecretStore$$/{want=1; next} want && /^  name: /{print $$2; want=0}' )"; \
+		STORES="$$( $(KUBECTL) get -k "$(SECRET_STORES_DIR)/overlays/$(ENV)" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true )"; \
 		if [ -n "$$STORES" ]; then \
 			for store in $$STORES; do \
 				echo "⏳ Waiting for ClusterSecretStore/$$store to become Ready..."; \
