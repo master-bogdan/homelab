@@ -1,9 +1,9 @@
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
-import { Box, Button, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { SectionCard } from '@/shared/ui';
+import { AppButton, SectionCard } from '@/shared/ui';
 
 import { useDashboardPage } from './hooks/useDashboardPage';
 
@@ -14,14 +14,14 @@ export const DashboardPage = () => {
     <Stack spacing={3}>
       <SectionCard
         action={
-          <Button
+          <AppButton
             component={RouterLink}
             endIcon={<ArrowForwardRoundedIcon />}
             to={appRoutes.roomsNew}
             variant="contained"
           >
             Create room
-          </Button>
+          </AppButton>
         }
         description="Use this shell as the landing page for estimate operations, activity feeds, and backend status."
         title="Dashboard"

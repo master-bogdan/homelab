@@ -373,7 +373,7 @@ func (s *Service) Connect(w http.ResponseWriter, r *http.Request, identity Conne
 
 	conn, err := websocket.Accept(w, r, s.acceptOptions())
 	if err != nil {
-		logger.L().Error("WebSocket accept error", "err", err)
+		logger.L().Error(wsLog("WebSocket accept failed"), "err", err)
 		return
 	}
 
@@ -427,7 +427,7 @@ func (s *Service) readHandler(client *Client) {
 			closeStatus = websocket.StatusPolicyViolation
 			closeReason = "rate limit exceeded"
 			logger.L().Warn(
-				"ws rate limit exceeded",
+				wsLog("Inbound rate limit exceeded"),
 				"conn_id", client.ConnID,
 				"identity_type", client.IdentityType,
 				"identity_id", client.IdentityID,
@@ -578,7 +578,7 @@ func (s *Service) dispatchDisconnect(info DisconnectInfo) {
 
 func (s *Service) logConnect(info ClientInfo) {
 	logger.L().Info(
-		"ws connected",
+		wsLog("WebSocket connected"),
 		"conn_id", info.ConnID,
 		"identity_type", info.IdentityType,
 		"identity_id", info.IdentityID,
@@ -589,7 +589,7 @@ func (s *Service) logConnect(info ClientInfo) {
 
 func (s *Service) logDisconnect(info ClientInfo) {
 	logger.L().Info(
-		"ws disconnected",
+		wsLog("WebSocket disconnected"),
 		"conn_id", info.ConnID,
 		"identity_type", info.IdentityType,
 		"identity_id", info.IdentityID,
@@ -600,7 +600,7 @@ func (s *Service) logDisconnect(info ClientInfo) {
 
 func (s *Service) logError(info ClientInfo, err error) {
 	logger.L().Error(
-		"ws error",
+		wsLog("WebSocket error"),
 		"conn_id", info.ConnID,
 		"identity_type", info.IdentityType,
 		"identity_id", info.IdentityID,
@@ -634,6 +634,10 @@ func (s *Service) sendHello(client *Client) {
 	default:
 		s.unregister <- client
 	}
+}
+
+func wsLog(message string) string {
+	return logger.Prefix("MODULE", "WS", message)
 }
 
 func (s *Service) allowIncomingMessage(client *Client) bool {

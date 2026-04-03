@@ -1,6 +1,6 @@
 import { Chip, Stack, Typography } from '@mui/material';
 
-import { SectionCard } from '@/shared/ui';
+import { AppPageState, SectionCard } from '@/shared/ui';
 import { formatDateTime } from '@/shared/utils';
 
 import { useHistoryRoomPage } from './hooks/useHistoryRoomPage';
@@ -28,9 +28,11 @@ export const HistoryRoomPage = () => {
             </Stack>
           ))
         ) : (
-          <Typography color="text.secondary" variant="body2">
-            No history entries are available for this room yet.
-          </Typography>
+          <AppPageState
+            description="When room activity is connected, event history and processing status will appear here."
+            title="No history entries yet"
+            titleVariant="body1"
+          />
         )}
       </Stack>
     </SectionCard>

@@ -9,6 +9,7 @@ export const ContentShell = ({ children, drawerWidth }: ContentShellProps) => (
   <Box
     component="main"
     sx={{
+      backgroundColor: 'background.default',
       flexGrow: 1,
       minWidth: 0,
       width: { lg: `calc(100% - ${drawerWidth}px)` }
@@ -18,7 +19,8 @@ export const ContentShell = ({ children, drawerWidth }: ContentShellProps) => (
     <Container
       maxWidth="xl"
       sx={{
-        py: { xs: 3, md: 5 }
+        py: { xs: 3, md: 5 },
+        px: { xs: 2.5, md: 4 }
       }}
     >
       {children}

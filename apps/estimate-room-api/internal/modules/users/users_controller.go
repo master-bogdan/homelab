@@ -75,7 +75,7 @@ func (c *usersController) GetMe(w http.ResponseWriter, r *http.Request) {
 				},
 			))
 		default:
-			c.logger.Error("failed to get current user", "err", err)
+			logger.FromRequest(r, c.logger).Error("failed to get current user", "err", err)
 			httputils.WriteResponseError(w, apperrors.CreateHttpError(
 				apperrors.ErrInternal,
 				apperrors.HttpError{

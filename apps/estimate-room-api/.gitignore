@@ -1,0 +1,15 @@
+# Build artifacts
+/bin/
+/build/
+/server
+/.air
+
+# Go tooling outputs
+*.test
+coverage.out
+
+# Logs
+*.log
+
+# Editor/OS noise
+.DS_Store

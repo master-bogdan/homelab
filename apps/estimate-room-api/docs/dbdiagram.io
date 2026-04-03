@@ -57,6 +57,8 @@ Table users {
   password_hash  text
   github_id      text
   display_name   text        [not null, default: '']
+  organization   text
+  occupation     text
   avatar_url     text
   created_at     timestamptz [not null, default: `now()`]
   updated_at     timestamptz [not null, default: `now()`]
@@ -264,6 +266,24 @@ Table oauth2_oidc_sessions {
   client_id       text        [not null, ref: > oauth2_clients.client_id]
   nonce           text        [not null]
   created_at      timestamptz [not null, default: `now()`]
+  revoked_at      timestamptz
+
+  Indexes {
+    (user_id) [name: 'idx_oauth2_oidc_sessions_active_user_id']
+  }
+}
+
+Table auth_password_reset_tokens {
+  password_reset_token_id text        [pk]
+  user_id                 text        [not null, ref: > users.user_id]
+  token_hash              text        [not null, unique]
+  expires_at              timestamptz [not null]
+  used_at                 timestamptz
+  created_at              timestamptz [not null, default: `now()`]
+
+  Indexes {
+    (user_id) [name: 'idx_auth_password_reset_tokens_user_id']
+  }
 }
 
 Table oauth2_auth_codes {

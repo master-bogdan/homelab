@@ -1,6 +1,11 @@
 export const appRoutes = {
   root: '/',
   login: '/login',
+  register: '/register',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
+  resetPasswordSuccess: '/reset-password/success',
+  authCallback: '/auth/callback',
   dashboard: '/dashboard',
   roomsNew: '/rooms/new',
   roomDetails: '/rooms/:id',

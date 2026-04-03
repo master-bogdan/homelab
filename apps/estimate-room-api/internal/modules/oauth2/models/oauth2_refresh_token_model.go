@@ -13,14 +13,14 @@ type Oauth2RefreshTokenModel struct {
 	UserID         string    `bun:"user_id"`
 	ClientID       string    `bun:"client_id"`
 	OidcSessionID  string    `bun:"oidc_session_id"`
-	Scopes         []string  `bun:"scopes"`
+	Scopes         []string  `bun:"scopes,array"`
 	Token          string    `bun:"token"`
 	IssuedAt       time.Time `bun:"issued_at"`
 	ExpiresAt      time.Time `bun:"expires_at"`
 	IsRevoked      bool      `bun:"is_revoked"`
 	CreatedAt      time.Time `bun:"created_at"`
 
-	Client       *Oauth2ClientModel      `bun:"rel:belongs-to,join:client_id=client_id"`
-	OidcSession  *OidcSessionModel       `bun:"rel:belongs-to,join:oidc_session_id=oidc_session_id"`
+	Client       *Oauth2ClientModel        `bun:"rel:belongs-to,join:client_id=client_id"`
+	OidcSession  *OidcSessionModel         `bun:"rel:belongs-to,join:oidc_session_id=oidc_session_id"`
 	AccessTokens []*Oauth2AccessTokenModel `bun:"rel:has-many,join:refresh_token_id=refresh_token_id"`
 }

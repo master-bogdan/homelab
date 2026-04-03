@@ -29,49 +29,49 @@ func main() {
 	commands := []string{Create, Up, Down}
 
 	if !slices.Contains(commands, command) {
-		logger.L().Error("Invalid command. Use 'up', 'down' or 'create'", "command", command)
+		logger.L().Error(logger.Prefix("CLI", "MIGRATIONS", "Invalid command. Use 'up', 'down' or 'create'"), "command", command)
 		os.Exit(1)
 	}
 
 	if command == Create {
 		if name == "" {
-			logger.L().Error("Migration name is required. Use: -command=create -name=your_migration_name")
+			logger.L().Error(logger.Prefix("CLI", "MIGRATIONS", "Migration name is required. Use: -command=create -name=your_migration_name"))
 			os.Exit(1)
 		}
 
 		upFile, downFile, err := postgresql.MigrateCreate(name)
 		if err != nil {
-			logger.L().Error("Failed to create migration", "err", err)
+			logger.L().Error(logger.Prefix("CLI", "MIGRATIONS", "Failed to create migration"), "err", err)
 			os.Exit(1)
 		}
 
-		logger.L().Info("Created migration files", "up_file", upFile, "down_file", downFile)
+		logger.L().Info(logger.Prefix("CLI", "MIGRATIONS", "Created migration files"), "up_file", upFile, "down_file", downFile)
 
 		return
 	}
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		logger.L().Error("Failed to load config", "err", err)
+		logger.L().Error(logger.Prefix("CLI", "MIGRATIONS", "Failed to load config"), "err", err)
 		os.Exit(1)
 	}
 
 	switch command {
 	case Up:
-		logger.L().Info("Applying migrations...")
+		logger.L().Info(logger.Prefix("CLI", "MIGRATIONS", "Applying migrations"))
 		if err := postgresql.MigrateUp(cfg.DB.DatabaseURL); err != nil {
-			logger.L().Error("Failed to run migrations", "err", err)
+			logger.L().Error(logger.Prefix("CLI", "MIGRATIONS", "Failed to run migrations"), "err", err)
 			os.Exit(1)
 		}
 
-		logger.L().Info("Migrations applied successfully")
+		logger.L().Info(logger.Prefix("CLI", "MIGRATIONS", "Migrations applied successfully"))
 	case Down:
-		logger.L().Info("Rolling back migrations...")
+		logger.L().Info(logger.Prefix("CLI", "MIGRATIONS", "Rolling back migrations"))
 		if err := postgresql.MigrateDown(cfg.DB.DatabaseURL); err != nil {
-			logger.L().Error("Failed to rollback migrations", "err", err)
+			logger.L().Error(logger.Prefix("CLI", "MIGRATIONS", "Failed to rollback migrations"), "err", err)
 			os.Exit(1)
 		}
 
-		logger.L().Info("Migrations rolled back successfully")
+		logger.L().Info(logger.Prefix("CLI", "MIGRATIONS", "Migrations rolled back successfully"))
 	}
 }

@@ -64,6 +64,11 @@ func (c *invitesController) AcceptInvitation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	logger.FromRequest(r, c.logger).Info("accept invitation dto accepted",
+		"path", r.URL.Path,
+		"guest_name_provided", dto.GuestName != nil,
+	)
+
 	result, err := c.service.AcceptInvitation(r.Context(), token, userID, dto.GuestName)
 	if err != nil {
 		c.writeInviteError(w, r, err)
@@ -150,7 +155,7 @@ func (c *invitesController) writeError(w http.ResponseWriter, r *http.Request, e
 		logArgs = append(logArgs, "err", cause)
 	}
 
-	c.logger.Error("request failed", logArgs...)
+	logger.FromRequest(r, c.logger).Error("request failed", logArgs...)
 
 	httputils.WriteResponseError(w, apperrors.CreateHttpError(
 		errType,

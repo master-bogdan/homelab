@@ -64,7 +64,7 @@ func (s *roomsExpiryService) TouchActivity(roomID string) {
 	}
 
 	if err := s.roomsRepo.TouchActivity(roomID); err != nil {
-		s.logger.Error("failed to touch room activity", "room_id", roomID, "err", err)
+		s.logger.Error(roomsExpiryLog("Failed to touch room activity"), "room_id", roomID, "err", err)
 	}
 }
 
@@ -92,7 +92,7 @@ func (s *roomsExpiryService) ExpireInactiveRooms(cutoff time.Time) ([]*roomsmode
 		metrics.RecordRoomLifecycle(room.Status)
 		s.applyTerminalRewardsBestEffort(room)
 		if err := s.broadcastRoomExpired(room); err != nil {
-			s.logger.Error("failed to broadcast room expired", "room_id", room.RoomID, "err", err)
+			s.logger.Error(roomsExpiryLog("Failed to broadcast room expired"), "room_id", room.RoomID, "err", err)
 		}
 	}
 
@@ -125,12 +125,12 @@ func (s *roomsExpiryService) runExpirySweep() {
 	cutoff := time.Now().Add(-roomExpiryAfter)
 	expiredRooms, err := s.ExpireInactiveRooms(cutoff)
 	if err != nil {
-		s.logger.Error("failed to expire inactive rooms", "err", err)
+		s.logger.Error(roomsExpiryLog("Failed to expire inactive rooms"), "err", err)
 		return
 	}
 
 	if len(expiredRooms) > 0 {
-		s.logger.Info("expired inactive rooms", "count", len(expiredRooms), "cutoff", cutoff)
+		s.logger.Info(roomsExpiryLog("Expired inactive rooms"), "count", len(expiredRooms), "cutoff", cutoff)
 	}
 }
 
@@ -150,7 +150,7 @@ func (s *roomsExpiryService) applyTerminalRewardsBestEffort(room *roomsmodels.Ro
 		return nil
 	})
 	if err != nil {
-		s.logger.Error("failed to apply expiry rewards", "room_id", room.RoomID, "status", room.Status, "err", err)
+		s.logger.Error(roomsExpiryLog("Failed to apply expiry rewards"), "room_id", room.RoomID, "status", room.Status, "err", err)
 		return
 	}
 
@@ -159,7 +159,7 @@ func (s *roomsExpiryService) applyTerminalRewardsBestEffort(room *roomsmodels.Ro
 	}
 
 	if err := s.rewardSvc.NotifyAppliedRewards(context.Background(), appliedRewards); err != nil {
-		s.logger.Error("failed to notify room expiry rewards", "room_id", room.RoomID, "count", len(appliedRewards), "err", err)
+		s.logger.Error(roomsExpiryLog("Failed to notify room expiry rewards"), "room_id", room.RoomID, "count", len(appliedRewards), "err", err)
 	}
 }
 
@@ -181,4 +181,8 @@ func (s *roomsExpiryService) broadcastRoomExpired(room *roomsmodels.RoomsModel) 
 		RoomID:  room.RoomID,
 		Payload: data,
 	})
+}
+
+func roomsExpiryLog(message string) string {
+	return logger.Prefix("MODULE", "ROOMS", "EXPIRY", message)
 }

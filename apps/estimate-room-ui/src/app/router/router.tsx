@@ -1,9 +1,16 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 
-import { AppLayout, PublicLayout } from '@/app/layouts';
+import { AppLayout } from '@/app/layouts';
+import {
+  ForgotPasswordPage,
+  LoginPage,
+  OAuthCallbackPage,
+  RegisterPage,
+  ResetPasswordPage,
+  ResetPasswordSuccessPage
+} from '@/modules/auth';
 import { DashboardPage } from '@/modules/dashboard';
 import { HistoryPage, HistoryRoomPage } from '@/modules/history';
-import { LoginPage } from '@/modules/auth';
 import { ProfilePage } from '@/modules/profile';
 import { NewRoomPage, RoomDetailsPage } from '@/modules/rooms';
 import { SettingsPage } from '@/modules/settings';
@@ -19,13 +26,28 @@ export const router = createBrowserRouter([
     element: <Navigate replace to={appRoutes.dashboard} />
   },
   {
-    element: <PublicLayout />,
-    children: [
-      {
-        path: appRoutes.login,
-        element: <LoginPage />
-      }
-    ]
+    path: appRoutes.login,
+    element: <LoginPage />
+  },
+  {
+    path: appRoutes.register,
+    element: <RegisterPage />
+  },
+  {
+    path: appRoutes.forgotPassword,
+    element: <ForgotPasswordPage />
+  },
+  {
+    path: appRoutes.resetPassword,
+    element: <ResetPasswordPage />
+  },
+  {
+    path: appRoutes.resetPasswordSuccess,
+    element: <ResetPasswordSuccessPage />
+  },
+  {
+    path: appRoutes.authCallback,
+    element: <OAuthCallbackPage />
   },
   {
     element: <ProtectedRoute />,

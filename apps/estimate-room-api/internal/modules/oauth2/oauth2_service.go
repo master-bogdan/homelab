@@ -29,7 +29,7 @@ type UserService interface {
 	FindByGithubID(githubID string) (*usersmodels.UserModel, error)
 	HasSoftDeletedEmail(email string) (bool, error)
 	HasSoftDeletedGithubID(githubID string) (bool, error)
-	Create(email, passwordHash string) (string, error)
+	Create(email, passwordHash, displayName string, organization, occupation *string) (string, error)
 	CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error)
 	UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error
 }
@@ -81,7 +81,7 @@ func NewOauth2Service(
 }
 
 func (s *oauth2Service) ValidateClient(dto *oauth2dto.AuthorizeQueryDTO) error {
-	s.logger.Info("ValidateClient")
+	s.logger.Info(oauth2Log("Validating OAuth client"))
 	client, err := s.clientRepo.FindByID(dto.ClientID)
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (s *oauth2Service) ValidateClient(dto *oauth2dto.AuthorizeQueryDTO) error {
 }
 
 func (s *oauth2Service) GetLoggedInUserID(sessionID string) (string, error) {
-	s.logger.Info("GetLoggedInUserID")
+	s.logger.Info(oauth2Log("Resolving logged-in user"))
 	session, err := s.authService.GetOidcSessionByID(sessionID)
 	if err != nil {
 		return "", errors.New("session not found")
@@ -119,7 +119,7 @@ func (s *oauth2Service) GetLoggedInUserID(sessionID string) (string, error) {
 }
 
 func (s *oauth2Service) CreateAuthCode(dto *oauth2dto.CreateOauthCodeDTO) (string, error) {
-	s.logger.Info("CreateAuthCode")
+	s.logger.Info(oauth2Log("Creating authorization code"))
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
 	if err != nil {
@@ -147,7 +147,7 @@ func (s *oauth2Service) CreateAuthCode(dto *oauth2dto.CreateOauthCodeDTO) (strin
 }
 
 func (s *oauth2Service) CreateOidcSession(dto *oauth2dto.CreateOidcSessionDTO) (string, error) {
-	s.logger.Info("CreateOidcSession")
+	s.logger.Info(oauth2Log("Creating OIDC session"))
 	oidcSession := &oauth2models.OidcSessionModel{
 		UserID:   dto.UserID,
 		ClientID: dto.ClientID,
@@ -163,7 +163,7 @@ func (s *oauth2Service) CreateOidcSession(dto *oauth2dto.CreateOidcSessionDTO) (
 }
 
 func (s *oauth2Service) AuthenticateUser(dto *oauth2dto.UserDTO) (string, error) {
-	s.logger.Info("AuthenticateUser")
+	s.logger.Info(oauth2Log("Authenticating user"))
 	user, err := s.userService.FindByEmail(dto.Email)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrUserNotFound) {
@@ -194,13 +194,13 @@ func (s *oauth2Service) AuthenticateUser(dto *oauth2dto.UserDTO) (string, error)
 }
 
 func (s *oauth2Service) RegisterUser(dto *oauth2dto.UserDTO) (string, error) {
-	s.logger.Info("RegisterUser")
+	s.logger.Info(oauth2Log("Registering user"))
 	passwordHash, err := utils.HashPassword(dto.Password)
 	if err != nil {
 		return "", err
 	}
 
-	userID, err := s.userService.Create(dto.Email, passwordHash)
+	userID, err := s.userService.Create(dto.Email, passwordHash, "", nil, nil)
 	if err != nil {
 		return "", err
 	}
@@ -258,7 +258,7 @@ func (s *oauth2Service) GetOrCreateUserFromGithub(profile oauth2utils.GithubProf
 }
 
 func (s *oauth2Service) GetAuthorizationTokens(ctx context.Context, dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error) {
-	s.logger.Info("GetAuthorizationTokens")
+	logger.FromContext(ctx, s.logger).Info(oauth2Log("Issuing authorization tokens"))
 	authCode, err := s.authCodeRepo.FindByCode(dto.Code)
 	if err != nil {
 		return oauth2dto.TokenResponseDTO{}, errors.New("invalid auth code")
@@ -301,7 +301,7 @@ func (s *oauth2Service) GetAuthorizationTokens(ctx context.Context, dto *oauth2d
 }
 
 func (s *oauth2Service) GetRefreshTokens(ctx context.Context, dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error) {
-	s.logger.Info("GetRefreshTokens")
+	logger.FromContext(ctx, s.logger).Info(oauth2Log("Refreshing tokens"))
 	refreshToken, err := s.refreshTokenRepo.FindByToken(ctx, dto.RefreshToken)
 	if err != nil || refreshToken.IsRevoked || refreshToken.ExpiresAt.Before(time.Now()) {
 		return oauth2dto.TokenResponseDTO{}, errors.New("invalid or expired refresh token")
@@ -320,7 +320,7 @@ func (s *oauth2Service) GetRefreshTokens(ctx context.Context, dto *oauth2dto.Get
 }
 
 func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID, oidcSessionID string, scopes []string) (oauth2dto.TokenResponseDTO, error) {
-	s.logger.Info("GenerateTokenPair")
+	logger.FromContext(ctx, s.logger).Info(oauth2Log("Generating token pair"))
 	accessTokenDuration := time.Minute * 15     // 15 minutes
 	refreshTokenDuration := time.Hour * 24 * 30 // 30 days
 	idTokenDuration := time.Minute * 15         // 15 minutes
@@ -394,4 +394,8 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 		RefreshToken: refreshToken,
 		IDToken:      idToken,
 	}, nil
+}
+
+func oauth2Log(message string) string {
+	return logger.Prefix("MODULE", "OAUTH2", message)
 }

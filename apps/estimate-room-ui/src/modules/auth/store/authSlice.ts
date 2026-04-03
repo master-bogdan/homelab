@@ -5,7 +5,7 @@ import type { AuthUser } from '@/shared/types';
 import type { AuthState } from '../types';
 
 const initialState: AuthState = {
-  status: 'unauthenticated',
+  status: 'unknown',
   user: null
 };
 
@@ -26,5 +26,4 @@ const authSlice = createSlice({
 });
 
 export const { clearSession, hydrateSession, setSession } = authSlice.actions;
-export const logout = clearSession;
 export const authReducer = authSlice.reducer;

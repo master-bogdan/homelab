@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -54,11 +55,23 @@ func (r *responseRecorder) Push(target string, opts *http.PushOptions) error {
 	return http.ErrNotSupported
 }
 
-// RequestLoggerMiddleware logs request metrics like duration, status, and size.
 func RequestLoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rec := &responseRecorder{ResponseWriter: w}
+		r = r.WithContext(WithRequestFields(r.Context(), RequestFields{
+			RequestID: GetRequestID(r.Context()),
+			Method:    r.Method,
+			Path:      r.URL.Path,
+		}))
+		reqLogger := FromRequest(r)
+
+		reqLogger.Info(Prefix("MW", "HTTP", "REQUEST", "Request started"),
+			"headers", requestHeaders(r),
+			"content_length", r.ContentLength,
+			"remote_ip", clientIP(r),
+			"user_agent", r.UserAgent(),
+		)
 
 		next.ServeHTTP(rec, r)
 
@@ -83,17 +96,63 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 		}
 		metrics.RecordHTTPRequest(r.Method, routePattern, status, duration)
 
-		L().Log(r.Context(), level, "request",
-			"method", r.Method,
-			"path", r.URL.Path,
+		endArgs := []any{
 			"route", routePattern,
 			"status", status,
 			"duration_ms", duration.Milliseconds(),
 			"bytes", rec.bytes,
 			"remote_ip", clientIP(r),
 			"user_agent", r.UserAgent(),
-		)
+		}
+		switch level {
+		case slog.LevelError:
+			reqLogger.Error(Prefix("MW", "HTTP", "REQUEST", "Request ended"), endArgs...)
+		case slog.LevelWarn:
+			reqLogger.Warn(Prefix("MW", "HTTP", "REQUEST", "Request ended"), endArgs...)
+		default:
+			reqLogger.Info(Prefix("MW", "HTTP", "REQUEST", "Request ended"), endArgs...)
+		}
 	})
+}
+
+func requestHeaders(r *http.Request) map[string]string {
+	if r == nil {
+		return map[string]string{}
+	}
+
+	allowedHeaders := []string{
+		"Accept",
+		"Content-Type",
+		"Origin",
+		"Referer",
+		RequestIDHeader,
+	}
+
+	headers := make(map[string]string, len(allowedHeaders))
+	for _, header := range allowedHeaders {
+		value := strings.TrimSpace(r.Header.Get(header))
+		if value == "" {
+			continue
+		}
+
+		headers[strings.ToLower(header)] = value
+	}
+
+	if len(headers) == 0 {
+		return map[string]string{}
+	}
+
+	normalizedHeaders := make(map[string]string, len(headers))
+	keys := make([]string, 0, len(headers))
+	for key := range headers {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		normalizedHeaders[key] = headers[key]
+	}
+
+	return normalizedHeaders
 }
 
 func clientIP(r *http.Request) string {

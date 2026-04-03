@@ -1,6 +1,6 @@
-import { Button, Stack, Typography } from '@mui/material';
+import { Stack, Typography } from '@mui/material';
 
-import { SectionCard } from '@/shared/ui';
+import { AppButton, SectionCard } from '@/shared/ui';
 
 import { useSettingsPage } from './hooks/useSettingsPage';
 
@@ -10,9 +10,9 @@ export const SettingsPage = () => {
   return (
     <SectionCard
       action={
-        <Button onClick={toggleTheme} variant="contained">
+        <AppButton onClick={toggleTheme} variant="contained">
           Toggle theme
-        </Button>
+        </AppButton>
       }
       description="Operational settings and environment-facing configuration can grow here."
       title="Settings"

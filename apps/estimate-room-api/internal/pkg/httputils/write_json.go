@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
+	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
 )
 
 type WriteResponseOptions struct {
@@ -43,6 +44,9 @@ func WriteResponse(w http.ResponseWriter, v any, opts ...WriteResponseOptions) {
 func WriteResponseError(w http.ResponseWriter, httpErr apperrors.HttpError, opts ...WriteResponseOptions) {
 	if httpErr.Errors == nil {
 		httpErr.Errors = []apperrors.ErrorItem{}
+	}
+	if requestID := w.Header().Get(logger.RequestIDHeader); requestID != "" {
+		httpErr.Instance = requestID
 	}
 
 	cfg := WriteResponseOptions{

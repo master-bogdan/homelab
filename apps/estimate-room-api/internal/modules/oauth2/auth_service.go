@@ -80,7 +80,7 @@ func (s *authService) CreateAccessToken(ctx context.Context, model *oauth2models
 func (s *authService) checkToken(ctx context.Context, token string) (string, error) {
 	storedToken, err := s.accessTokenRepo.FindByToken(ctx, token)
 	if err != nil {
-		s.logger.Error("invalid or expired access token")
+		s.logger.Error(oauth2AuthLog("Invalid or expired access token"))
 		return "", errors.New("invalid or expired access token")
 	}
 
@@ -137,4 +137,8 @@ func bearerToken(value string) string {
 	}
 
 	return strings.TrimSpace(token)
+}
+
+func oauth2AuthLog(message string) string {
+	return logger.Prefix("MODULE", "OAUTH2", "AUTH", message)
 }
