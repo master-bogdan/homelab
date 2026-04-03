@@ -1,0 +1,101 @@
+package oauth2repositories
+
+import (
+	"context"
+	"errors"
+
+	"database/sql"
+	"github.com/google/uuid"
+	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
+	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
+	"github.com/uptrace/bun"
+)
+
+type Oauth2AuthCodeRepository interface {
+	Create(model *oauth2models.Oauth2AuthCodeModel) error
+	FindByCode(code string) (*oauth2models.Oauth2AuthCodeModel, error)
+	MarkUsed(authCodeID string) error
+}
+
+type oauth2AuthCodeRepository struct {
+	db *bun.DB
+}
+
+func NewOauth2AuthCodeRepository(db *bun.DB) *oauth2AuthCodeRepository {
+	return &oauth2AuthCodeRepository{db: db}
+}
+
+func (r *oauth2AuthCodeRepository) Create(model *oauth2models.Oauth2AuthCodeModel) error {
+	const query = `
+		INSERT INTO oauth2_auth_codes (
+			auth_code_id, client_id, user_id, oidc_session_id, code,
+			redirect_uri, scopes, code_challenge, code_challenge_method, is_used, expires_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`
+
+	if model.AuthCodeID == "" {
+		model.AuthCodeID = uuid.NewString()
+	}
+
+	_, err := r.db.ExecContext(
+		context.Background(),
+		query,
+		model.AuthCodeID,
+		model.ClientID,
+		model.UserID,
+		model.OidcSessionID,
+		model.Code,
+		model.RedirectURI,
+		model.Scopes,
+		model.CodeChallenge,
+		model.CodeChallengeMethod,
+		model.IsUsed,
+		model.ExpiresAt,
+	)
+	return err
+}
+
+func (r *oauth2AuthCodeRepository) FindByCode(code string) (*oauth2models.Oauth2AuthCodeModel, error) {
+	const query = `
+		SELECT auth_code_id, client_id, user_id, oidc_session_id, code,
+			redirect_uri, scopes, code_challenge, code_challenge_method, is_used, expires_at, created_at
+		FROM oauth2_auth_codes
+		WHERE code = $1
+	`
+
+	var model oauth2models.Oauth2AuthCodeModel
+	row := r.db.QueryRowContext(context.Background(), query, code)
+	err := row.Scan(
+		&model.AuthCodeID,
+		&model.ClientID,
+		&model.UserID,
+		&model.OidcSessionID,
+		&model.Code,
+		&model.RedirectURI,
+		&model.Scopes,
+		&model.CodeChallenge,
+		&model.CodeChallengeMethod,
+		&model.IsUsed,
+		&model.ExpiresAt,
+		&model.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, apperrors.ErrAuthCodeNotFound
+		}
+		return nil, err
+	}
+
+	return &model, nil
+}
+
+func (r *oauth2AuthCodeRepository) MarkUsed(authCodeID string) error {
+	const query = `
+		UPDATE oauth2_auth_codes
+		SET is_used = true
+		WHERE auth_code_id = $1
+	`
+
+	_, err := r.db.ExecContext(context.Background(), query, authCodeID)
+	return err
+}

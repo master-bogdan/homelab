@@ -13,6 +13,7 @@ Lightweight Kubernetes manifests and local app projects for a home cluster. Uses
 - Container registry access (default: `REGISTRY=docker.io/masterbogdan0`)
 
 > Using Minikube? Start your cluster (example 3-node profile), then enable the storage addons once all nodes are ready (enabling them inline prevents secondary nodes from booting and kube-proxy from starting):
+>
 > ```bash
 > minikube start --profile homelab-staging --nodes=3 --driver=docker --cpus=4 --memory=8192
 > minikube addons enable storage-provisioner --profile homelab-staging
@@ -21,6 +22,7 @@ Lightweight Kubernetes manifests and local app projects for a home cluster. Uses
 > ```
 >
 > If the profile gets wedged (e.g., kube-proxy or nodes never become Ready), delete and recreate it:
+>
 > ```bash
 > minikube delete --profile homelab-staging
 > minikube start --profile homelab-staging --nodes=3 --driver=docker --cpus=4 --memory=8192
@@ -80,6 +82,7 @@ Use `ENV=dev`, `ENV=staging`, or `ENV=prod` and make sure `kubectl` points at th
 - `make validate-namespaces ENV=<env>`
 
 **Networking (Traefik + Gateway):**
+
 - `make deploy-networking ENV=<env>`
 - `make delete-networking ENV=<env>`
 - `make validate-networking ENV=<env>`
@@ -90,16 +93,23 @@ Use `ENV=dev`, `ENV=staging`, or `ENV=prod` and make sure `kubectl` points at th
 - `make validate-system ENV=<env>`
 
 **Platform (Authentik, n8n, SeaweedFS):**
+
 - `make deploy-platform ENV=<env>`
 - `make delete-platform ENV=<env>`
 - `make validate-platform ENV=<env>`
 
+<<<<<<< phase-4
 **Observability (Prometheus, Grafana, Headlamp, OpenSearch, Fluent Bit):**
+=======
+**Observability (Prometheus, Grafana, OpenSearch, Fluent Bit):**
+
+>>>>>>> main
 - `make deploy-observability ENV=<env>`
 - `make delete-observability ENV=<env>`
 - `make validate-observability ENV=<env>`
 
 **Databases (PostgreSQL, Redis — dev only):**
+
 - `make deploy-databases ENV=<env>`
 - `make delete-databases ENV=<env>`
 - `make validate-databases ENV=<env>`
@@ -146,7 +156,12 @@ Use `ENV=dev`, `ENV=staging`, or `ENV=prod` and make sure `kubectl` points at th
 
 ### Access methods (no `/etc/hosts` edits needed)
 
+<<<<<<< phase-4
 **Option 1: Wildcard DNS (sslip.io)**
+=======
+**Option 1: Wildcard DNS (nip.io / sslip.io)**
+
+>>>>>>> main
 ```bash
 # Get your Minikube IP
 IP=$(minikube ip --profile homelab-staging)
@@ -160,6 +175,7 @@ IP_DASH=${IP//./-}
 ```
 
 **Option 2: minikube tunnel (LoadBalancer services)**
+
 ```bash
 # In a separate terminal, start tunnel
 minikube tunnel --profile homelab-staging
@@ -169,6 +185,7 @@ minikube tunnel --profile homelab-staging
 ```
 
 **Option 3: minikube service (direct service URL)**
+
 ```bash
 # Open service directly in browser (bypasses ingress)
 minikube service --url -n staging-observability grafana --profile homelab-staging
@@ -177,6 +194,7 @@ minikube service --url -n staging-platform n8n --profile homelab-staging
 ```
 
 **Option 4: kubectl port-forward (fallback)**
+
 ```bash
 # Forward local port to service
 kubectl -n staging-observability port-forward svc/grafana 3000:3000
@@ -250,4 +268,12 @@ The Makefile automatically prefers `overlays/$(ENV)` when present; falls back to
 
 ## License
 
-MIT
+This repository is source-available.
+
+Unless otherwise noted, the root `LICENSE` file applies to all code, Kubernetes manifests, scripts, configuration, and documentation in this repository.
+
+You may use, copy, and modify this repository for personal, educational, research, evaluation, and other non-commercial purposes.
+
+Any commercial use requires a separate paid commercial license from the author. Commercial use includes, but is not limited to, internal company use, client work, paid services, SaaS, resale, and distribution of modified versions for commercial purposes.
+
+See `LICENSE` and `COMMERCIAL.md` for details.

@@ -1,0 +1,803 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "WebSocket-based room estimation service.",
+        "title": "Estimate Room API",
+        "contact": {},
+        "version": "1.0.0"
+    },
+    "basePath": "/api/v1",
+    "paths": {
+        "/api/v1/gamification/me": {
+            "get": {
+                "description": "Returns cumulative stats and unlocked achievements for the current authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "gamification"
+                ],
+                "summary": "Current user gamification",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/gamificationdto.MeResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/health/healthz": {
+            "get": {
+                "description": "Reports service liveness status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Liveness check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/health.LivenessStatus"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/health/readyz": {
+            "get": {
+                "description": "Checks database and Redis connectivity.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Readiness check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/health.ReadinessStatus"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/history/me/sessions": {
+            "get": {
+                "description": "Returns paginated room history for the current authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "history"
+                ],
+                "summary": "Current user sessions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ALL",
+                            "ACTIVE",
+                            "FINISHED",
+                            "EXPIRED"
+                        ],
+                        "type": "string",
+                        "description": "Status filter",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ALL",
+                            "ADMIN",
+                            "PARTICIPANT"
+                        ],
+                        "type": "string",
+                        "description": "Role filter",
+                        "name": "role",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/historydto.SessionListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/history/rooms/{id}/summary": {
+            "get": {
+                "description": "Returns aggregated room history, participants, tasks, rounds, and revealed votes.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "history"
+                ],
+                "summary": "Room summary",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Room ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/historydto.RoomSummaryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/history/teams/{id}/sessions": {
+            "get": {
+                "description": "Returns paginated room history for a team. Team owner access is required.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "history"
+                ],
+                "summary": "Team sessions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Team ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "ALL",
+                            "ACTIVE",
+                            "FINISHED",
+                            "EXPIRED"
+                        ],
+                        "type": "string",
+                        "description": "Status filter",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/historydto.SessionListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/oauth2/github/callback": {
+            "get": {
+                "description": "Handles GitHub OAuth callback and issues internal auth code.",
+                "tags": [
+                    "oauth2"
+                ],
+                "summary": "GitHub OAuth callback",
+                "responses": {}
+            }
+        },
+        "/api/v1/oauth2/github/login": {
+            "get": {
+                "description": "Redirects to GitHub OAuth authorize URL.",
+                "tags": [
+                    "oauth2"
+                ],
+                "summary": "Login with GitHub",
+                "responses": {}
+            }
+        },
+        "/api/v1/users/me": {
+            "get": {
+                "description": "Returns the current authenticated user profile.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Current user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/usersdto.UserResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apperrors.HttpError"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "apperrors.ErrorItem": {
+            "type": "object",
+            "properties": {
+                "detail": {
+                    "type": "string"
+                },
+                "pointer": {
+                    "type": "string"
+                }
+            }
+        },
+        "apperrors.HttpError": {
+            "type": "object",
+            "properties": {
+                "detail": {
+                    "type": "string"
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apperrors.ErrorItem"
+                    }
+                },
+                "instance": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "gamificationdto.AchievementResponse": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "unlockedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "gamificationdto.MeResponse": {
+            "type": "object",
+            "properties": {
+                "achievements": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/gamificationdto.AchievementResponse"
+                    }
+                },
+                "stats": {
+                    "$ref": "#/definitions/gamificationdto.StatsResponse"
+                }
+            }
+        },
+        "gamificationdto.StatsResponse": {
+            "type": "object",
+            "properties": {
+                "level": {
+                    "type": "integer"
+                },
+                "nextLevelXp": {
+                    "type": "integer"
+                },
+                "sessionsAdmined": {
+                    "type": "integer"
+                },
+                "sessionsParticipated": {
+                    "type": "integer"
+                },
+                "tasksEstimated": {
+                    "type": "integer"
+                },
+                "xp": {
+                    "type": "integer"
+                }
+            }
+        },
+        "health.LivenessStatus": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                },
+                "uptime": {
+                    "type": "string"
+                }
+            }
+        },
+        "health.ReadinessStatus": {
+            "type": "object",
+            "properties": {
+                "db": {
+                    "type": "string"
+                },
+                "redis": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "uptime": {
+                    "type": "string"
+                }
+            }
+        },
+        "historydto.RoomSummaryOverview": {
+            "type": "object",
+            "properties": {
+                "adminUser": {
+                    "$ref": "#/definitions/historydto.RoomSummaryUserRef"
+                },
+                "approxDurationSeconds": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "estimatedTasksCount": {
+                    "type": "integer"
+                },
+                "finishedAt": {
+                    "type": "string"
+                },
+                "lastActivityAt": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "participantsCount": {
+                    "type": "integer"
+                },
+                "roomId": {
+                    "type": "string"
+                },
+                "roundCount": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tasksCount": {
+                    "type": "integer"
+                },
+                "teamId": {
+                    "type": "string"
+                }
+            }
+        },
+        "historydto.RoomSummaryParticipant": {
+            "type": "object",
+            "properties": {
+                "avatarUrl": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "estimatedTasksVotedCount": {
+                    "type": "integer"
+                },
+                "guestName": {
+                    "type": "string"
+                },
+                "joinedAt": {
+                    "type": "string"
+                },
+                "leftAt": {
+                    "type": "string"
+                },
+                "participantId": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                },
+                "votesCastCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "historydto.RoomSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "overview": {
+                    "$ref": "#/definitions/historydto.RoomSummaryOverview"
+                },
+                "participants": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/historydto.RoomSummaryParticipant"
+                    }
+                },
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/historydto.RoomSummaryTask"
+                    }
+                }
+            }
+        },
+        "historydto.RoomSummaryTask": {
+            "type": "object",
+            "properties": {
+                "approxDurationSeconds": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "externalKey": {
+                    "type": "string"
+                },
+                "finalEstimateValue": {
+                    "type": "string"
+                },
+                "isActive": {
+                    "type": "boolean"
+                },
+                "roundCount": {
+                    "type": "integer"
+                },
+                "rounds": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/historydto.RoomSummaryTaskRound"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "taskId": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "historydto.RoomSummaryTaskRound": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "eligibleParticipantIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "roundNumber": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "votes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/historydto.RoomSummaryVote"
+                    }
+                }
+            }
+        },
+        "historydto.RoomSummaryUserRef": {
+            "type": "object",
+            "properties": {
+                "avatarUrl": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "historydto.RoomSummaryVote": {
+            "type": "object",
+            "properties": {
+                "avatarUrl": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "guestName": {
+                    "type": "string"
+                },
+                "participantId": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "historydto.SessionListItem": {
+            "type": "object",
+            "properties": {
+                "approxDurationSeconds": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "estimatedTasksCount": {
+                    "type": "integer"
+                },
+                "finishedAt": {
+                    "type": "string"
+                },
+                "lastActivityAt": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "participantsCount": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "roomId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tasksCount": {
+                    "type": "integer"
+                },
+                "teamId": {
+                    "type": "string"
+                }
+            }
+        },
+        "historydto.SessionListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/historydto.SessionListItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "usersdto.UserResponse": {
+            "type": "object",
+            "properties": {
+                "avatarUrl": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "githubId": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lastLoginAt": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
