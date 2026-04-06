@@ -78,7 +78,7 @@ func (c *authController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, oauth2.SessionCookie(sessionID, r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.Oauth2SessionCookie(sessionID, r, c.trustProxyHeaders))
 	httputils.WriteResponse(w, formatSessionResponse(user))
 }
 
@@ -122,7 +122,7 @@ func (c *authController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, oauth2.SessionCookie(sessionID, r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.Oauth2SessionCookie(sessionID, r, c.trustProxyHeaders))
 	httputils.WriteResponse(w, formatSessionResponse(user), httputils.WriteResponseOptions{Status: http.StatusCreated})
 }
 
@@ -230,9 +230,9 @@ func (c *authController) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, oauth2.ExpiredSessionCookie(r, c.trustProxyHeaders))
-	http.SetCookie(w, oauth2.ExpiredAccessTokenCookie(r, c.trustProxyHeaders))
-	http.SetCookie(w, oauth2.ExpiredRefreshTokenCookie(r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.ExpiredOauth2SessionCookie(r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.ExpiredOauth2AccessTokenCookie(r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.ExpiredOauth2RefreshTokenCookie(r, c.trustProxyHeaders))
 
 	httputils.WriteResponse(w, authdto.ResetPasswordResponse{Reset: true})
 }
@@ -246,15 +246,15 @@ func (c *authController) ResetPassword(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} apperrors.HttpError
 // @Router /api/v1/auth/logout [post]
 func (c *authController) Logout(w http.ResponseWriter, r *http.Request) {
-	sessionID := oauth2.ReadSessionID(r)
+	sessionID := oauth2.ReadOauth2SessionID(r)
 	if err := c.service.Logout(r.Context(), sessionID); err != nil {
 		c.writeError(w, r, apperrors.ErrInternal, "", err)
 		return
 	}
 
-	http.SetCookie(w, oauth2.ExpiredSessionCookie(r, c.trustProxyHeaders))
-	http.SetCookie(w, oauth2.ExpiredAccessTokenCookie(r, c.trustProxyHeaders))
-	http.SetCookie(w, oauth2.ExpiredRefreshTokenCookie(r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.ExpiredOauth2SessionCookie(r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.ExpiredOauth2AccessTokenCookie(r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.ExpiredOauth2RefreshTokenCookie(r, c.trustProxyHeaders))
 
 	httputils.WriteResponse(w, authdto.LogoutResponse{LoggedOut: true})
 }
@@ -344,7 +344,7 @@ func (c *authController) GithubCallback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	http.SetCookie(w, oauth2.SessionCookie(sessionID, r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.Oauth2SessionCookie(sessionID, r, c.trustProxyHeaders))
 	http.Redirect(w, r, continueURL, http.StatusFound)
 }
 

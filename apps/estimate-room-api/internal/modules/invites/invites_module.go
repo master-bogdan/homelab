@@ -17,7 +17,7 @@ type InvitesModule struct {
 type InvitesModuleDeps struct {
 	Router      chi.Router
 	DB          *bun.DB
-	AuthService oauth2.AuthService
+	AuthService oauth2.Oauth2SessionAuthService
 	TokenKey    string
 }
 

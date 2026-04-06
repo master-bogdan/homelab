@@ -33,7 +33,7 @@ type roomsController struct {
 	service       RoomsService
 	taskService   RoomsTaskService
 	inviteService invites.InvitesService
-	authService   oauth2.AuthService
+	authService   oauth2.Oauth2SessionAuthService
 	logger        *slog.Logger
 }
 
@@ -41,7 +41,7 @@ func NewRoomsController(
 	service RoomsService,
 	taskService RoomsTaskService,
 	inviteService invites.InvitesService,
-	authService oauth2.AuthService,
+	authService oauth2.Oauth2SessionAuthService,
 ) RoomsController {
 	return &roomsController{
 		service:       service,

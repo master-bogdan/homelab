@@ -28,7 +28,7 @@ func setupTestWithTrustProxyHeaders(t *testing.T, trustProxyHeaders bool) (*chi.
 	testutils.ResetOauthTables(t, db)
 
 	router := chi.NewRouter()
-	authService := oauth2.NewAuthServiceFromDB(testutils.TestTokenKey, db)
+	authService := oauth2.NewOauth2SessionAuthServiceFromDB(testutils.TestTokenKey, db)
 
 	router.Route("/api/v1", func(r chi.Router) {
 		usersModule := users.NewUsersModule(users.UsersModuleDeps{
@@ -38,14 +38,14 @@ func setupTestWithTrustProxyHeaders(t *testing.T, trustProxyHeaders bool) (*chi.
 		})
 
 		oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-			Router:            r,
-			DB:                db,
-			TokenKey:          testutils.TestTokenKey,
-			Issuer:            testutils.TestIssuer,
-			UserService:       usersModule.Service,
-			AuthService:       authService,
-			FrontendBaseURL:   "http://localhost:5173",
-			TrustProxyHeaders: trustProxyHeaders,
+			Router:             r,
+			DB:                 db,
+			TokenKey:           testutils.TestTokenKey,
+			Issuer:             testutils.TestIssuer,
+			UserService:        usersModule.Service,
+			SessionAuthService: authService,
+			FrontendBaseURL:    "http://localhost:5173",
+			TrustProxyHeaders:  trustProxyHeaders,
 		})
 	})
 
@@ -136,7 +136,7 @@ func TestAuthorize_WithSessionForDifferentNonce_RotatesSession_Integration(t *te
 		"&nonce=rotated-nonce"+
 		"&code_challenge=abc123"+
 		"&code_challenge_method=S256", nil)
-	req.AddCookie(&http.Cookie{Name: oauth2.SessionCookieName, Value: sessionID})
+	req.AddCookie(&http.Cookie{Name: oauth2.Oauth2SessionCookieName, Value: sessionID})
 
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -174,7 +174,7 @@ func TestToken_AuthorizationCodeFlow_ReturnsTokens_Integration(t *testing.T) {
 		"&nonce=nonce123"+
 		"&code_challenge="+url.QueryEscape(codeChallenge)+
 		"&code_challenge_method=S256", nil)
-	reqLogin.AddCookie(&http.Cookie{Name: oauth2.SessionCookieName, Value: sessionID})
+	reqLogin.AddCookie(&http.Cookie{Name: oauth2.Oauth2SessionCookieName, Value: sessionID})
 
 	rrLogin := httptest.NewRecorder()
 	router.ServeHTTP(rrLogin, reqLogin)
@@ -228,9 +228,9 @@ func TestToken_AuthorizationCodeFlow_ReturnsTokens_Integration(t *testing.T) {
 	var refreshCookie *http.Cookie
 	for _, cookie := range rrToken.Result().Cookies() {
 		switch cookie.Name {
-		case oauth2.AccessTokenCookieName:
+		case oauth2.Oauth2AccessTokenCookieName:
 			accessCookie = cookie
-		case oauth2.RefreshTokenCookieName:
+		case oauth2.Oauth2RefreshTokenCookieName:
 			refreshCookie = cookie
 		}
 	}

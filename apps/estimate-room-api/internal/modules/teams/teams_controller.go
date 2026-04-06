@@ -26,14 +26,14 @@ type TeamsController interface {
 type teamsController struct {
 	service       TeamsService
 	inviteService TeamsInviteService
-	authService   oauth2.AuthService
+	authService   oauth2.Oauth2SessionAuthService
 	logger        *slog.Logger
 }
 
 func NewTeamsController(
 	service TeamsService,
 	inviteService TeamsInviteService,
-	authService oauth2.AuthService,
+	authService oauth2.Oauth2SessionAuthService,
 ) TeamsController {
 	return &teamsController{
 		service:       service,

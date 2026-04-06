@@ -49,20 +49,20 @@ func setupAuthTestWithOptions(t *testing.T, emailClient emailinfra.Client, trust
 	testutils.ResetOauthTables(t, db)
 
 	router := chi.NewRouter()
-	sessionService := oauth2.NewAuthServiceFromDB(testutils.TestTokenKey, db)
+	sessionService := oauth2.NewOauth2SessionAuthServiceFromDB(testutils.TestTokenKey, db)
 
 	router.Route("/api/v1", func(r chi.Router) {
 		userService := users.NewUsersService(usersrepositories.NewUserRepository(db))
 
 		oauth2Module := oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-			Router:            r,
-			DB:                db,
-			TokenKey:          testutils.TestTokenKey,
-			Issuer:            testutils.TestIssuer,
-			UserService:       userService,
-			AuthService:       sessionService,
-			FrontendBaseURL:   "http://localhost:5173",
-			TrustProxyHeaders: trustProxyHeaders,
+			Router:             r,
+			DB:                 db,
+			TokenKey:           testutils.TestTokenKey,
+			Issuer:             testutils.TestIssuer,
+			UserService:        userService,
+			SessionAuthService: sessionService,
+			FrontendBaseURL:    "http://localhost:5173",
+			TrustProxyHeaders:  trustProxyHeaders,
 		})
 
 		auth.NewAuthModule(auth.AuthModuleDeps{
@@ -70,7 +70,7 @@ func setupAuthTestWithOptions(t *testing.T, emailClient emailinfra.Client, trust
 			DB:                db,
 			UserService:       userService,
 			Oauth2Service:     oauth2Module.Service,
-			SessionService:    oauth2Module.AuthService,
+			SessionService:    oauth2Module.SessionAuthService,
 			FrontendBaseURL:   "http://localhost:5173",
 			TrustProxyHeaders: trustProxyHeaders,
 			EmailClient:       emailClient,
@@ -202,7 +202,7 @@ func TestLogin_ReturnsSessionCookieAndAuthenticatedPayload(t *testing.T) {
 
 	var sessionCookie *http.Cookie
 	for _, cookie := range rr.Result().Cookies() {
-		if cookie.Name == oauth2.SessionCookieName {
+		if cookie.Name == oauth2.Oauth2SessionCookieName {
 			sessionCookie = cookie
 			break
 		}
@@ -449,7 +449,7 @@ func TestLogin_SetsSecureSessionCookieWhenTrustedProxyHeadersIndicateHTTPS(t *te
 	}
 
 	for _, cookie := range rr.Result().Cookies() {
-		if cookie.Name == oauth2.SessionCookieName {
+		if cookie.Name == oauth2.Oauth2SessionCookieName {
 			if !cookie.Secure {
 				t.Fatalf("expected session cookie to be marked Secure")
 			}
@@ -561,7 +561,7 @@ func TestResetPassword_RevokesExistingSession(t *testing.T) {
 	}
 
 	sessionReq := httptest.NewRequest(http.MethodGet, "/api/v1/auth/session", nil)
-	sessionReq.AddCookie(&http.Cookie{Name: oauth2.SessionCookieName, Value: sessionID})
+	sessionReq.AddCookie(&http.Cookie{Name: oauth2.Oauth2SessionCookieName, Value: sessionID})
 
 	sessionRR := httptest.NewRecorder()
 	router.ServeHTTP(sessionRR, sessionReq)

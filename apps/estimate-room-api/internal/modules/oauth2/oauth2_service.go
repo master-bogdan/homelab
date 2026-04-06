@@ -41,16 +41,16 @@ type UserService interface {
 }
 
 type Oauth2Service interface {
-	ValidateClient(dto *oauth2dto.AuthorizeQueryDTO) error
-	CreateAuthCode(dto *oauth2dto.CreateOauthCodeDTO) (string, error)
-	CreateOidcSession(dto *oauth2dto.CreateOidcSessionDTO) (string, error)
+	ValidateClient(dto *oauth2dto.Oauth2AuthorizeQueryDTO) error
+	CreateAuthCode(dto *oauth2dto.Oauth2CreateAuthCodeDTO) (string, error)
+	CreateOidcSession(dto *oauth2dto.Oauth2CreateOidcSessionDTO) (string, error)
 	GetLoggedInUserID(sessionID string) (string, error)
-	AuthenticateUser(dto *oauth2dto.UserDTO) (string, error)
-	RegisterUser(dto *oauth2dto.UserDTO) (string, error)
+	AuthenticateUser(dto *oauth2dto.Oauth2UserDTO) (string, error)
+	RegisterUser(dto *oauth2dto.Oauth2UserDTO) (string, error)
 	GetOrCreateUserFromGithub(profile oauth2utils.GithubProfile) (string, error)
-	GetAuthorizationTokens(ctx context.Context, dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error)
-	GetRefreshTokens(ctx context.Context, dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error)
-	GenerateTokenPair(ctx context.Context, userID, clientID, oidcSessionID string, scopes []string) (oauth2dto.TokenResponseDTO, error)
+	GetAuthorizationTokens(ctx context.Context, dto *oauth2dto.Oauth2GetTokenDTO) (oauth2dto.Oauth2TokenResponseDTO, error)
+	GetRefreshTokens(ctx context.Context, dto *oauth2dto.Oauth2GetTokenDTO) (oauth2dto.Oauth2TokenResponseDTO, error)
+	GenerateTokenPair(ctx context.Context, userID, clientID, oidcSessionID string, scopes []string) (oauth2dto.Oauth2TokenResponseDTO, error)
 }
 
 type oauth2Service struct {
@@ -58,7 +58,7 @@ type oauth2Service struct {
 	authCodeRepo     oauth2repositories.Oauth2AuthCodeRepository
 	userService      UserService
 	refreshTokenRepo oauth2repositories.Oauth2RefreshTokenRepository
-	authService      AuthService
+	authService      Oauth2SessionAuthService
 	tokenKey         []byte
 	issuer           string
 	logger           *slog.Logger
@@ -69,7 +69,7 @@ func NewOauth2Service(
 	authCodeRepo oauth2repositories.Oauth2AuthCodeRepository,
 	refreshTokenRepo oauth2repositories.Oauth2RefreshTokenRepository,
 	userService UserService,
-	authService AuthService,
+	authService Oauth2SessionAuthService,
 	tokenKey []byte,
 	issuer string,
 ) Oauth2Service {
@@ -86,7 +86,7 @@ func NewOauth2Service(
 	}
 }
 
-func (s *oauth2Service) ValidateClient(dto *oauth2dto.AuthorizeQueryDTO) error {
+func (s *oauth2Service) ValidateClient(dto *oauth2dto.Oauth2AuthorizeQueryDTO) error {
 	s.logger.Info(oauth2Log("Validating OAuth client"))
 	client, err := s.clientRepo.FindByID(dto.ClientID)
 	if err != nil {
@@ -124,7 +124,7 @@ func (s *oauth2Service) GetLoggedInUserID(sessionID string) (string, error) {
 	return session.UserID, nil
 }
 
-func (s *oauth2Service) CreateAuthCode(dto *oauth2dto.CreateOauthCodeDTO) (string, error) {
+func (s *oauth2Service) CreateAuthCode(dto *oauth2dto.Oauth2CreateAuthCodeDTO) (string, error) {
 	s.logger.Info(oauth2Log("Creating authorization code"))
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
@@ -152,7 +152,7 @@ func (s *oauth2Service) CreateAuthCode(dto *oauth2dto.CreateOauthCodeDTO) (strin
 	return code, nil
 }
 
-func (s *oauth2Service) CreateOidcSession(dto *oauth2dto.CreateOidcSessionDTO) (string, error) {
+func (s *oauth2Service) CreateOidcSession(dto *oauth2dto.Oauth2CreateOidcSessionDTO) (string, error) {
 	s.logger.Info(oauth2Log("Creating OIDC session"))
 	oidcSession := &oauth2models.OidcSessionModel{
 		UserID:   dto.UserID,
@@ -168,7 +168,7 @@ func (s *oauth2Service) CreateOidcSession(dto *oauth2dto.CreateOidcSessionDTO) (
 	return oidcSessionID, nil
 }
 
-func (s *oauth2Service) AuthenticateUser(dto *oauth2dto.UserDTO) (string, error) {
+func (s *oauth2Service) AuthenticateUser(dto *oauth2dto.Oauth2UserDTO) (string, error) {
 	s.logger.Info(oauth2Log("Authenticating user"))
 	user, err := s.userService.FindByEmail(dto.Email)
 	if err != nil {
@@ -199,7 +199,7 @@ func (s *oauth2Service) AuthenticateUser(dto *oauth2dto.UserDTO) (string, error)
 	return user.UserID, nil
 }
 
-func (s *oauth2Service) RegisterUser(dto *oauth2dto.UserDTO) (string, error) {
+func (s *oauth2Service) RegisterUser(dto *oauth2dto.Oauth2UserDTO) (string, error) {
 	s.logger.Info(oauth2Log("Registering user"))
 	passwordHash, err := utils.HashPassword(dto.Password)
 	if err != nil {
@@ -263,69 +263,69 @@ func (s *oauth2Service) GetOrCreateUserFromGithub(profile oauth2utils.GithubProf
 	return s.userService.CreateWithGithub(profile.Email, profile.ID, profile.DisplayName, profile.AvatarURL)
 }
 
-func (s *oauth2Service) GetAuthorizationTokens(ctx context.Context, dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error) {
+func (s *oauth2Service) GetAuthorizationTokens(ctx context.Context, dto *oauth2dto.Oauth2GetTokenDTO) (oauth2dto.Oauth2TokenResponseDTO, error) {
 	logger.FromContext(ctx, s.logger).Info(oauth2Log("Issuing authorization tokens"))
 	authCode, err := s.authCodeRepo.FindByCode(dto.Code)
 	if err != nil {
-		return oauth2dto.TokenResponseDTO{}, errors.New("invalid auth code")
+		return oauth2dto.Oauth2TokenResponseDTO{}, errors.New("invalid auth code")
 	}
 
 	if authCode.ClientID != dto.ClientID {
-		return oauth2dto.TokenResponseDTO{}, errors.New("invalid client")
+		return oauth2dto.Oauth2TokenResponseDTO{}, errors.New("invalid client")
 	}
 
 	if authCode.RedirectURI != dto.RedirectURI {
-		return oauth2dto.TokenResponseDTO{}, errors.New("invalid redirect_uri")
+		return oauth2dto.Oauth2TokenResponseDTO{}, errors.New("invalid redirect_uri")
 	}
 
 	if authCode.IsUsed {
-		return oauth2dto.TokenResponseDTO{}, errors.New("invalid or used auth code")
+		return oauth2dto.Oauth2TokenResponseDTO{}, errors.New("invalid or used auth code")
 	}
 
 	if time.Now().After(authCode.ExpiresAt) {
-		return oauth2dto.TokenResponseDTO{}, errors.New("auth code expired")
+		return oauth2dto.Oauth2TokenResponseDTO{}, errors.New("auth code expired")
 	}
 
 	if authCode.CodeChallengeMethod != "S256" {
-		return oauth2dto.TokenResponseDTO{}, errors.New("unsupported code challenge method")
+		return oauth2dto.Oauth2TokenResponseDTO{}, errors.New("unsupported code challenge method")
 	}
 
 	hashed := sha256.Sum256([]byte(dto.CodeVerifier))
 	encodedVerifier := base64.RawURLEncoding.EncodeToString(hashed[:])
 
 	if encodedVerifier != authCode.CodeChallenge {
-		return oauth2dto.TokenResponseDTO{}, errors.New("code_verifier does not match code_challenge")
+		return oauth2dto.Oauth2TokenResponseDTO{}, errors.New("code_verifier does not match code_challenge")
 	}
 
 	authCode.IsUsed = true
 	err = s.authCodeRepo.MarkUsed(authCode.AuthCodeID)
 	if err != nil {
-		return oauth2dto.TokenResponseDTO{}, err
+		return oauth2dto.Oauth2TokenResponseDTO{}, err
 	}
 
 	return s.GenerateTokenPair(ctx, authCode.UserID, authCode.ClientID, authCode.OidcSessionID, authCode.Scopes)
 }
 
-func (s *oauth2Service) GetRefreshTokens(ctx context.Context, dto *oauth2dto.GetTokenDTO) (oauth2dto.TokenResponseDTO, error) {
+func (s *oauth2Service) GetRefreshTokens(ctx context.Context, dto *oauth2dto.Oauth2GetTokenDTO) (oauth2dto.Oauth2TokenResponseDTO, error) {
 	logger.FromContext(ctx, s.logger).Info(oauth2Log("Refreshing tokens"))
 	refreshToken, err := s.refreshTokenRepo.FindByToken(ctx, dto.RefreshToken)
 	if err != nil || refreshToken.IsRevoked || refreshToken.ExpiresAt.Before(time.Now()) {
-		return oauth2dto.TokenResponseDTO{}, errors.New("invalid or expired refresh token")
+		return oauth2dto.Oauth2TokenResponseDTO{}, errors.New("invalid or expired refresh token")
 	}
 
 	if refreshToken.ClientID != dto.ClientID {
-		return oauth2dto.TokenResponseDTO{}, errors.New("invalid client")
+		return oauth2dto.Oauth2TokenResponseDTO{}, errors.New("invalid client")
 	}
 
 	err = s.refreshTokenRepo.Revoke(ctx, refreshToken.RefreshTokenID)
 	if err != nil {
-		return oauth2dto.TokenResponseDTO{}, err
+		return oauth2dto.Oauth2TokenResponseDTO{}, err
 	}
 
 	return s.GenerateTokenPair(ctx, refreshToken.UserID, refreshToken.ClientID, refreshToken.OidcSessionID, refreshToken.Scopes)
 }
 
-func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID, oidcSessionID string, scopes []string) (oauth2dto.TokenResponseDTO, error) {
+func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID, oidcSessionID string, scopes []string) (oauth2dto.Oauth2TokenResponseDTO, error) {
 	logger.FromContext(ctx, s.logger).Info(oauth2Log("Generating token pair"))
 
 	refreshTokenPayload := oauth2models.Oauth2RefreshTokenModel{
@@ -338,14 +338,14 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 	}
 	refreshToken, err := utils.GenerateToken(s.tokenKey, refreshTokenPayload)
 	if err != nil {
-		return oauth2dto.TokenResponseDTO{}, err
+		return oauth2dto.Oauth2TokenResponseDTO{}, err
 	}
 
 	refreshTokenPayload.Token = refreshToken
 
 	refreshTokenID, err := s.refreshTokenRepo.Create(ctx, &refreshTokenPayload)
 	if err != nil {
-		return oauth2dto.TokenResponseDTO{}, err
+		return oauth2dto.Oauth2TokenResponseDTO{}, err
 	}
 
 	accessTokenPayload := oauth2models.Oauth2AccessTokenModel{
@@ -360,23 +360,23 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 	}
 	accessToken, err := utils.GenerateToken(s.tokenKey, accessTokenPayload)
 	if err != nil {
-		return oauth2dto.TokenResponseDTO{}, err
+		return oauth2dto.Oauth2TokenResponseDTO{}, err
 	}
 
 	accessTokenPayload.Token = accessToken
 
 	err = s.authService.CreateAccessToken(ctx, &accessTokenPayload)
 	if err != nil {
-		return oauth2dto.TokenResponseDTO{}, err
+		return oauth2dto.Oauth2TokenResponseDTO{}, err
 	}
 
 	session, err := s.authService.GetOidcSessionByID(oidcSessionID)
 	if err != nil {
-		return oauth2dto.TokenResponseDTO{}, err
+		return oauth2dto.Oauth2TokenResponseDTO{}, err
 	}
 
 	now := time.Now()
-	idTokenPayload := oauth2dto.IDTokenPayload{
+	idTokenPayload := oauth2dto.Oauth2IDTokenPayload{
 		Issuer:    s.issuer,
 		Subject:   userID,
 		Audience:  clientID,
@@ -387,10 +387,10 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 
 	idToken, err := utils.GenerateToken(s.tokenKey, idTokenPayload)
 	if err != nil {
-		return oauth2dto.TokenResponseDTO{}, err
+		return oauth2dto.Oauth2TokenResponseDTO{}, err
 	}
 
-	return oauth2dto.TokenResponseDTO{
+	return oauth2dto.Oauth2TokenResponseDTO{
 		AccessToken:  accessToken,
 		TokenType:    "bearer",
 		ExpiresIn:    int(accessTokenTTL.Seconds()),

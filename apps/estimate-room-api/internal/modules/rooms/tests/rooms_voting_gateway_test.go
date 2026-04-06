@@ -85,7 +85,7 @@ func setupRoomsRealtimeTest(t *testing.T) (*httptest.Server, *bun.DB) {
 	}
 
 	router := chi.NewRouter()
-	authService := oauth2.NewAuthServiceFromDB(testutils.TestTokenKey, db)
+	authService := oauth2.NewOauth2SessionAuthServiceFromDB(testutils.TestTokenKey, db)
 	pubSub := newTestPubSub()
 
 	router.Route("/api/v1", func(r chi.Router) {

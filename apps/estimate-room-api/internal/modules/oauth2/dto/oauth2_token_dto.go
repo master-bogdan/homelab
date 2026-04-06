@@ -6,7 +6,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type GetTokenDTO struct {
+type Oauth2GetTokenDTO struct {
 	GrantType    string `form:"grant_type" validate:"required,oneof=authorization_code refresh_token"`
 	CodeVerifier string `form:"code_verifier"`
 	Code         string `form:"code"`
@@ -15,7 +15,7 @@ type GetTokenDTO struct {
 	RefreshToken string `form:"refresh_token"`
 }
 
-func (s *GetTokenDTO) Validate() error {
+func (s *Oauth2GetTokenDTO) Validate() error {
 	validate := validator.New()
 	if err := validate.Struct(s); err != nil {
 		return err
@@ -37,7 +37,7 @@ func (s *GetTokenDTO) Validate() error {
 	return nil
 }
 
-type IDTokenPayload struct {
+type Oauth2IDTokenPayload struct {
 	Issuer    string `json:"iss"`
 	Subject   string `json:"sub"`
 	Audience  string `json:"aud"`
@@ -47,7 +47,7 @@ type IDTokenPayload struct {
 	Nonce     string `json:"nonce,omitempty"`
 }
 
-type TokenResponseDTO struct {
+type Oauth2TokenResponseDTO struct {
 	AccessToken  string `json:"access_token"`
 	TokenType    string `json:"token_type"` // "Bearer"
 	ExpiresIn    int    `json:"expires_in"` // in seconds

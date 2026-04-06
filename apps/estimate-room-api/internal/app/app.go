@@ -107,17 +107,18 @@ func (deps *AppDeps) SetupApp(ctx context.Context) error {
 	deps.Router.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
 	))
+
 	deps.Router.Handle("/metrics", metrics.Handler())
 
-	deps.Router.Route("/api/v1", func(r chi.Router) {
-		emailClient := email.NewSMTPClient(email.SMTPConfig{
-			From:     deps.Cfg.Email.From,
-			Host:     deps.Cfg.Email.SMTPHost,
-			Port:     deps.Cfg.Email.SMTPPort,
-			Username: deps.Cfg.Email.SMTPUsername,
-			Password: deps.Cfg.Email.SMTPPassword,
-		})
+	emailClient := email.NewSMTPClient(email.SMTPConfig{
+		From:     deps.Cfg.Email.From,
+		Host:     deps.Cfg.Email.SMTPHost,
+		Port:     deps.Cfg.Email.SMTPPort,
+		Username: deps.Cfg.Email.SMTPUsername,
+		Password: deps.Cfg.Email.SMTPPassword,
+	})
 
+	deps.Router.Route("/api/v1", func(r chi.Router) {
 		health.NewHealthModule(health.HealthModuleDeps{
 			Router:             r,
 			DB:                 deps.DB,
@@ -143,7 +144,7 @@ func (deps *AppDeps) SetupApp(ctx context.Context) error {
 			DB:                deps.DB,
 			UserService:       userService,
 			Oauth2Service:     oauth2Module.Service,
-			SessionService:    oauth2Module.AuthService,
+			SessionService:    oauth2Module.SessionAuthService,
 			FrontendBaseURL:   frontendBaseURL,
 			TrustProxyHeaders: deps.Cfg.Server.TrustProxyHeaders,
 			EmailClient:       emailClient,
@@ -158,7 +159,7 @@ func (deps *AppDeps) SetupApp(ctx context.Context) error {
 
 		wsModule := ws.NewWsModule(ws.WsModuleDeps{
 			Router:               r,
-			AuthService:          oauth2Module.AuthService,
+			AuthService:          oauth2Module.SessionAuthService,
 			TokenKey:             deps.Cfg.Server.PasetoSymmetricKey,
 			Server:               deps.WsServer,
 			OriginPatterns:       wsOriginPatterns,
@@ -168,20 +169,20 @@ func (deps *AppDeps) SetupApp(ctx context.Context) error {
 		users.NewUsersModule(users.UsersModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
-			AuthService: oauth2Module.AuthService,
+			AuthService: oauth2Module.SessionAuthService,
 		})
 
 		invitesModule := invites.NewInvitesModule(invites.InvitesModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
-			AuthService: oauth2Module.AuthService,
+			AuthService: oauth2Module.SessionAuthService,
 			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
 		})
 
 		teams.NewTeamsModule(teams.TeamsModuleDeps{
 			Router:         r,
 			DB:             deps.DB,
-			AuthService:    oauth2Module.AuthService,
+			AuthService:    oauth2Module.SessionAuthService,
 			UserService:    userService,
 			InvitesService: invitesModule.Service,
 		})
@@ -189,7 +190,7 @@ func (deps *AppDeps) SetupApp(ctx context.Context) error {
 		gamificationModule := gamification.NewGamificationModule(gamification.GamificationModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
-			AuthService: oauth2Module.AuthService,
+			AuthService: oauth2Module.SessionAuthService,
 			WsService:   wsModule.Service,
 		})
 
@@ -197,7 +198,7 @@ func (deps *AppDeps) SetupApp(ctx context.Context) error {
 			Router:         r,
 			DB:             deps.DB,
 			WsService:      wsModule.Service,
-			AuthService:    oauth2Module.AuthService,
+			AuthService:    oauth2Module.SessionAuthService,
 			InvitesService: invitesModule.Service,
 			RewardService:  gamificationModule.Service,
 		})
@@ -205,7 +206,7 @@ func (deps *AppDeps) SetupApp(ctx context.Context) error {
 		history.NewHistoryModule(history.HistoryModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
-			AuthService: oauth2Module.AuthService,
+			AuthService: oauth2Module.SessionAuthService,
 		})
 
 		if roomsModule != nil && roomsModule.ExpiryService != nil {

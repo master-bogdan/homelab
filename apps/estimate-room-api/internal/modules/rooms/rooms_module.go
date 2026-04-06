@@ -26,7 +26,7 @@ type RoomsModuleDeps struct {
 	Router         chi.Router
 	DB             *bun.DB
 	WsService      *ws.Service
-	AuthService    oauth2.AuthService
+	AuthService    oauth2.Oauth2SessionAuthService
 	InvitesService invites.InvitesService
 	RewardService  gamification.RoomRewardService
 }

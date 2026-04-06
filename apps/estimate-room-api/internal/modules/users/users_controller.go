@@ -18,11 +18,11 @@ type UsersController interface {
 
 type usersController struct {
 	service     UsersService
-	authService oauth2.AuthService
+	authService oauth2.Oauth2SessionAuthService
 	logger      *slog.Logger
 }
 
-func NewUsersController(service UsersService, authService oauth2.AuthService) UsersController {
+func NewUsersController(service UsersService, authService oauth2.Oauth2SessionAuthService) UsersController {
 	return &usersController{
 		service:     service,
 		authService: authService,

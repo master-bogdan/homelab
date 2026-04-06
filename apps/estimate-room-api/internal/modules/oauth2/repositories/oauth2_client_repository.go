@@ -2,9 +2,9 @@ package oauth2repositories
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
-	"database/sql"
 	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/uptrace/bun"
@@ -29,6 +29,7 @@ func (r *oauth2ClientRepository) FindByID(clientID string) (*oauth2models.Oauth2
 		Where("oc.client_id = ?", clientID).
 		Limit(1).
 		Scan(context.Background())
+		// TODO: Refactor this
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperrors.ErrClientNotFound

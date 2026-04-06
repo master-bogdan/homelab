@@ -21,11 +21,11 @@ type HistoryController interface {
 
 type historyController struct {
 	service     HistoryService
-	authService oauth2.AuthService
+	authService oauth2.Oauth2SessionAuthService
 	logger      *slog.Logger
 }
 
-func NewHistoryController(service HistoryService, authService oauth2.AuthService) HistoryController {
+func NewHistoryController(service HistoryService, authService oauth2.Oauth2SessionAuthService) HistoryController {
 	return &historyController{
 		service:     service,
 		authService: authService,

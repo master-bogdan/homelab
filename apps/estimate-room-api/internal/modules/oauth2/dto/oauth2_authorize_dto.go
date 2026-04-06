@@ -9,7 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type AuthorizeQueryDTO struct {
+type Oauth2AuthorizeQueryDTO struct {
 	ClientID            string `query:"client_id" validate:"required"`
 	RedirectURI         string `query:"redirect_uri" validate:"required,url"`
 	ResponseType        string `query:"response_type" validate:"required,eq=code"`
@@ -20,7 +20,7 @@ type AuthorizeQueryDTO struct {
 	Nonce               string `query:"nonce" validate:"required"`
 }
 
-func (s *AuthorizeQueryDTO) Validate() error {
+func (s *Oauth2AuthorizeQueryDTO) Validate() error {
 	validScopes := []string{"openid", "admin", "user"}
 
 	scopes := strings.Fields(s.Scopes)

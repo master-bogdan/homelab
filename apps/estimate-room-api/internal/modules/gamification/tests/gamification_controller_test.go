@@ -53,7 +53,7 @@ func setupGamificationTest(t *testing.T) (*chi.Mux, *bun.DB, gamification.Gamifi
 	}
 
 	router := chi.NewRouter()
-	authService := oauth2.NewAuthServiceFromDB(testutils.TestTokenKey, db)
+	authService := oauth2.NewOauth2SessionAuthServiceFromDB(testutils.TestTokenKey, db)
 	wsService := ws.NewService(nil, "test-gamification-events")
 
 	var gamificationModule *gamification.GamificationModule

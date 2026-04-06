@@ -31,7 +31,7 @@ func setupTeamsTest(t *testing.T) (*chi.Mux, *bun.DB) {
 	testutils.ResetOauthTables(t, db)
 
 	router := chi.NewRouter()
-	authService := oauth2.NewAuthServiceFromDB(testutils.TestTokenKey, db)
+	authService := oauth2.NewOauth2SessionAuthServiceFromDB(testutils.TestTokenKey, db)
 	userRepo := usersrepositories.NewUserRepository(db)
 	userService := users.NewUsersService(userRepo)
 

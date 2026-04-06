@@ -8,7 +8,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type CreateOauthCodeDTO struct {
+type Oauth2CreateAuthCodeDTO struct {
 	ClientID            string `validate:"required"`
 	UserID              string `validate:"required"`
 	OidcSessionID       string `validate:"required"`
@@ -18,7 +18,7 @@ type CreateOauthCodeDTO struct {
 	Scopes              string `validate:"required"`
 }
 
-func (s *CreateOauthCodeDTO) Validate() error {
+func (s *Oauth2CreateAuthCodeDTO) Validate() error {
 	validScopes := []string{"openid", "admin", "user"}
 
 	scopes := strings.FieldsSeq(s.Scopes)

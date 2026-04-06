@@ -24,11 +24,11 @@ type InvitesController interface {
 
 type invitesController struct {
 	service     InvitesService
-	authService oauth2.AuthService
+	authService oauth2.Oauth2SessionAuthService
 	logger      *slog.Logger
 }
 
-func NewInvitesController(service InvitesService, authService oauth2.AuthService) InvitesController {
+func NewInvitesController(service InvitesService, authService oauth2.Oauth2SessionAuthService) InvitesController {
 	return &invitesController{
 		service:     service,
 		authService: authService,

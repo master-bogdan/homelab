@@ -2,9 +2,9 @@ package oauth2repositories
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
-	"database/sql"
 	"github.com/google/uuid"
 	oauth2models "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/models"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
@@ -58,6 +58,7 @@ func (r *oauth2AuthCodeRepository) FindByCode(code string) (*oauth2models.Oauth2
 		Where("oac.code = ?", code).
 		Limit(1).
 		Scan(context.Background())
+		// TODO: Refactor this
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperrors.ErrAuthCodeNotFound

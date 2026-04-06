@@ -57,7 +57,7 @@ func setupRoomsTasksTestWithRewardService(t *testing.T, rewardService gamificati
 	}
 
 	router := chi.NewRouter()
-	authService := oauth2.NewAuthServiceFromDB(testutils.TestTokenKey, db)
+	authService := oauth2.NewOauth2SessionAuthServiceFromDB(testutils.TestTokenKey, db)
 	wsService := ws.NewService(nil, "test-room-events")
 
 	router.Route("/api/v1", func(r chi.Router) {

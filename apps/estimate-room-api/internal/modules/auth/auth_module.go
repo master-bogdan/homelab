@@ -21,7 +21,7 @@ type AuthModuleDeps struct {
 	DB                *bun.DB
 	UserService       users.UsersService
 	Oauth2Service     oauth2.Oauth2Service
-	SessionService    oauth2.AuthService
+	SessionService    oauth2.Oauth2SessionAuthService
 	FrontendBaseURL   string
 	TrustProxyHeaders bool
 	EmailClient       email.Client

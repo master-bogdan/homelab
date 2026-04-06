@@ -16,7 +16,7 @@ type UsersModule struct {
 type UsersModuleDeps struct {
 	Router      chi.Router
 	DB          *bun.DB
-	AuthService oauth2.AuthService
+	AuthService oauth2.Oauth2SessionAuthService
 }
 
 func NewUsersModule(deps UsersModuleDeps) *UsersModule {

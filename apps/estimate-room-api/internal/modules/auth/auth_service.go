@@ -55,7 +55,7 @@ type AuthService interface {
 type AuthServiceDeps struct {
 	UserService            users.UsersService
 	Oauth2Service          oauth2.Oauth2Service
-	SessionService         oauth2.AuthService
+	SessionService         oauth2.Oauth2SessionAuthService
 	FrontendBaseURL        string
 	EmailClient            emailinfra.Client
 	PasswordResetTokenRepo authrepositories.PasswordResetTokenRepository
@@ -69,7 +69,7 @@ type AuthServiceDeps struct {
 type authService struct {
 	userService            users.UsersService
 	oauth2Service          oauth2.Oauth2Service
-	sessionService         oauth2.AuthService
+	sessionService         oauth2.Oauth2SessionAuthService
 	frontendBaseURL        string
 	emailClient            emailinfra.Client
 	passwordResetTokenRepo authrepositories.PasswordResetTokenRepository
@@ -123,6 +123,7 @@ func (s *authService) Login(ctx context.Context, dto *authdto.LoginDTO) (*usersm
 
 	user, err := s.userService.FindByEmail(email)
 	if err != nil {
+		// TODO: Refactor this
 		if errors.Is(err, apperrors.ErrUserNotFound) {
 			if hasDeletedEmail, lookupErr := s.userService.HasSoftDeletedEmail(email); lookupErr == nil && hasDeletedEmail {
 				return nil, "", ErrInvalidCredentials
@@ -153,6 +154,7 @@ func (s *authService) Login(ctx context.Context, dto *authdto.LoginDTO) (*usersm
 	return updatedUser, sessionID, nil
 }
 
+// TODO: Refactor this service
 func (s *authService) Register(ctx context.Context, dto *authdto.RegisterDTO) (*usersmodels.UserModel, string, error) {
 	_ = ctx
 
@@ -313,7 +315,7 @@ func (s *authService) ResetPassword(ctx context.Context, dto *authdto.ResetPassw
 }
 
 func (s *authService) GetSession(r *http.Request) (*usersmodels.UserModel, bool, error) {
-	sessionID := oauth2.ReadSessionID(r)
+	sessionID := oauth2.ReadOauth2SessionID(r)
 	if sessionID == "" {
 		return nil, false, nil
 	}
@@ -413,8 +415,8 @@ func (s *authService) createContinueSession(userID, continueURL string) (string,
 	return s.createContinueSessionFromQuery(userID, query)
 }
 
-func (s *authService) createContinueSessionFromQuery(userID string, query *oauth2dto.AuthorizeQueryDTO) (string, error) {
-	oidcSessionDTO := &oauth2dto.CreateOidcSessionDTO{
+func (s *authService) createContinueSessionFromQuery(userID string, query *oauth2dto.Oauth2AuthorizeQueryDTO) (string, error) {
+	oidcSessionDTO := &oauth2dto.Oauth2CreateOidcSessionDTO{
 		UserID:   userID,
 		ClientID: query.ClientID,
 		Nonce:    query.Nonce,
@@ -426,7 +428,7 @@ func (s *authService) createContinueSessionFromQuery(userID string, query *oauth
 	return s.oauth2Service.CreateOidcSession(oidcSessionDTO)
 }
 
-func (s *authService) parseContinueURL(continueURL string) (*oauth2dto.AuthorizeQueryDTO, error) {
+func (s *authService) parseContinueURL(continueURL string) (*oauth2dto.Oauth2AuthorizeQueryDTO, error) {
 	trimmedContinueURL := strings.TrimSpace(continueURL)
 
 	parsedURL, err := url.Parse(trimmedContinueURL)
@@ -445,7 +447,7 @@ func (s *authService) parseContinueURL(continueURL string) (*oauth2dto.Authorize
 		return nil, ErrInvalidContinueURL
 	}
 
-	query := &oauth2dto.AuthorizeQueryDTO{
+	query := &oauth2dto.Oauth2AuthorizeQueryDTO{
 		ClientID:            parsedURL.Query().Get("client_id"),
 		RedirectURI:         parsedURL.Query().Get("redirect_uri"),
 		ResponseType:        parsedURL.Query().Get("response_type"),
@@ -470,7 +472,7 @@ func (s *authService) parseContinueURL(continueURL string) (*oauth2dto.Authorize
 func (s *authService) logContinueURLRejection(
 	reason string,
 	parsedURL *url.URL,
-	query *oauth2dto.AuthorizeQueryDTO,
+	query *oauth2dto.Oauth2AuthorizeQueryDTO,
 	err error,
 ) {
 	logArgs := []any{"reason", reason}

@@ -224,7 +224,7 @@ func (a *e2eApp) loginAndGetAccessToken(t *testing.T, email, password string) st
 		t.Fatalf("expected 200 from token endpoint, got %d: %s", tokenResp.StatusCode, string(body))
 	}
 
-	payload := oauth2dto.TokenResponseDTO{}
+	payload := oauth2dto.Oauth2TokenResponseDTO{}
 	if err := json.NewDecoder(tokenResp.Body).Decode(&payload); err != nil {
 		t.Fatalf("failed to decode token response: %v", err)
 	}

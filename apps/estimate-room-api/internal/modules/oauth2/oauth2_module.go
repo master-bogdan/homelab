@@ -8,20 +8,20 @@ import (
 )
 
 type Oauth2Module struct {
-	Controller  Oauth2Controller
-	Service     Oauth2Service
-	AuthService AuthService
+	Controller         Oauth2Controller
+	Service            Oauth2Service
+	SessionAuthService Oauth2SessionAuthService
 }
 
 type Oauth2ModuleDeps struct {
-	Router            chi.Router
-	DB                *bun.DB
-	TokenKey          string
-	Issuer            string
-	UserService       UserService
-	AuthService       AuthService
-	FrontendBaseURL   string
-	TrustProxyHeaders bool
+	Router             chi.Router
+	DB                 *bun.DB
+	TokenKey           string
+	Issuer             string
+	UserService        UserService
+	SessionAuthService Oauth2SessionAuthService
+	FrontendBaseURL    string
+	TrustProxyHeaders  bool
 }
 
 func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
@@ -31,9 +31,9 @@ func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
 	accessTokenRepo := oauth2repositories.NewOauth2AccessTokenRepository(deps.DB)
 	oidcSessionRepo := oauth2repositories.NewOauth2OidcSessionRepository(deps.DB)
 
-	authService := deps.AuthService
+	authService := deps.SessionAuthService
 	if authService == nil {
-		authService = NewAuthService(deps.TokenKey, accessTokenRepo, oidcSessionRepo)
+		authService = NewOauth2SessionAuthService(deps.TokenKey, accessTokenRepo, oidcSessionRepo)
 	}
 
 	svc := NewOauth2Service(
@@ -54,8 +54,8 @@ func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
 	})
 
 	return &Oauth2Module{
-		Controller:  ctrl,
-		Service:     svc,
-		AuthService: authService,
+		Controller:         ctrl,
+		Service:            svc,
+		SessionAuthService: authService,
 	}
 }

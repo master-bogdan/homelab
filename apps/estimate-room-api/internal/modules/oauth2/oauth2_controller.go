@@ -20,7 +20,7 @@ type Oauth2Controller interface {
 
 type oauth2Controller struct {
 	service           Oauth2Service
-	authService       AuthService
+	authService       Oauth2SessionAuthService
 	logger            *slog.Logger
 	frontendBaseURL   string
 	trustProxyHeaders bool
@@ -28,7 +28,7 @@ type oauth2Controller struct {
 
 func NewOauth2Controller(
 	oauth2Service Oauth2Service,
-	authService AuthService,
+	authService Oauth2SessionAuthService,
 	frontendBaseURL string,
 	trustProxyHeaders bool,
 ) Oauth2Controller {
@@ -84,7 +84,7 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 		"code_challenge_method", query.CodeChallengeMethod,
 	)
 
-	sessionID := ReadSessionID(r)
+	sessionID := ReadOauth2SessionID(r)
 	if sessionID == "" {
 		c.redirectToFrontendLogin(w, r)
 		return
@@ -98,7 +98,7 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if session.ClientID != query.ClientID || session.Nonce != query.Nonce {
-		oidcSessionID, createErr := c.service.CreateOidcSession(&oauth2dto.CreateOidcSessionDTO{
+		oidcSessionID, createErr := c.service.CreateOidcSession(&oauth2dto.Oauth2CreateOidcSessionDTO{
 			UserID:   session.UserID,
 			ClientID: query.ClientID,
 			Nonce:    query.Nonce,
@@ -110,10 +110,10 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 		}
 
 		sessionID = oidcSessionID
-		http.SetCookie(w, SessionCookie(oidcSessionID, r, c.trustProxyHeaders))
+		http.SetCookie(w, Oauth2SessionCookie(oidcSessionID, r, c.trustProxyHeaders))
 	}
 
-	createAuthCodeDTO := &oauth2dto.CreateOauthCodeDTO{
+	createAuthCodeDTO := &oauth2dto.Oauth2CreateAuthCodeDTO{
 		ClientID:            query.ClientID,
 		UserID:              session.UserID,
 		OidcSessionID:       sessionID,
@@ -160,7 +160,7 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 // @Param client_id formData string true "OAuth client ID"
 // @Param redirect_uri formData string false "Redirect URI"
 // @Param refresh_token formData string false "Refresh token"
-// @Success 200 {object} oauth2dto.TokenResponseDTO
+// @Success 200 {object} oauth2dto.Oauth2TokenResponseDTO
 // @Failure 400 {object} apperrors.HttpError
 // @Failure 401 {object} apperrors.HttpError
 // @Failure 500 {object} apperrors.HttpError
@@ -214,9 +214,9 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func parseAuthorizeQuery(r *http.Request) *oauth2dto.AuthorizeQueryDTO {
+func parseAuthorizeQuery(r *http.Request) *oauth2dto.Oauth2AuthorizeQueryDTO {
 	q := r.URL.Query()
-	return &oauth2dto.AuthorizeQueryDTO{
+	return &oauth2dto.Oauth2AuthorizeQueryDTO{
 		ClientID:            q.Get("client_id"),
 		RedirectURI:         q.Get("redirect_uri"),
 		ResponseType:        q.Get("response_type"),
@@ -228,12 +228,12 @@ func parseAuthorizeQuery(r *http.Request) *oauth2dto.AuthorizeQueryDTO {
 	}
 }
 
-func parseTokenForm(r *http.Request) (*oauth2dto.GetTokenDTO, error) {
+func parseTokenForm(r *http.Request) (*oauth2dto.Oauth2GetTokenDTO, error) {
 	if err := r.ParseForm(); err != nil {
 		return nil, err
 	}
 
-	return &oauth2dto.GetTokenDTO{
+	return &oauth2dto.Oauth2GetTokenDTO{
 		GrantType:    r.Form.Get("grant_type"),
 		CodeVerifier: r.Form.Get("code_verifier"),
 		Code:         r.Form.Get("code"),
@@ -257,11 +257,11 @@ func (c *oauth2Controller) redirectToFrontendLogin(w http.ResponseWriter, r *htt
 	http.Redirect(w, r, loginURL, http.StatusFound)
 }
 
-func (c *oauth2Controller) setTokenCookies(w http.ResponseWriter, r *http.Request, tokens oauth2dto.TokenResponseDTO) {
-	http.SetCookie(w, AccessTokenCookie(tokens.AccessToken, r, c.trustProxyHeaders))
+func (c *oauth2Controller) setTokenCookies(w http.ResponseWriter, r *http.Request, tokens oauth2dto.Oauth2TokenResponseDTO) {
+	http.SetCookie(w, Oauth2AccessTokenCookie(tokens.AccessToken, r, c.trustProxyHeaders))
 
 	if tokens.RefreshToken != "" {
-		http.SetCookie(w, RefreshTokenCookie(tokens.RefreshToken, r, c.trustProxyHeaders))
+		http.SetCookie(w, Oauth2RefreshTokenCookie(tokens.RefreshToken, r, c.trustProxyHeaders))
 	}
 }
 
@@ -306,7 +306,7 @@ func readRefreshToken(r *http.Request) string {
 		return refreshToken
 	}
 
-	cookie, err := r.Cookie(RefreshTokenCookieName)
+	cookie, err := r.Cookie(Oauth2RefreshTokenCookieName)
 	if err != nil {
 		return ""
 	}

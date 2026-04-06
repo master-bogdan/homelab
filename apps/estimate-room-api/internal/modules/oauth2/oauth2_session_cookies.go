@@ -6,17 +6,17 @@ import (
 )
 
 const (
-	SessionCookieName      = "session_id"
-	AccessTokenCookieName  = "access_token"
-	RefreshTokenCookieName = "refresh_token"
+	Oauth2SessionCookieName      = "session_id"
+	Oauth2AccessTokenCookieName  = "access_token"
+	Oauth2RefreshTokenCookieName = "refresh_token"
 )
 
-func ReadSessionID(r *http.Request) string {
+func ReadOauth2SessionID(r *http.Request) string {
 	if r == nil {
 		return ""
 	}
 
-	if cookie, err := r.Cookie(SessionCookieName); err == nil && cookie.Value != "" {
+	if cookie, err := r.Cookie(Oauth2SessionCookieName); err == nil && cookie.Value != "" {
 		return cookie.Value
 	}
 
@@ -27,38 +27,38 @@ func ReadSessionID(r *http.Request) string {
 	return ""
 }
 
-func SessionCookie(sessionID string, r *http.Request, trustProxyHeaders bool) *http.Cookie {
-	return cookieWithSettings(SessionCookieName, sessionID, 0, isSecureRequest(r, trustProxyHeaders))
+func Oauth2SessionCookie(sessionID string, r *http.Request, trustProxyHeaders bool) *http.Cookie {
+	return cookieWithSettings(Oauth2SessionCookieName, sessionID, 0, isSecureRequest(r, trustProxyHeaders))
 }
 
-func AccessTokenCookie(token string, r *http.Request, trustProxyHeaders bool) *http.Cookie {
+func Oauth2AccessTokenCookie(token string, r *http.Request, trustProxyHeaders bool) *http.Cookie {
 	return cookieWithSettings(
-		AccessTokenCookieName,
+		Oauth2AccessTokenCookieName,
 		token,
 		int(accessTokenTTL.Seconds()),
 		isSecureRequest(r, trustProxyHeaders),
 	)
 }
 
-func RefreshTokenCookie(token string, r *http.Request, trustProxyHeaders bool) *http.Cookie {
+func Oauth2RefreshTokenCookie(token string, r *http.Request, trustProxyHeaders bool) *http.Cookie {
 	return cookieWithSettings(
-		RefreshTokenCookieName,
+		Oauth2RefreshTokenCookieName,
 		token,
 		int(refreshTokenTTL.Seconds()),
 		isSecureRequest(r, trustProxyHeaders),
 	)
 }
 
-func ExpiredSessionCookie(r *http.Request, trustProxyHeaders bool) *http.Cookie {
-	return expiredCookie(SessionCookieName, isSecureRequest(r, trustProxyHeaders))
+func ExpiredOauth2SessionCookie(r *http.Request, trustProxyHeaders bool) *http.Cookie {
+	return expiredCookie(Oauth2SessionCookieName, isSecureRequest(r, trustProxyHeaders))
 }
 
-func ExpiredAccessTokenCookie(r *http.Request, trustProxyHeaders bool) *http.Cookie {
-	return expiredCookie(AccessTokenCookieName, isSecureRequest(r, trustProxyHeaders))
+func ExpiredOauth2AccessTokenCookie(r *http.Request, trustProxyHeaders bool) *http.Cookie {
+	return expiredCookie(Oauth2AccessTokenCookieName, isSecureRequest(r, trustProxyHeaders))
 }
 
-func ExpiredRefreshTokenCookie(r *http.Request, trustProxyHeaders bool) *http.Cookie {
-	return expiredCookie(RefreshTokenCookieName, isSecureRequest(r, trustProxyHeaders))
+func ExpiredOauth2RefreshTokenCookie(r *http.Request, trustProxyHeaders bool) *http.Cookie {
+	return expiredCookie(Oauth2RefreshTokenCookieName, isSecureRequest(r, trustProxyHeaders))
 }
 
 func cookieWithSettings(name, value string, maxAge int, secure bool) *http.Cookie {
