@@ -14,13 +14,14 @@ type Oauth2Module struct {
 }
 
 type Oauth2ModuleDeps struct {
-	Router          chi.Router
-	DB              *bun.DB
-	TokenKey        string
-	Issuer          string
-	UserService     UserService
-	AuthService     AuthService
-	FrontendBaseURL string
+	Router            chi.Router
+	DB                *bun.DB
+	TokenKey          string
+	Issuer            string
+	UserService       UserService
+	AuthService       AuthService
+	FrontendBaseURL   string
+	TrustProxyHeaders bool
 }
 
 func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
@@ -45,7 +46,7 @@ func NewOauth2Module(deps Oauth2ModuleDeps) *Oauth2Module {
 		deps.Issuer,
 	)
 
-	ctrl := NewOauth2Controller(svc, authService, deps.FrontendBaseURL)
+	ctrl := NewOauth2Controller(svc, authService, deps.FrontendBaseURL, deps.TrustProxyHeaders)
 
 	deps.Router.Route("/oauth2", func(r chi.Router) {
 		r.Get("/authorize", ctrl.Authorize)

@@ -72,13 +72,14 @@ func NewOauth2Service(db *bun.DB) oauth2.Oauth2Service {
 	})
 
 	oauth2Module := oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-		Router:          chi.NewRouter(),
-		DB:              db,
-		TokenKey:        TestTokenKey,
-		Issuer:          TestIssuer,
-		UserService:     usersModule.Service,
-		AuthService:     authService,
-		FrontendBaseURL: "http://localhost:5173",
+		Router:            chi.NewRouter(),
+		DB:                db,
+		TokenKey:          TestTokenKey,
+		Issuer:            TestIssuer,
+		UserService:       usersModule.Service,
+		AuthService:       authService,
+		FrontendBaseURL:   "http://localhost:5173",
+		TrustProxyHeaders: false,
 	})
 
 	return oauth2Module.Service

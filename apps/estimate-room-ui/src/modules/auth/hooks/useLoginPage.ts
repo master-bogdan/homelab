@@ -5,7 +5,7 @@ import { useAppDispatch } from '@/app/store/hooks';
 
 import { authService } from '../services';
 import { setSession } from '../store';
-import { isInvalidCredentialsError, resolveApiErrorMessage } from '../utils';
+import { isInvalidCredentialsError, resolveApiErrorMessage, resolveApiHref } from '../utils';
 
 import { useAuthContinuation } from './useAuthContinuation';
 
@@ -39,7 +39,7 @@ export const useLoginPage = () => {
       });
 
       dispatch(setSession(user));
-      window.location.assign(pendingRequest.continueUrl);
+      window.location.assign(resolveApiHref(pendingRequest.continueUrl));
     } catch (error) {
       const message = isInvalidCredentialsError(error)
         ? 'Email or password is incorrect.'

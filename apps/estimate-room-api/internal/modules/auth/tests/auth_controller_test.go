@@ -35,10 +35,14 @@ func (f *fakeEmailClient) Send(_ context.Context, msg emailinfra.Message) error 
 }
 
 func setupAuthTest(t *testing.T) (*chi.Mux, *bun.DB, string, string) {
-	return setupAuthTestWithEmailClient(t, emailinfra.NewNoopClient())
+	return setupAuthTestWithOptions(t, emailinfra.NewNoopClient(), false)
 }
 
 func setupAuthTestWithEmailClient(t *testing.T, emailClient emailinfra.Client) (*chi.Mux, *bun.DB, string, string) {
+	return setupAuthTestWithOptions(t, emailClient, false)
+}
+
+func setupAuthTestWithOptions(t *testing.T, emailClient emailinfra.Client, trustProxyHeaders bool) (*chi.Mux, *bun.DB, string, string) {
 	t.Helper()
 
 	db := testutils.SetupTestDB(t)
@@ -51,23 +55,25 @@ func setupAuthTestWithEmailClient(t *testing.T, emailClient emailinfra.Client) (
 		userService := users.NewUsersService(usersrepositories.NewUserRepository(db))
 
 		oauth2Module := oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-			Router:          r,
-			DB:              db,
-			TokenKey:        testutils.TestTokenKey,
-			Issuer:          testutils.TestIssuer,
-			UserService:     userService,
-			AuthService:     sessionService,
-			FrontendBaseURL: "http://localhost:5173",
+			Router:            r,
+			DB:                db,
+			TokenKey:          testutils.TestTokenKey,
+			Issuer:            testutils.TestIssuer,
+			UserService:       userService,
+			AuthService:       sessionService,
+			FrontendBaseURL:   "http://localhost:5173",
+			TrustProxyHeaders: trustProxyHeaders,
 		})
 
 		auth.NewAuthModule(auth.AuthModuleDeps{
-			Router:          r,
-			DB:              db,
-			UserService:     userService,
-			Oauth2Service:   oauth2Module.Service,
-			SessionService:  oauth2Module.AuthService,
-			FrontendBaseURL: "http://localhost:5173",
-			EmailClient:     emailClient,
+			Router:            r,
+			DB:                db,
+			UserService:       userService,
+			Oauth2Service:     oauth2Module.Service,
+			SessionService:    oauth2Module.AuthService,
+			FrontendBaseURL:   "http://localhost:5173",
+			TrustProxyHeaders: trustProxyHeaders,
+			EmailClient:       emailClient,
 		})
 	})
 
@@ -113,7 +119,7 @@ func TestForgotPassword_ExistingUser_SendsResetEmail(t *testing.T) {
 
 func continueURL(clientID, redirectURI, state, nonce, codeChallenge string) string {
 	return continueURLWithScopes(
-		"http://api.estimateroom.test",
+		"/api/v1/oauth2/authorize",
 		clientID,
 		redirectURI,
 		"user",
@@ -123,8 +129,8 @@ func continueURL(clientID, redirectURI, state, nonce, codeChallenge string) stri
 	)
 }
 
-func continueURLWithScopes(baseURL, clientID, redirectURI, scopes, state, nonce, codeChallenge string) string {
-	return strings.TrimRight(baseURL, "/") + "/api/v1/oauth2/authorize?client_id=" + url.QueryEscape(clientID) +
+func continueURLWithScopes(authorizePath, clientID, redirectURI, scopes, state, nonce, codeChallenge string) string {
+	return strings.TrimRight(authorizePath, "/") + "?client_id=" + url.QueryEscape(clientID) +
 		"&redirect_uri=" + url.QueryEscape(redirectURI) +
 		"&response_type=code" +
 		"&scopes=" + url.QueryEscape(scopes) +
@@ -302,7 +308,7 @@ func TestRegister_WithEstimateRoomUILocalContinueURL_ReturnsCreated(t *testing.T
 		"password":    "password123",
 		"displayName": "Local Register",
 		"continue": continueURLWithScopes(
-			"http://localhost:8080",
+			"/api/v1/oauth2/authorize",
 			clientID,
 			redirectURI,
 			"openid user",
@@ -336,7 +342,7 @@ func TestRegister_InvalidContinueURL_DoesNotPersistUser(t *testing.T) {
 		"password":    "password123",
 		"displayName": "Retry User",
 		"continue": continueURLWithScopes(
-			"http://api.estimateroom.test/invalid",
+			"/invalid/oauth2/authorize",
 			clientID,
 			redirectURI,
 			"user",
@@ -379,6 +385,79 @@ func TestRegister_InvalidContinueURL_DoesNotPersistUser(t *testing.T) {
 	if retryRR.Code != http.StatusCreated {
 		t.Fatalf("expected 201 Created on retry, got %d", retryRR.Code)
 	}
+}
+
+func TestLogin_AbsoluteContinueURL_ReturnsBadRequest(t *testing.T) {
+	router, db, clientID, redirectURI := setupAuthTest(t)
+	defer db.Close()
+
+	testutils.SeedUser(t, db, "absolute-continue@example.com", "password123")
+
+	body := map[string]string{
+		"email":    "absolute-continue@example.com",
+		"password": "password123",
+		"continue": "https://attacker.example/api/v1/oauth2/authorize?client_id=" + url.QueryEscape(clientID) +
+			"&redirect_uri=" + url.QueryEscape(redirectURI) +
+			"&response_type=code" +
+			"&scopes=user" +
+			"&state=state-absolute" +
+			"&code_challenge=challenge-absolute" +
+			"&code_challenge_method=S256" +
+			"&nonce=nonce-absolute",
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d", rr.Code)
+	}
+}
+
+func TestLogin_SetsSecureSessionCookieWhenTrustedProxyHeadersIndicateHTTPS(t *testing.T) {
+	router, db, clientID, redirectURI := setupAuthTestWithOptions(t, emailinfra.NewNoopClient(), true)
+	defer db.Close()
+
+	testutils.SeedUser(t, db, "proxy-secure@example.com", "password123")
+
+	body := map[string]string{
+		"email":    "proxy-secure@example.com",
+		"password": "password123",
+		"continue": continueURL(clientID, redirectURI, "state-proxy", "nonce-proxy", "challenge-proxy"),
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal request: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Forwarded-Proto", "https")
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", rr.Code)
+	}
+
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie.Name == oauth2.SessionCookieName {
+			if !cookie.Secure {
+				t.Fatalf("expected session cookie to be marked Secure")
+			}
+			return
+		}
+	}
+
+	t.Fatalf("expected session cookie to be set")
 }
 
 func TestGetSession_WithSessionCookie_ReturnsAuthenticatedUser(t *testing.T) {

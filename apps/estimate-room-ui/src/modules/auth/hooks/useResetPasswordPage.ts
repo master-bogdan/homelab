@@ -8,7 +8,7 @@ import { appRoutes } from '@/shared/constants/routes';
 import { authService } from '../services';
 import type { ResetPasswordValidationReason } from '../types';
 import { clearSession } from '../store';
-import { clearOauthTokenCookies, getResetLinkCopy, resolveApiErrorMessage } from '../utils';
+import { getResetLinkCopy, resolveApiErrorMessage } from '../utils';
 
 interface ResetPasswordFormValues {
   readonly confirmPassword: string;
@@ -110,7 +110,6 @@ export const useResetPasswordPage = () => {
         token
       });
 
-      clearOauthTokenCookies();
       dispatch(clearSession());
       navigate(appRoutes.resetPasswordSuccess, { replace: true });
     } catch (error) {

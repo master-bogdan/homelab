@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 
 	authdto "github.com/master-bogdan/estimate-room-api/internal/modules/auth/dto"
@@ -27,14 +28,16 @@ type AuthController interface {
 }
 
 type authController struct {
-	service AuthService
-	logger  *slog.Logger
+	service           AuthService
+	logger            *slog.Logger
+	trustProxyHeaders bool
 }
 
-func NewAuthController(service AuthService) AuthController {
+func NewAuthController(service AuthService, trustProxyHeaders bool) AuthController {
 	return &authController{
-		service: service,
-		logger:  logger.L().With(slog.String("controller", "auth")),
+		service:           service,
+		logger:            logger.L().With(slog.String("controller", "auth")),
+		trustProxyHeaders: trustProxyHeaders,
 	}
 }
 
@@ -61,11 +64,13 @@ func (c *authController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.FromRequest(r, c.logger).Info("login dto accepted",
+	logArgs := []any{
 		"path", r.URL.Path,
 		"email", maskEmailForLog(dto.Email),
-		"continue", dto.ContinueURL,
-	)
+	}
+	logArgs = append(logArgs, safeContinueLogFields(dto.ContinueURL)...)
+
+	logger.FromRequest(r, c.logger).Info("login dto accepted", logArgs...)
 
 	user, sessionID, err := c.service.Login(r.Context(), &dto)
 	if err != nil {
@@ -73,7 +78,7 @@ func (c *authController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, oauth2.SessionCookie(sessionID, r.TLS != nil))
+	http.SetCookie(w, oauth2.SessionCookie(sessionID, r, c.trustProxyHeaders))
 	httputils.WriteResponse(w, formatSessionResponse(user))
 }
 
@@ -100,14 +105,16 @@ func (c *authController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.FromRequest(r, c.logger).Info("register dto accepted",
+	logArgs := []any{
 		"path", r.URL.Path,
 		"email", maskEmailForLog(dto.Email),
 		"display_name_provided", dto.DisplayName != "",
 		"organization_provided", dto.Organization != "",
 		"occupation_provided", dto.Occupation != "",
-		"continue", dto.ContinueURL,
-	)
+	}
+	logArgs = append(logArgs, safeContinueLogFields(dto.ContinueURL)...)
+
+	logger.FromRequest(r, c.logger).Info("register dto accepted", logArgs...)
 
 	user, sessionID, err := c.service.Register(r.Context(), &dto)
 	if err != nil {
@@ -115,7 +122,7 @@ func (c *authController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, oauth2.SessionCookie(sessionID, r.TLS != nil))
+	http.SetCookie(w, oauth2.SessionCookie(sessionID, r, c.trustProxyHeaders))
 	httputils.WriteResponse(w, formatSessionResponse(user), httputils.WriteResponseOptions{Status: http.StatusCreated})
 }
 
@@ -223,6 +230,10 @@ func (c *authController) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http.SetCookie(w, oauth2.ExpiredSessionCookie(r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.ExpiredAccessTokenCookie(r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.ExpiredRefreshTokenCookie(r, c.trustProxyHeaders))
+
 	httputils.WriteResponse(w, authdto.ResetPasswordResponse{Reset: true})
 }
 
@@ -241,9 +252,9 @@ func (c *authController) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, oauth2.ExpiredSessionCookie(r.TLS != nil))
-	http.SetCookie(w, oauth2.ExpiredAccessTokenCookie(r.TLS != nil))
-	http.SetCookie(w, oauth2.ExpiredRefreshTokenCookie(r.TLS != nil))
+	http.SetCookie(w, oauth2.ExpiredSessionCookie(r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.ExpiredAccessTokenCookie(r, c.trustProxyHeaders))
+	http.SetCookie(w, oauth2.ExpiredRefreshTokenCookie(r, c.trustProxyHeaders))
 
 	httputils.WriteResponse(w, authdto.LogoutResponse{LoggedOut: true})
 }
@@ -285,10 +296,10 @@ func (c *authController) GetSession(w http.ResponseWriter, r *http.Request) {
 // @Router /api/v1/auth/github/login [get]
 func (c *authController) GithubLogin(w http.ResponseWriter, r *http.Request) {
 	continueURL := r.URL.Query().Get("continue")
-	logger.FromRequest(r, c.logger).Info("github login requested",
-		"path", r.URL.Path,
-		"continue", continueURL,
-	)
+	logArgs := []any{"path", r.URL.Path}
+	logArgs = append(logArgs, safeContinueLogFields(continueURL)...)
+
+	logger.FromRequest(r, c.logger).Info("github login requested", logArgs...)
 	redirectURL, err := c.service.StartGithubLogin(continueURL)
 	if err != nil {
 		c.writeAuthError(w, r, err)
@@ -333,8 +344,23 @@ func (c *authController) GithubCallback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	http.SetCookie(w, oauth2.SessionCookie(sessionID, r.TLS != nil))
+	http.SetCookie(w, oauth2.SessionCookie(sessionID, r, c.trustProxyHeaders))
 	http.Redirect(w, r, continueURL, http.StatusFound)
+}
+
+func safeContinueLogFields(continueURL string) []any {
+	trimmedContinueURL := strings.TrimSpace(continueURL)
+	fields := []any{"continue_present", trimmedContinueURL != ""}
+	if trimmedContinueURL == "" {
+		return fields
+	}
+
+	parsedURL, err := url.Parse(trimmedContinueURL)
+	if err == nil && parsedURL.Path != "" {
+		fields = append(fields, "continue_path", parsedURL.Path)
+	}
+
+	return fields
 }
 
 func (c *authController) writeAuthError(w http.ResponseWriter, r *http.Request, err error) {

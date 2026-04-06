@@ -3,6 +3,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -43,12 +44,17 @@ type AppDeps struct {
 	WsServer           ws.PubSub
 }
 
-func (deps *AppDeps) SetupApp(ctx context.Context) {
+func (deps *AppDeps) SetupApp(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if deps.Cfg == nil {
 		deps.Cfg = &config.Config{}
+	}
+
+	frontendBaseURL := strings.TrimSpace(deps.Cfg.Frontend.BaseURL)
+	if frontendBaseURL == "" {
+		return fmt.Errorf("FRONTEND_BASE_URL is required")
 	}
 
 	httpRateLimitPerMinute := 100
@@ -74,9 +80,7 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		[]string{},
 		splitConfigList(deps.Cfg.Server.HTTPAllowedOrigins)...,
 	)
-	if deps.Cfg.Frontend.BaseURL != "" {
-		httpOriginPatterns = append(httpOriginPatterns, deps.Cfg.Frontend.BaseURL)
-	}
+	httpOriginPatterns = append(httpOriginPatterns, frontendBaseURL)
 
 	routerMiddlewares = append(routerMiddlewares, cors.Handler(cors.Options{
 		AllowedOrigins: httpOriginPatterns,
@@ -125,22 +129,24 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		userService := users.NewUsersService(userRepo)
 
 		oauth2Module := oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-			Router:          r,
-			DB:              deps.DB,
-			TokenKey:        deps.Cfg.Server.PasetoSymmetricKey,
-			Issuer:          deps.Cfg.Server.Issuer,
-			UserService:     userService,
-			FrontendBaseURL: deps.Cfg.Frontend.BaseURL,
+			Router:            r,
+			DB:                deps.DB,
+			TokenKey:          deps.Cfg.Server.PasetoSymmetricKey,
+			Issuer:            deps.Cfg.Server.Issuer,
+			UserService:       userService,
+			FrontendBaseURL:   frontendBaseURL,
+			TrustProxyHeaders: deps.Cfg.Server.TrustProxyHeaders,
 		})
 
 		auth.NewAuthModule(auth.AuthModuleDeps{
-			Router:          r,
-			DB:              deps.DB,
-			UserService:     userService,
-			Oauth2Service:   oauth2Module.Service,
-			SessionService:  oauth2Module.AuthService,
-			FrontendBaseURL: deps.Cfg.Frontend.BaseURL,
-			EmailClient:     emailClient,
+			Router:            r,
+			DB:                deps.DB,
+			UserService:       userService,
+			Oauth2Service:     oauth2Module.Service,
+			SessionService:    oauth2Module.AuthService,
+			FrontendBaseURL:   frontendBaseURL,
+			TrustProxyHeaders: deps.Cfg.Server.TrustProxyHeaders,
+			EmailClient:       emailClient,
 			Github: oauth2utils.GithubConfig{
 				ClientID:     deps.Cfg.Github.ClientID,
 				ClientSecret: deps.Cfg.Github.ClientSecret,
@@ -206,6 +212,8 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 			roomsModule.ExpiryService.Start(ctx)
 		}
 	})
+
+	return nil
 }
 
 func splitConfigList(value string) []string {

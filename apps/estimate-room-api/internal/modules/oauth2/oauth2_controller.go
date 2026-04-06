@@ -19,22 +19,25 @@ type Oauth2Controller interface {
 }
 
 type oauth2Controller struct {
-	service         Oauth2Service
-	authService     AuthService
-	logger          *slog.Logger
-	frontendBaseURL string
+	service           Oauth2Service
+	authService       AuthService
+	logger            *slog.Logger
+	frontendBaseURL   string
+	trustProxyHeaders bool
 }
 
 func NewOauth2Controller(
 	oauth2Service Oauth2Service,
 	authService AuthService,
 	frontendBaseURL string,
+	trustProxyHeaders bool,
 ) Oauth2Controller {
 	return &oauth2Controller{
-		service:         oauth2Service,
-		authService:     authService,
-		logger:          logger.L().With(slog.String("module", "oauth")),
-		frontendBaseURL: frontendBaseURL,
+		service:           oauth2Service,
+		authService:       authService,
+		logger:            logger.L().With(slog.String("module", "oauth")),
+		frontendBaseURL:   frontendBaseURL,
+		trustProxyHeaders: trustProxyHeaders,
 	}
 }
 
@@ -107,7 +110,7 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 		}
 
 		sessionID = oidcSessionID
-		http.SetCookie(w, SessionCookie(oidcSessionID, r.TLS != nil))
+		http.SetCookie(w, SessionCookie(oidcSessionID, r, c.trustProxyHeaders))
 	}
 
 	createAuthCodeDTO := &oauth2dto.CreateOauthCodeDTO{
@@ -137,7 +140,10 @@ func (c *oauth2Controller) Authorize(w http.ResponseWriter, r *http.Request) {
 		redirectTo += "&state=" + query.State
 	}
 
-	logger.FromRequest(r, c.logger).Info(fmt.Sprintf("redirect to: %s", redirectTo))
+	logger.FromRequest(r, c.logger).Info("redirecting authorization response",
+		"redirect_uri", query.RedirectURI,
+		"state_present", query.State != "",
+	)
 
 	http.Redirect(w, r, redirectTo, http.StatusFound)
 }
@@ -188,6 +194,7 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		c.setTokenCookies(w, r, tokens)
 		httputils.WriteResponse(w, tokens, httputils.WriteResponseOptions{Status: http.StatusOK})
 		return
 	case "refresh_token":
@@ -198,6 +205,7 @@ func (c *oauth2Controller) GetTokens(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		c.setTokenCookies(w, r, tokens)
 		httputils.WriteResponse(w, tokens, httputils.WriteResponseOptions{Status: http.StatusOK})
 		return
 	default:
@@ -231,12 +239,12 @@ func parseTokenForm(r *http.Request) (*oauth2dto.GetTokenDTO, error) {
 		Code:         r.Form.Get("code"),
 		ClientID:     r.Form.Get("client_id"),
 		RedirectURI:  r.Form.Get("redirect_uri"),
-		RefreshToken: r.Form.Get("refresh_token"),
+		RefreshToken: readRefreshToken(r),
 	}, nil
 }
 
 func (c *oauth2Controller) redirectToFrontendLogin(w http.ResponseWriter, r *http.Request) {
-	loginURL, err := buildFrontendLoginURL(c.frontendBaseURL, currentRequestURL(r))
+	loginURL, err := buildFrontendLoginURL(c.frontendBaseURL, currentRequestURI(r))
 	if err != nil {
 		logger.FromRequest(r, c.logger).Error("failed to build frontend login redirect", "err", err)
 		httputils.WriteResponseError(w, apperrors.CreateHttpError(
@@ -247,6 +255,14 @@ func (c *oauth2Controller) redirectToFrontendLogin(w http.ResponseWriter, r *htt
 	}
 
 	http.Redirect(w, r, loginURL, http.StatusFound)
+}
+
+func (c *oauth2Controller) setTokenCookies(w http.ResponseWriter, r *http.Request, tokens oauth2dto.TokenResponseDTO) {
+	http.SetCookie(w, AccessTokenCookie(tokens.AccessToken, r, c.trustProxyHeaders))
+
+	if tokens.RefreshToken != "" {
+		http.SetCookie(w, RefreshTokenCookie(tokens.RefreshToken, r, c.trustProxyHeaders))
+	}
 }
 
 func buildFrontendLoginURL(frontendBaseURL, continueURL string) (string, error) {
@@ -267,25 +283,33 @@ func buildFrontendLoginURL(frontendBaseURL, continueURL string) (string, error) 
 	return loginURL.String(), nil
 }
 
-func currentRequestURL(r *http.Request) string {
+func currentRequestURI(r *http.Request) string {
 	if r == nil || r.URL == nil {
 		return ""
 	}
 
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
+	requestURI := r.URL.RequestURI()
+	if requestURI != "" {
+		return requestURI
 	}
 
-	if forwardedProto := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Proto"), ",")[0]); forwardedProto != "" {
-		scheme = forwardedProto
+	return r.URL.Path
+}
+
+func readRefreshToken(r *http.Request) string {
+	if r == nil {
+		return ""
 	}
 
-	copyURL := *r.URL
-	if !copyURL.IsAbs() {
-		copyURL.Scheme = scheme
-		copyURL.Host = r.Host
+	refreshToken := strings.TrimSpace(r.Form.Get("refresh_token"))
+	if refreshToken != "" {
+		return refreshToken
 	}
 
-	return copyURL.String()
+	cookie, err := r.Cookie(RefreshTokenCookieName)
+	if err != nil {
+		return ""
+	}
+
+	return cookie.Value
 }

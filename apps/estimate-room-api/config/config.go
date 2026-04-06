@@ -12,7 +12,7 @@ import (
 
 type Config struct {
 	App struct {
-		Env string
+		Env string `env:"APP_ENV" envDefault:"DEV"`
 	}
 	Frontend struct {
 		BaseURL string `env:"FRONTEND_BASE_URL"`
@@ -25,6 +25,7 @@ type Config struct {
 		Issuer                  string `env:"ISSUER"`
 		HTTPAllowedOrigins      string `env:"HTTP_ALLOWED_ORIGINS"`
 		WebSocketAllowedOrigins string `env:"WS_ALLOWED_ORIGINS"`
+		TrustProxyHeaders       bool   `env:"TRUST_PROXY_HEADERS" envDefault:"false"`
 		HTTPRateLimitPerMinute  int    `env:"HTTP_RATE_LIMIT_PER_MINUTE" envDefault:"100"`
 		WSRateLimitPerMinute    int    `env:"WS_RATE_LIMIT_PER_MINUTE" envDefault:"120"`
 	}

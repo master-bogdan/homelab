@@ -57,7 +57,9 @@ func setupE2EApp(t *testing.T) *e2eApp {
 		IsGracefulShutdown: &atomic.Bool{},
 		WsServer:           nil,
 	}
-	application.SetupApp(backgroundCtx)
+	if err := application.SetupApp(backgroundCtx); err != nil {
+		t.Fatalf("failed to set up app: %v", err)
+	}
 
 	server := httptest.NewServer(router)
 	redirectURI := "http://localhost:4081/callback"
@@ -117,7 +119,7 @@ func (a *e2eApp) loginAndGetAccessToken(t *testing.T, email, password string) st
 	codeVerifier := "verifier-" + uuid.NewString()
 	codeChallenge := generateCodeChallenge(codeVerifier)
 
-	authorizeURL := a.server.URL + "/api/v1/oauth2/authorize?client_id=" + url.QueryEscape(a.clientID) +
+	authorizePath := "/api/v1/oauth2/authorize?client_id=" + url.QueryEscape(a.clientID) +
 		"&redirect_uri=" + url.QueryEscape(a.redirectURI) +
 		"&response_type=code" +
 		"&scopes=user" +
@@ -125,11 +127,12 @@ func (a *e2eApp) loginAndGetAccessToken(t *testing.T, email, password string) st
 		"&code_challenge=" + url.QueryEscape(codeChallenge) +
 		"&code_challenge_method=S256" +
 		"&nonce=" + url.QueryEscape(nonce)
+	authorizeURL := a.server.URL + authorizePath
 
 	loginBody := map[string]string{
 		"email":    email,
 		"password": password,
-		"continue": authorizeURL,
+		"continue": authorizePath,
 	}
 	bodyBytes, err := json.Marshal(loginBody)
 	if err != nil {

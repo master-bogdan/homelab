@@ -18,6 +18,10 @@ import (
 )
 
 func setupTest(t *testing.T) (*chi.Mux, *bun.DB, string, string, string, string) {
+	return setupTestWithTrustProxyHeaders(t, false)
+}
+
+func setupTestWithTrustProxyHeaders(t *testing.T, trustProxyHeaders bool) (*chi.Mux, *bun.DB, string, string, string, string) {
 	t.Helper()
 
 	db := testutils.SetupTestDB(t)
@@ -34,13 +38,14 @@ func setupTest(t *testing.T) (*chi.Mux, *bun.DB, string, string, string, string)
 		})
 
 		oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-			Router:          r,
-			DB:              db,
-			TokenKey:        testutils.TestTokenKey,
-			Issuer:          testutils.TestIssuer,
-			UserService:     usersModule.Service,
-			AuthService:     authService,
-			FrontendBaseURL: "http://localhost:5173",
+			Router:            r,
+			DB:                db,
+			TokenKey:          testutils.TestTokenKey,
+			Issuer:            testutils.TestIssuer,
+			UserService:       usersModule.Service,
+			AuthService:       authService,
+			FrontendBaseURL:   "http://localhost:5173",
+			TrustProxyHeaders: trustProxyHeaders,
 		})
 	})
 
@@ -91,6 +96,8 @@ func TestAuthorize_WithoutSession_RedirectsToFrontendLogin_Integration(t *testin
 		"&nonce=nonce123"+
 		"&code_challenge=abc123"+
 		"&code_challenge_method=S256", nil)
+	req.Host = "evil.example"
+	req.Header.Set("X-Forwarded-Proto", "https")
 
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -109,8 +116,11 @@ func TestAuthorize_WithoutSession_RedirectsToFrontendLogin_Integration(t *testin
 	}
 
 	continueURL := loc.Query().Get("continue")
-	if !strings.Contains(continueURL, "/api/v1/oauth2/authorize") {
-		t.Fatalf("expected continue url to point back to authorize, got: %s", continueURL)
+	if continueURL != req.URL.RequestURI() {
+		t.Fatalf("expected relative continue url %q, got %q", req.URL.RequestURI(), continueURL)
+	}
+	if strings.Contains(continueURL, "://") || strings.HasPrefix(continueURL, "//") {
+		t.Fatalf("expected continue url to remain relative, got %q", continueURL)
 	}
 }
 
@@ -149,7 +159,7 @@ func generateCodeChallenge(verifier string) string {
 }
 
 func TestToken_AuthorizationCodeFlow_ReturnsTokens_Integration(t *testing.T) {
-	router, db, clientID, _, sessionID, redirectURI := setupTest(t)
+	router, db, clientID, _, sessionID, redirectURI := setupTestWithTrustProxyHeaders(t, true)
 	defer db.Close()
 
 	codeVerifier := "testverifier1234567890"
@@ -189,6 +199,7 @@ func TestToken_AuthorizationCodeFlow_ReturnsTokens_Integration(t *testing.T) {
 
 	reqToken := httptest.NewRequest("POST", "/api/v1/oauth2/token", strings.NewReader(formToken.Encode()))
 	reqToken.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	reqToken.Header.Set("X-Forwarded-Proto", "https")
 
 	rrToken := httptest.NewRecorder()
 	router.ServeHTTP(rrToken, reqToken)
@@ -211,6 +222,30 @@ func TestToken_AuthorizationCodeFlow_ReturnsTokens_Integration(t *testing.T) {
 	}
 	if !strings.Contains(bodyStr, "id_token") {
 		t.Fatalf("expected response to contain id_token, got %s", bodyStr)
+	}
+
+	var accessCookie *http.Cookie
+	var refreshCookie *http.Cookie
+	for _, cookie := range rrToken.Result().Cookies() {
+		switch cookie.Name {
+		case oauth2.AccessTokenCookieName:
+			accessCookie = cookie
+		case oauth2.RefreshTokenCookieName:
+			refreshCookie = cookie
+		}
+	}
+
+	if accessCookie == nil || accessCookie.Value == "" {
+		t.Fatalf("expected access_token cookie to be set")
+	}
+	if !accessCookie.HttpOnly || !accessCookie.Secure {
+		t.Fatalf("expected access_token cookie to be HttpOnly and Secure, got %#v", accessCookie)
+	}
+	if refreshCookie == nil || refreshCookie.Value == "" {
+		t.Fatalf("expected refresh_token cookie to be set")
+	}
+	if !refreshCookie.HttpOnly || !refreshCookie.Secure {
+		t.Fatalf("expected refresh_token cookie to be HttpOnly and Secure, got %#v", refreshCookie)
 	}
 }
 

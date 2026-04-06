@@ -17,14 +17,15 @@ type AuthModule struct {
 }
 
 type AuthModuleDeps struct {
-	Router          chi.Router
-	DB              *bun.DB
-	UserService     users.UsersService
-	Oauth2Service   oauth2.Oauth2Service
-	SessionService  oauth2.AuthService
-	FrontendBaseURL string
-	EmailClient     email.Client
-	Github          oauth2utils.GithubConfig
+	Router            chi.Router
+	DB                *bun.DB
+	UserService       users.UsersService
+	Oauth2Service     oauth2.Oauth2Service
+	SessionService    oauth2.AuthService
+	FrontendBaseURL   string
+	TrustProxyHeaders bool
+	EmailClient       email.Client
+	Github            oauth2utils.GithubConfig
 }
 
 func NewAuthModule(deps AuthModuleDeps) *AuthModule {
@@ -47,7 +48,7 @@ func NewAuthModule(deps AuthModuleDeps) *AuthModule {
 		OidcSessionRepo:        oidcSessionRepo,
 		Github:                 deps.Github,
 	})
-	controller := NewAuthController(service)
+	controller := NewAuthController(service, deps.TrustProxyHeaders)
 
 	deps.Router.Route("/auth", func(r chi.Router) {
 		r.Post("/login", controller.Login)

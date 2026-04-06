@@ -2,7 +2,7 @@ import { appConfig } from '@/shared/config/env';
 
 import type { PendingAuthorizationRequest } from '../types';
 
-import { createApiUrl } from './apiUrl';
+import { createApiPath } from './apiUrl';
 
 const pendingAuthorizationStorageKey = 'estimate-room.auth.pending-authorization';
 
@@ -81,7 +81,7 @@ export const createPendingAuthorizationRequest = async (redirectTo: string) => {
   const codeChallenge = await createCodeChallenge(codeVerifier);
   const nonce = createRandomToken();
   const state = createRandomToken();
-  const continueUrl = createApiUrl('oauth2/authorize', {
+  const continueUrl = createApiPath('oauth2/authorize', {
     client_id: clientId,
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
@@ -90,7 +90,7 @@ export const createPendingAuthorizationRequest = async (redirectTo: string) => {
     response_type: 'code',
     scopes,
     state
-  }).toString();
+  });
 
   const request: PendingAuthorizationRequest = {
     clientId,

@@ -97,7 +97,10 @@ func main() {
 	}
 
 	backgroundCtx, cancelBackground := context.WithCancel(context.Background())
-	application.SetupApp(backgroundCtx)
+	if err := application.SetupApp(backgroundCtx); err != nil {
+		logger.L().Error(logPrefix("BOOT", "APP", "Failed to configure application"), "err", err)
+		os.Exit(1)
+	}
 	logger.L().Info(logPrefix("BOOT", "APP", "Application modules and routes configured"))
 
 	addr := net.JoinHostPort(

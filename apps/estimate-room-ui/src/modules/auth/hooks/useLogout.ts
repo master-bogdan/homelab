@@ -6,7 +6,6 @@ import { appRoutes } from '@/shared/constants/routes';
 
 import { authService } from '../services';
 import { clearSession } from '../store';
-import { clearOauthTokenCookies } from '../utils';
 
 export const useLogout = () => {
   const dispatch = useAppDispatch();
@@ -23,7 +22,6 @@ export const useLogout = () => {
     try {
       await authService.logout();
     } finally {
-      clearOauthTokenCookies();
       dispatch(clearSession());
       navigate(appRoutes.login, { replace: true });
       setIsLoggingOut(false);

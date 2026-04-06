@@ -13,6 +13,14 @@ const resolveBaseUrl = (baseUrl: string) => {
   return `${origin}${normalizedBaseUrl}`;
 };
 
+const resolveOrigin = (baseUrl: string) => {
+  if (/^https?:\/\//.test(baseUrl)) {
+    return new URL(baseUrl).origin;
+  }
+
+  return typeof window === 'undefined' ? 'http://localhost' : window.location.origin;
+};
+
 export const createApiUrl = (path: string, query?: Record<string, QueryValue>) => {
   const url = new URL(
     path.replace(/^\//, ''),
@@ -30,4 +38,22 @@ export const createApiUrl = (path: string, query?: Record<string, QueryValue>) =
   }
 
   return url;
+};
+
+export const createApiPath = (path: string, query?: Record<string, QueryValue>) => {
+  const url = createApiUrl(path, query);
+
+  return `${url.pathname}${url.search}`;
+};
+
+export const resolveApiHref = (pathOrUrl: string) => {
+  if (/^https?:\/\//.test(pathOrUrl)) {
+    return pathOrUrl;
+  }
+
+  if (pathOrUrl.startsWith('/')) {
+    return new URL(pathOrUrl, `${resolveOrigin(appConfig.apiBaseUrl)}/`).toString();
+  }
+
+  return createApiUrl(pathOrUrl).toString();
 };

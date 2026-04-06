@@ -16,8 +16,9 @@ describe('oauthFlow', () => {
     } = await import('../oauthFlow');
 
     const request = await createPendingAuthorizationRequest('/dashboard?tab=activity');
-    const continueUrl = new URL(request.continueUrl);
+    const continueUrl = new URL(request.continueUrl, 'http://localhost');
 
+    expect(request.continueUrl.startsWith('/api/v1/oauth2/authorize?')).toBe(true);
     expect(continueUrl.pathname).toBe('/api/v1/oauth2/authorize');
     expect(continueUrl.searchParams.get('client_id')).toBe('estimate-room-ui');
     expect(continueUrl.searchParams.get('redirect_uri')).toBe(
@@ -38,7 +39,7 @@ describe('oauthFlow', () => {
     await expect(
       ensurePendingAuthorizationRequest(
         '/dashboard',
-        'http://localhost:8080/api/v1/oauth2/authorize?client_id=client&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fauth%2Fcallback&response_type=code&scopes=openid%20user&state=test&code_challenge=test&code_challenge_method=S256&nonce=test'
+        '/api/v1/oauth2/authorize?client_id=client&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fauth%2Fcallback&response_type=code&scopes=openid%20user&state=test&code_challenge=test&code_challenge_method=S256&nonce=test'
       )
     ).rejects.toThrow('Your sign-in session expired. Please start again.');
   });

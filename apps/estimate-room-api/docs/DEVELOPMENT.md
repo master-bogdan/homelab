@@ -28,12 +28,21 @@ Minimum variables:
 Optional but recommended:
 
 - `WS_ALLOWED_ORIGINS`
+- `TRUST_PROXY_HEADERS` when the API is behind a trusted TLS-terminating proxy and should treat `X-Forwarded-Proto: https` as secure
 - `HTTP_RATE_LIMIT_PER_MINUTE`
 - `WS_RATE_LIMIT_PER_MINUTE`
 - GitHub OAuth variables if GitHub login is required
 - Email SMTP variables if local password reset emails should be delivered
 
 `FRONTEND_BASE_URL` is used by `/api/v1/oauth2/authorize` to redirect unauthenticated users to the frontend login page with a `continue` URL.
+The server now validates `FRONTEND_BASE_URL` during startup and exits early if it is missing.
+
+OAuth browser `continue` values are intentionally relative path-plus-query values such as `/api/v1/oauth2/authorize?...`.
+The frontend can still resolve those relative paths against `VITE_API_BASE_URL` for browser navigation, but the backend no longer accepts absolute `continue` URLs from clients.
+
+Access and refresh tokens are now issued as backend-owned `HttpOnly` cookies on the API origin.
+This works cleanly for same-origin deployments and same-site subdomain deployments with `credentials: include`.
+If you deploy the frontend and API on different sites, plan additional cookie settings and CSRF hardening before relying on browser cookie auth.
 
 The checked-in local defaults are aligned to the dev compose stack:
 

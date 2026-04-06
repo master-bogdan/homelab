@@ -118,7 +118,7 @@ func extractToken(r *http.Request) string {
 		return token
 	}
 
-	cookie, err := r.Cookie("access_token")
+	cookie, err := r.Cookie(AccessTokenCookieName)
 	if err == nil && cookie.Value != "" {
 		return cookie.Value
 	}

@@ -5,7 +5,7 @@ import { useAppDispatch } from '@/app/store/hooks';
 
 import { authService } from '../services';
 import { setSession } from '../store';
-import { isEmailAlreadyInUseError, resolveApiErrorMessage } from '../utils';
+import { isEmailAlreadyInUseError, resolveApiErrorMessage, resolveApiHref } from '../utils';
 
 import { useAuthContinuation } from './useAuthContinuation';
 
@@ -69,7 +69,7 @@ export const useRegisterPage = () => {
       });
 
       dispatch(setSession(user));
-      window.location.assign(pendingRequest.continueUrl);
+      window.location.assign(resolveApiHref(pendingRequest.continueUrl));
     } catch (error) {
       if (isEmailAlreadyInUseError(error)) {
         form.setError('email', {

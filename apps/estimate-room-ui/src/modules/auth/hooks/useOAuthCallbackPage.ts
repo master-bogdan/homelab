@@ -8,9 +8,7 @@ import { authService } from '../services';
 import { clearSession, setSession } from '../store';
 import type { PendingAuthorizationRequest } from '../types';
 import {
-  clearOauthTokenCookies,
   clearPendingAuthorizationRequest,
-  persistOauthTokenCookies,
   readPendingAuthorizationRequest,
   resolveApiErrorMessage
 } from '../utils';
@@ -34,14 +32,12 @@ const finalizeOAuthCallbackRequest = async (
     throw new Error('Your sign-in session expired. Please try signing in again.');
   }
 
-  const tokens = await authService.exchangeAuthorizationCode({
+  await authService.exchangeAuthorizationCode({
     clientId: pendingRequest.clientId,
     code,
     codeVerifier: pendingRequest.codeVerifier,
     redirectUri: pendingRequest.redirectUri
   });
-
-  persistOauthTokenCookies(tokens);
 
   const user = await authService.fetchSession();
 
@@ -106,7 +102,6 @@ export const useOAuthCallbackPage = () => {
         }
 
         clearPendingAuthorizationRequest();
-        clearOauthTokenCookies();
         dispatch(clearSession());
 
         setErrorMessage(

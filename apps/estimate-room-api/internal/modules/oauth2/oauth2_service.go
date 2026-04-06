@@ -23,6 +23,12 @@ import (
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
 
+const (
+	accessTokenTTL  = 15 * time.Minute
+	refreshTokenTTL = 30 * 24 * time.Hour
+	idTokenTTL      = 15 * time.Minute
+)
+
 type UserService interface {
 	FindByID(userID string) (*usersmodels.UserModel, error)
 	FindByEmail(email string) (*usersmodels.UserModel, error)
@@ -321,9 +327,6 @@ func (s *oauth2Service) GetRefreshTokens(ctx context.Context, dto *oauth2dto.Get
 
 func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID, oidcSessionID string, scopes []string) (oauth2dto.TokenResponseDTO, error) {
 	logger.FromContext(ctx, s.logger).Info(oauth2Log("Generating token pair"))
-	accessTokenDuration := time.Minute * 15     // 15 minutes
-	refreshTokenDuration := time.Hour * 24 * 30 // 30 days
-	idTokenDuration := time.Minute * 15         // 15 minutes
 
 	refreshTokenPayload := oauth2models.Oauth2RefreshTokenModel{
 		UserID:        userID,
@@ -331,7 +334,7 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 		OidcSessionID: oidcSessionID,
 		Scopes:        scopes,
 		IssuedAt:      time.Now(),
-		ExpiresAt:     time.Now().Add(refreshTokenDuration),
+		ExpiresAt:     time.Now().Add(refreshTokenTTL),
 	}
 	refreshToken, err := utils.GenerateToken(s.tokenKey, refreshTokenPayload)
 	if err != nil {
@@ -352,7 +355,7 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 		RefreshTokenID: &refreshTokenID,
 		Scopes:         scopes,
 		IssuedAt:       time.Now(),
-		ExpiresAt:      time.Now().Add(accessTokenDuration),
+		ExpiresAt:      time.Now().Add(accessTokenTTL),
 		Issuer:         s.issuer,
 	}
 	accessToken, err := utils.GenerateToken(s.tokenKey, accessTokenPayload)
@@ -377,7 +380,7 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 		Issuer:    s.issuer,
 		Subject:   userID,
 		Audience:  clientID,
-		ExpiresAt: now.Add(idTokenDuration).Unix(),
+		ExpiresAt: now.Add(idTokenTTL).Unix(),
 		IssuedAt:  now.Unix(),
 		Nonce:     session.Nonce,
 	}
@@ -390,7 +393,7 @@ func (s *oauth2Service) GenerateTokenPair(ctx context.Context, userID, clientID,
 	return oauth2dto.TokenResponseDTO{
 		AccessToken:  accessToken,
 		TokenType:    "bearer",
-		ExpiresIn:    int(accessTokenDuration.Seconds()),
+		ExpiresIn:    int(accessTokenTTL.Seconds()),
 		RefreshToken: refreshToken,
 		IDToken:      idToken,
 	}, nil

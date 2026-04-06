@@ -25,8 +25,6 @@ const OAuthCallbackRoute = () => {
 
 describe('useOAuthCallbackPage', () => {
   beforeEach(() => {
-    document.cookie = 'access_token=; Max-Age=0; Path=/';
-    document.cookie = 'refresh_token=; Max-Age=0; Path=/';
     sessionStorage.clear();
     vi.clearAllMocks();
   });
@@ -37,7 +35,7 @@ describe('useOAuthCallbackPage', () => {
       JSON.stringify({
         clientId: 'estimate-room-ui',
         codeVerifier: 'verifier-123',
-        continueUrl: 'http://localhost:8080/api/v1/oauth2/authorize?...',
+        continueUrl: '/api/v1/oauth2/authorize?...',
         redirectTo: '/dashboard',
         redirectUri: 'http://localhost:5173/auth/callback',
         state: 'state-123'

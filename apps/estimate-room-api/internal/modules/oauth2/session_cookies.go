@@ -1,6 +1,9 @@
 package oauth2
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
 const (
 	SessionCookieName      = "session_id"
@@ -24,37 +27,83 @@ func ReadSessionID(r *http.Request) string {
 	return ""
 }
 
-func SessionCookie(sessionID string, secure bool) *http.Cookie {
-	return &http.Cookie{
-		Name:     SessionCookieName,
-		Value:    sessionID,
+func SessionCookie(sessionID string, r *http.Request, trustProxyHeaders bool) *http.Cookie {
+	return cookieWithSettings(SessionCookieName, sessionID, 0, isSecureRequest(r, trustProxyHeaders))
+}
+
+func AccessTokenCookie(token string, r *http.Request, trustProxyHeaders bool) *http.Cookie {
+	return cookieWithSettings(
+		AccessTokenCookieName,
+		token,
+		int(accessTokenTTL.Seconds()),
+		isSecureRequest(r, trustProxyHeaders),
+	)
+}
+
+func RefreshTokenCookie(token string, r *http.Request, trustProxyHeaders bool) *http.Cookie {
+	return cookieWithSettings(
+		RefreshTokenCookieName,
+		token,
+		int(refreshTokenTTL.Seconds()),
+		isSecureRequest(r, trustProxyHeaders),
+	)
+}
+
+func ExpiredSessionCookie(r *http.Request, trustProxyHeaders bool) *http.Cookie {
+	return expiredCookie(SessionCookieName, isSecureRequest(r, trustProxyHeaders))
+}
+
+func ExpiredAccessTokenCookie(r *http.Request, trustProxyHeaders bool) *http.Cookie {
+	return expiredCookie(AccessTokenCookieName, isSecureRequest(r, trustProxyHeaders))
+}
+
+func ExpiredRefreshTokenCookie(r *http.Request, trustProxyHeaders bool) *http.Cookie {
+	return expiredCookie(RefreshTokenCookieName, isSecureRequest(r, trustProxyHeaders))
+}
+
+func cookieWithSettings(name, value string, maxAge int, secure bool) *http.Cookie {
+	cookie := &http.Cookie{
+		Name:     name,
+		Value:    value,
 		HttpOnly: true,
 		Secure:   secure,
 		Path:     "/",
 		SameSite: http.SameSiteLaxMode,
 	}
-}
 
-func ExpiredSessionCookie(secure bool) *http.Cookie {
-	return expiredCookie(SessionCookieName, secure)
-}
+	if maxAge > 0 {
+		cookie.MaxAge = maxAge
+	}
 
-func ExpiredAccessTokenCookie(secure bool) *http.Cookie {
-	return expiredCookie(AccessTokenCookieName, secure)
-}
-
-func ExpiredRefreshTokenCookie(secure bool) *http.Cookie {
-	return expiredCookie(RefreshTokenCookieName, secure)
+	return cookie
 }
 
 func expiredCookie(name string, secure bool) *http.Cookie {
-	return &http.Cookie{
-		Name:     name,
-		Value:    "",
-		HttpOnly: true,
-		Secure:   secure,
-		Path:     "/",
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   -1,
+	cookie := cookieWithSettings(name, "", 0, secure)
+	cookie.MaxAge = -1
+
+	return cookie
+}
+
+func isSecureRequest(r *http.Request, trustProxyHeaders bool) bool {
+	if r == nil {
+		return false
 	}
+	if r.TLS != nil {
+		return true
+	}
+	if !trustProxyHeaders {
+		return false
+	}
+
+	return strings.EqualFold(firstForwardedValue(r.Header.Get("X-Forwarded-Proto")), "https")
+}
+
+func firstForwardedValue(value string) string {
+	head := strings.TrimSpace(strings.Split(value, ",")[0])
+	if head == "" {
+		return ""
+	}
+
+	return head
 }

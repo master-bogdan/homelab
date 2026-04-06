@@ -434,6 +434,10 @@ func (s *authService) parseContinueURL(continueURL string) (*oauth2dto.Authorize
 		s.logContinueURLRejection("parse_failed", nil, nil, err)
 		return nil, ErrInvalidContinueURL
 	}
+	if parsedURL.Scheme != "" || parsedURL.Host != "" {
+		s.logContinueURLRejection("absolute_url_not_allowed", parsedURL, nil, errors.New("continue url must be relative"))
+		return nil, ErrInvalidContinueURL
+	}
 
 	normalizedPath := strings.TrimRight(parsedURL.Path, "/")
 	if normalizedPath != "/api/v1/oauth2/authorize" && normalizedPath != "/oauth2/authorize" {

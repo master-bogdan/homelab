@@ -1,4 +1,4 @@
-export { createApiUrl } from './apiUrl';
+export { createApiPath, createApiUrl, resolveApiHref } from './apiUrl';
 export {
   clearPendingAuthorizationRequest,
   createPendingAuthorizationRequest,
@@ -11,7 +11,6 @@ export {
   isInvalidCredentialsError,
   resolveApiErrorMessage
 } from './errorMessages';
-export { clearOauthTokenCookies, persistOauthTokenCookies } from './tokenCookies';
 export {
   createEmailValidationRules,
   createPasswordValidationRules,
