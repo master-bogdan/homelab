@@ -26,14 +26,14 @@ type TeamsController interface {
 type teamsController struct {
 	service       TeamsService
 	inviteService TeamsInviteService
-	authService   oauth2.AuthService
+	authService   oauth2.Oauth2SessionAuthService
 	logger        *slog.Logger
 }
 
 func NewTeamsController(
 	service TeamsService,
 	inviteService TeamsInviteService,
-	authService oauth2.AuthService,
+	authService oauth2.Oauth2SessionAuthService,
 ) TeamsController {
 	return &teamsController{
 		service:       service,
@@ -59,6 +59,11 @@ func (c *teamsController) CreateTeam(w http.ResponseWriter, r *http.Request) {
 		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
 	}
+
+	logger.FromRequest(r, c.logger).Info("create team dto accepted",
+		"path", r.URL.Path,
+		"name", dto.Name,
+	)
 
 	team, err := c.service.CreateTeam(r.Context(), dto.Name, userID)
 	if err != nil {
@@ -124,6 +129,11 @@ func (c *teamsController) CreateInvites(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	logger.FromRequest(r, c.logger).Info("create team invites dto accepted",
+		"path", r.URL.Path,
+		"emails_count", len(dto.Emails),
+	)
+
 	invites, err := c.inviteService.CreateInvites(r.Context(), teamID, userID, dto.Emails)
 	if err != nil {
 		c.writeTeamError(w, r, err)
@@ -184,7 +194,7 @@ func (c *teamsController) writeError(w http.ResponseWriter, r *http.Request, err
 		logArgs = append(logArgs, "err", cause)
 	}
 
-	c.logger.Error("request failed", logArgs...)
+	logger.FromRequest(r, c.logger).Error("request failed", logArgs...)
 
 	httputils.WriteResponseError(w, apperrors.CreateHttpError(
 		errType,

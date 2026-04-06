@@ -3,15 +3,20 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
 	"github.com/master-bogdan/estimate-room-api/config"
 	_ "github.com/master-bogdan/estimate-room-api/docs"
+	"github.com/master-bogdan/estimate-room-api/internal/infra/email"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/auth"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/health"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/history"
@@ -39,12 +44,17 @@ type AppDeps struct {
 	WsServer           ws.PubSub
 }
 
-func (deps *AppDeps) SetupApp(ctx context.Context) {
+func (deps *AppDeps) SetupApp(ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if deps.Cfg == nil {
 		deps.Cfg = &config.Config{}
+	}
+
+	frontendBaseURL := strings.TrimSpace(deps.Cfg.Frontend.BaseURL)
+	if frontendBaseURL == "" {
+		return fmt.Errorf("FRONTEND_BASE_URL is required")
 	}
 
 	httpRateLimitPerMinute := 100
@@ -56,21 +66,57 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		wsRateLimitPerMinute = deps.Cfg.Server.WSRateLimitPerMinute
 	}
 
-	deps.Router.Use(
+	routerMiddlewares := []func(http.Handler) http.Handler{
 		logger.RequestIDMiddleware,
 		middleware.RealIP,
 		logger.RequestLoggerMiddleware,
 		middleware.Recoverer,
 		httprate.LimitByIP(httpRateLimitPerMinute, 1*time.Minute),
+	}
+
+	githubScopes := strings.Fields(deps.Cfg.Github.Scopes)
+	wsOriginPatterns := splitConfigList(deps.Cfg.Server.WebSocketAllowedOrigins)
+	httpOriginPatterns := append(
+		[]string{},
+		splitConfigList(deps.Cfg.Server.HTTPAllowedOrigins)...,
 	)
+	httpOriginPatterns = append(httpOriginPatterns, frontendBaseURL)
+
+	routerMiddlewares = append(routerMiddlewares, cors.Handler(cors.Options{
+		AllowedOrigins: httpOriginPatterns,
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+			http.MethodOptions,
+		},
+		AllowedHeaders: []string{
+			"Accept",
+			"Authorization",
+			"Content-Type",
+			"Origin",
+		},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
+	deps.Router.Use(routerMiddlewares...)
 
 	deps.Router.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("/swagger/doc.json"),
 	))
+
 	deps.Router.Handle("/metrics", metrics.Handler())
 
-	githubScopes := strings.Fields(deps.Cfg.Github.Scopes)
-	wsOriginPatterns := splitConfigList(deps.Cfg.Server.WebSocketAllowedOrigins)
+	emailClient := email.NewSMTPClient(email.SMTPConfig{
+		From:     deps.Cfg.Email.From,
+		Host:     deps.Cfg.Email.SMTPHost,
+		Port:     deps.Cfg.Email.SMTPPort,
+		Username: deps.Cfg.Email.SMTPUsername,
+		Password: deps.Cfg.Email.SMTPPassword,
+	})
 
 	deps.Router.Route("/api/v1", func(r chi.Router) {
 		health.NewHealthModule(health.HealthModuleDeps{
@@ -84,11 +130,24 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		userService := users.NewUsersService(userRepo)
 
 		oauth2Module := oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-			Router:      r,
-			DB:          deps.DB,
-			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
-			Issuer:      deps.Cfg.Server.Issuer,
-			UserService: userService,
+			Router:            r,
+			DB:                deps.DB,
+			TokenKey:          deps.Cfg.Server.PasetoSymmetricKey,
+			Issuer:            deps.Cfg.Server.Issuer,
+			UserService:       userService,
+			FrontendBaseURL:   frontendBaseURL,
+			TrustProxyHeaders: deps.Cfg.Server.TrustProxyHeaders,
+		})
+
+		auth.NewAuthModule(auth.AuthModuleDeps{
+			Router:            r,
+			DB:                deps.DB,
+			UserService:       userService,
+			Oauth2Service:     oauth2Module.Service,
+			SessionService:    oauth2Module.SessionAuthService,
+			FrontendBaseURL:   frontendBaseURL,
+			TrustProxyHeaders: deps.Cfg.Server.TrustProxyHeaders,
+			EmailClient:       emailClient,
 			Github: oauth2utils.GithubConfig{
 				ClientID:     deps.Cfg.Github.ClientID,
 				ClientSecret: deps.Cfg.Github.ClientSecret,
@@ -100,7 +159,7 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 
 		wsModule := ws.NewWsModule(ws.WsModuleDeps{
 			Router:               r,
-			AuthService:          oauth2Module.AuthService,
+			AuthService:          oauth2Module.SessionAuthService,
 			TokenKey:             deps.Cfg.Server.PasetoSymmetricKey,
 			Server:               deps.WsServer,
 			OriginPatterns:       wsOriginPatterns,
@@ -110,20 +169,20 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		users.NewUsersModule(users.UsersModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
-			AuthService: oauth2Module.AuthService,
+			AuthService: oauth2Module.SessionAuthService,
 		})
 
 		invitesModule := invites.NewInvitesModule(invites.InvitesModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
-			AuthService: oauth2Module.AuthService,
+			AuthService: oauth2Module.SessionAuthService,
 			TokenKey:    deps.Cfg.Server.PasetoSymmetricKey,
 		})
 
 		teams.NewTeamsModule(teams.TeamsModuleDeps{
 			Router:         r,
 			DB:             deps.DB,
-			AuthService:    oauth2Module.AuthService,
+			AuthService:    oauth2Module.SessionAuthService,
 			UserService:    userService,
 			InvitesService: invitesModule.Service,
 		})
@@ -131,7 +190,7 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		gamificationModule := gamification.NewGamificationModule(gamification.GamificationModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
-			AuthService: oauth2Module.AuthService,
+			AuthService: oauth2Module.SessionAuthService,
 			WsService:   wsModule.Service,
 		})
 
@@ -139,7 +198,7 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 			Router:         r,
 			DB:             deps.DB,
 			WsService:      wsModule.Service,
-			AuthService:    oauth2Module.AuthService,
+			AuthService:    oauth2Module.SessionAuthService,
 			InvitesService: invitesModule.Service,
 			RewardService:  gamificationModule.Service,
 		})
@@ -147,13 +206,15 @@ func (deps *AppDeps) SetupApp(ctx context.Context) {
 		history.NewHistoryModule(history.HistoryModuleDeps{
 			Router:      r,
 			DB:          deps.DB,
-			AuthService: oauth2Module.AuthService,
+			AuthService: oauth2Module.SessionAuthService,
 		})
 
 		if roomsModule != nil && roomsModule.ExpiryService != nil {
 			roomsModule.ExpiryService.Start(ctx)
 		}
 	})
+
+	return nil
 }
 
 func splitConfigList(value string) []string {

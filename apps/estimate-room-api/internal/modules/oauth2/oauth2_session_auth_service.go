@@ -15,7 +15,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type AuthService interface {
+type Oauth2SessionAuthService interface {
 	CheckAuth(r *http.Request) (userID string, err error)
 	CreateOidcSession(model *oauth2models.OidcSessionModel) (string, error)
 	GetOidcSessionByID(sessionID string) (*oauth2models.OidcSessionModel, error)
@@ -31,11 +31,11 @@ type authService struct {
 	logger          *slog.Logger
 }
 
-func NewAuthService(
+func NewOauth2SessionAuthService(
 	tokenKey string,
 	accessTokenRepo oauth2repositories.AccessTokenRepository,
 	oidcSessionRepo oauth2repositories.OidcSessionRepository,
-) AuthService {
+) Oauth2SessionAuthService {
 	log := logger.L().With(slog.String("module", "oauth2-auth"))
 	return &authService{
 		tokenKey:        []byte(tokenKey),
@@ -45,10 +45,10 @@ func NewAuthService(
 	}
 }
 
-func NewAuthServiceFromDB(tokenKey string, db *bun.DB) AuthService {
+func NewOauth2SessionAuthServiceFromDB(tokenKey string, db *bun.DB) Oauth2SessionAuthService {
 	accessTokenRepo := oauth2repositories.NewOauth2AccessTokenRepository(db)
 	oidcSessionRepo := oauth2repositories.NewOauth2OidcSessionRepository(db)
-	return NewAuthService(tokenKey, accessTokenRepo, oidcSessionRepo)
+	return NewOauth2SessionAuthService(tokenKey, accessTokenRepo, oidcSessionRepo)
 }
 
 func (s *authService) CheckAuth(r *http.Request) (string, error) {
@@ -80,7 +80,7 @@ func (s *authService) CreateAccessToken(ctx context.Context, model *oauth2models
 func (s *authService) checkToken(ctx context.Context, token string) (string, error) {
 	storedToken, err := s.accessTokenRepo.FindByToken(ctx, token)
 	if err != nil {
-		s.logger.Error("invalid or expired access token")
+		s.logger.Error(oauth2AuthLog("Invalid or expired access token"))
 		return "", errors.New("invalid or expired access token")
 	}
 
@@ -118,7 +118,7 @@ func extractToken(r *http.Request) string {
 		return token
 	}
 
-	cookie, err := r.Cookie("access_token")
+	cookie, err := r.Cookie(Oauth2AccessTokenCookieName)
 	if err == nil && cookie.Value != "" {
 		return cookie.Value
 	}
@@ -137,4 +137,8 @@ func bearerToken(value string) string {
 	}
 
 	return strings.TrimSpace(token)
+}
+
+func oauth2AuthLog(message string) string {
+	return logger.Prefix("MODULE", "OAUTH2", "AUTH", message)
 }

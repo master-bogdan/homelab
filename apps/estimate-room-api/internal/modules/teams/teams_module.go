@@ -19,7 +19,7 @@ type TeamsModule struct {
 type TeamsModuleDeps struct {
 	Router         chi.Router
 	DB             *bun.DB
-	AuthService    oauth2.AuthService
+	AuthService    oauth2.Oauth2SessionAuthService
 	UserService    users.UsersService
 	InvitesService invites.InvitesService
 }

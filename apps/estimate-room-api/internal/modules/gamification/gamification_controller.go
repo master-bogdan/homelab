@@ -17,11 +17,11 @@ type GamificationController interface {
 
 type gamificationController struct {
 	service     GamificationService
-	authService oauth2.AuthService
+	authService oauth2.Oauth2SessionAuthService
 	logger      *slog.Logger
 }
 
-func NewGamificationController(service GamificationService, authService oauth2.AuthService) GamificationController {
+func NewGamificationController(service GamificationService, authService oauth2.Oauth2SessionAuthService) GamificationController {
 	return &gamificationController{
 		service:     service,
 		authService: authService,
@@ -64,7 +64,7 @@ func (c *gamificationController) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	response, err := c.service.GetMe(r.Context(), userID)
 	if err != nil {
-		c.logger.Error("failed to get gamification profile", "err", err)
+		logger.FromRequest(r, c.logger).Error("failed to get gamification profile", "err", err)
 		httputils.WriteResponseError(w, apperrors.CreateHttpError(
 			apperrors.ErrInternal,
 			apperrors.HttpError{

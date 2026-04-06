@@ -2,8 +2,8 @@ package history
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	historyrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/history/repositories"
+	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
 	teamsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/teams/repositories"
 	"github.com/uptrace/bun"
 )
@@ -17,7 +17,7 @@ type HistoryModule struct {
 type HistoryModuleDeps struct {
 	Router      chi.Router
 	DB          *bun.DB
-	AuthService oauth2.AuthService
+	AuthService oauth2.Oauth2SessionAuthService
 }
 
 func NewHistoryModule(deps HistoryModuleDeps) *HistoryModule {

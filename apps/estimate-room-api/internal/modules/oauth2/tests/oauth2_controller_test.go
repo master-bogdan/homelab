@@ -12,20 +12,23 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
-	oauth2utils "github.com/master-bogdan/estimate-room-api/internal/modules/oauth2/utils"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/users"
 	testutils "github.com/master-bogdan/estimate-room-api/internal/pkg/test"
 	"github.com/uptrace/bun"
 )
 
 func setupTest(t *testing.T) (*chi.Mux, *bun.DB, string, string, string, string) {
+	return setupTestWithTrustProxyHeaders(t, false)
+}
+
+func setupTestWithTrustProxyHeaders(t *testing.T, trustProxyHeaders bool) (*chi.Mux, *bun.DB, string, string, string, string) {
 	t.Helper()
 
 	db := testutils.SetupTestDB(t)
 	testutils.ResetOauthTables(t, db)
 
 	router := chi.NewRouter()
-	authService := oauth2.NewAuthServiceFromDB(testutils.TestTokenKey, db)
+	authService := oauth2.NewOauth2SessionAuthServiceFromDB(testutils.TestTokenKey, db)
 
 	router.Route("/api/v1", func(r chi.Router) {
 		usersModule := users.NewUsersModule(users.UsersModuleDeps{
@@ -35,13 +38,14 @@ func setupTest(t *testing.T) (*chi.Mux, *bun.DB, string, string, string, string)
 		})
 
 		oauth2.NewOauth2Module(oauth2.Oauth2ModuleDeps{
-			Router:      r,
-			DB:          db,
-			TokenKey:    testutils.TestTokenKey,
-			Issuer:      testutils.TestIssuer,
-			UserService: usersModule.Service,
-			AuthService: authService,
-			Github:      oauth2utils.GithubConfig{},
+			Router:             r,
+			DB:                 db,
+			TokenKey:           testutils.TestTokenKey,
+			Issuer:             testutils.TestIssuer,
+			UserService:        usersModule.Service,
+			SessionAuthService: authService,
+			FrontendBaseURL:    "http://localhost:5173",
+			TrustProxyHeaders:  trustProxyHeaders,
 		})
 	})
 
@@ -80,7 +84,7 @@ func TestAuthorize_WithValidSession_ReturnsCode_Integration(t *testing.T) {
 	}
 }
 
-func TestAuthorize_WithoutSession_RedirectsToLogin_Integration(t *testing.T) {
+func TestAuthorize_WithoutSession_RedirectsToFrontendLogin_Integration(t *testing.T) {
 	router, db, clientID, _, _, redirectURI := setupTest(t)
 	defer db.Close()
 
@@ -92,6 +96,8 @@ func TestAuthorize_WithoutSession_RedirectsToLogin_Integration(t *testing.T) {
 		"&nonce=nonce123"+
 		"&code_challenge=abc123"+
 		"&code_challenge_method=S256", nil)
+	req.Host = "evil.example"
+	req.Header.Set("X-Forwarded-Proto", "https")
 
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
@@ -100,67 +106,50 @@ func TestAuthorize_WithoutSession_RedirectsToLogin_Integration(t *testing.T) {
 		t.Fatalf("expected 302 Found, got %d", rr.Code)
 	}
 
-	loc := rr.Header().Get("Location")
-	if !strings.HasPrefix(loc, "/api/v1/oauth2/login") {
-		t.Fatalf("expected redirect to login, got: %s", loc)
+	loc, err := url.Parse(rr.Header().Get("Location"))
+	if err != nil {
+		t.Fatalf("failed to parse redirect location: %v", err)
+	}
+
+	if loc.Scheme != "http" || loc.Host != "localhost:5173" || loc.Path != "/login" {
+		t.Fatalf("expected redirect to configured frontend login, got: %s", loc.String())
+	}
+
+	continueURL := loc.Query().Get("continue")
+	if continueURL != req.URL.RequestURI() {
+		t.Fatalf("expected relative continue url %q, got %q", req.URL.RequestURI(), continueURL)
+	}
+	if strings.Contains(continueURL, "://") || strings.HasPrefix(continueURL, "//") {
+		t.Fatalf("expected continue url to remain relative, got %q", continueURL)
 	}
 }
 
-func TestLogin_ValidUser_RedirectsWithCode_Integration(t *testing.T) {
-	router, db, clientID, _, _, redirectURI := setupTest(t)
+func TestAuthorize_WithSessionForDifferentNonce_RotatesSession_Integration(t *testing.T) {
+	router, db, clientID, _, sessionID, redirectURI := setupTest(t)
 	defer db.Close()
 
-	form := url.Values{}
-	form.Set("email", "testuser@example.com")
-	form.Set("password", "password123")
-	form.Set("client_id", clientID)
-	form.Set("redirect_uri", redirectURI)
-	form.Set("response_type", "code")
-	form.Set("scopes", "user")
-	form.Set("state", "xyz123")
-	form.Set("code_challenge", "abc123")
-	form.Set("code_challenge_method", "S256")
-	form.Set("nonce", "nonce123")
-
-	req := httptest.NewRequest("POST", "/api/v1/oauth2/login", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req := httptest.NewRequest("GET", "/api/v1/oauth2/authorize?client_id="+clientID+
+		"&redirect_uri="+url.QueryEscape(redirectURI)+
+		"&response_type=code"+
+		"&state=xyz123"+
+		"&scopes=user"+
+		"&nonce=rotated-nonce"+
+		"&code_challenge=abc123"+
+		"&code_challenge_method=S256", nil)
+	req.AddCookie(&http.Cookie{Name: oauth2.Oauth2SessionCookieName, Value: sessionID})
 
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusFound {
-		t.Fatalf("expected 302 redirect, got %d", rr.Code)
+		t.Fatalf("expected 302 Found, got %d", rr.Code)
 	}
 
-	loc := rr.Header().Get("Location")
-	if !strings.Contains(loc, "code=") {
-		t.Fatalf("expected redirect to contain auth code, got: %s", loc)
+	if !strings.Contains(rr.Header().Get("Location"), "code=") {
+		t.Fatalf("expected redirect to contain auth code, got: %s", rr.Header().Get("Location"))
 	}
-}
-
-func TestShowLoginForm_ReturnsHtml_Integration(t *testing.T) {
-	router, db, clientID, _, _, redirectURI := setupTest(t)
-	defer db.Close()
-
-	req := httptest.NewRequest("GET", "/api/v1/oauth2/login?client_id="+clientID+
-		"&redirect_uri="+url.QueryEscape(redirectURI)+
-		"&response_type=code"+
-		"&state=xyz123"+
-		"&scopes=user"+
-		"&nonce=nonce123"+
-		"&code_challenge=abc123"+
-		"&code_challenge_method=S256", nil)
-
-	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200 OK, got %d", rr.Code)
-	}
-
-	ct := rr.Header().Get("Content-Type")
-	if !strings.HasPrefix(ct, "text/html") {
-		t.Fatalf("expected text/html response, got: %s", ct)
+	if len(rr.Result().Cookies()) == 0 {
+		t.Fatalf("expected rotated session cookie to be set")
 	}
 }
 
@@ -170,28 +159,22 @@ func generateCodeChallenge(verifier string) string {
 }
 
 func TestToken_AuthorizationCodeFlow_ReturnsTokens_Integration(t *testing.T) {
-	router, db, clientID, _, sessionID, redirectURI := setupTest(t)
+	router, db, clientID, _, sessionID, redirectURI := setupTestWithTrustProxyHeaders(t, true)
 	defer db.Close()
 
 	codeVerifier := "testverifier1234567890"
 	codeChallenge := generateCodeChallenge(codeVerifier)
 	state := "xyz123"
 
-	formLogin := url.Values{}
-	formLogin.Set("email", "testuser@example.com")
-	formLogin.Set("password", "password123")
-	formLogin.Set("client_id", clientID)
-	formLogin.Set("redirect_uri", redirectURI)
-	formLogin.Set("response_type", "code")
-	formLogin.Set("scopes", "user")
-	formLogin.Set("state", state)
-	formLogin.Set("code_challenge", codeChallenge)
-	formLogin.Set("code_challenge_method", "S256")
-	formLogin.Set("nonce", "nonce123")
-
-	reqLogin := httptest.NewRequest("POST", "/api/v1/oauth2/login", strings.NewReader(formLogin.Encode()))
-	reqLogin.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	reqLogin.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+	reqLogin := httptest.NewRequest("GET", "/api/v1/oauth2/authorize?client_id="+clientID+
+		"&redirect_uri="+url.QueryEscape(redirectURI)+
+		"&response_type=code"+
+		"&state="+url.QueryEscape(state)+
+		"&scopes=user"+
+		"&nonce=nonce123"+
+		"&code_challenge="+url.QueryEscape(codeChallenge)+
+		"&code_challenge_method=S256", nil)
+	reqLogin.AddCookie(&http.Cookie{Name: oauth2.Oauth2SessionCookieName, Value: sessionID})
 
 	rrLogin := httptest.NewRecorder()
 	router.ServeHTTP(rrLogin, reqLogin)
@@ -216,6 +199,7 @@ func TestToken_AuthorizationCodeFlow_ReturnsTokens_Integration(t *testing.T) {
 
 	reqToken := httptest.NewRequest("POST", "/api/v1/oauth2/token", strings.NewReader(formToken.Encode()))
 	reqToken.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	reqToken.Header.Set("X-Forwarded-Proto", "https")
 
 	rrToken := httptest.NewRecorder()
 	router.ServeHTTP(rrToken, reqToken)
@@ -239,6 +223,30 @@ func TestToken_AuthorizationCodeFlow_ReturnsTokens_Integration(t *testing.T) {
 	if !strings.Contains(bodyStr, "id_token") {
 		t.Fatalf("expected response to contain id_token, got %s", bodyStr)
 	}
+
+	var accessCookie *http.Cookie
+	var refreshCookie *http.Cookie
+	for _, cookie := range rrToken.Result().Cookies() {
+		switch cookie.Name {
+		case oauth2.Oauth2AccessTokenCookieName:
+			accessCookie = cookie
+		case oauth2.Oauth2RefreshTokenCookieName:
+			refreshCookie = cookie
+		}
+	}
+
+	if accessCookie == nil || accessCookie.Value == "" {
+		t.Fatalf("expected access_token cookie to be set")
+	}
+	if !accessCookie.HttpOnly || !accessCookie.Secure {
+		t.Fatalf("expected access_token cookie to be HttpOnly and Secure, got %#v", accessCookie)
+	}
+	if refreshCookie == nil || refreshCookie.Value == "" {
+		t.Fatalf("expected refresh_token cookie to be set")
+	}
+	if !refreshCookie.HttpOnly || !refreshCookie.Secure {
+		t.Fatalf("expected refresh_token cookie to be HttpOnly and Secure, got %#v", refreshCookie)
+	}
 }
 
 func TestAuthorize_InvalidQueryParams_ReturnsBadRequest_Integration(t *testing.T) {
@@ -246,20 +254,6 @@ func TestAuthorize_InvalidQueryParams_ReturnsBadRequest_Integration(t *testing.T
 	defer db.Close()
 
 	req := httptest.NewRequest("GET", "/api/v1/oauth2/authorize?invalid=1", nil)
-	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 Bad Request, got %d", rr.Code)
-	}
-}
-
-func TestLogin_InvalidJsonBody_ReturnsBadRequest_Integration(t *testing.T) {
-	router, db, _, _, _, _ := setupTest(t)
-	defer db.Close()
-
-	req := httptest.NewRequest("POST", "/api/v1/oauth2/login", strings.NewReader("notjson"))
-	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 
@@ -298,30 +292,6 @@ func TestAuthorize_InvalidRedirectURI_ReturnsBadRequest_Integration(t *testing.T
 		"&state=xyz123"+
 		"&nonce=nonce123", nil)
 
-	rr := httptest.NewRecorder()
-	router.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 Bad Request, got %d", rr.Code)
-	}
-}
-
-func TestLogin_MissingRequiredField_ReturnsBadRequest_Integration(t *testing.T) {
-	router, db, clientID, _, _, redirectURI := setupTest(t)
-	defer db.Close()
-
-	form := url.Values{}
-	form.Set("email", "testuser@example.com")
-	form.Set("password", "password123")
-	form.Set("client_id", clientID)
-	form.Set("redirect_uri", redirectURI)
-	form.Set("response_type", "code")
-	form.Set("scopes", "user")
-	form.Set("state", "xyz123")
-	form.Set("nonce", "nonce123")
-
-	req := httptest.NewRequest("POST", "/api/v1/oauth2/login", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
 

@@ -15,6 +15,8 @@ type Oauth2RefreshTokenRepository interface {
 	Create(ctx context.Context, model *oauth2models.Oauth2RefreshTokenModel) (string, error)
 	FindByToken(ctx context.Context, token string) (*oauth2models.Oauth2RefreshTokenModel, error)
 	Revoke(ctx context.Context, refreshTokenID string) error
+	RevokeByOidcSessionID(ctx context.Context, oidcSessionID string) error
+	RevokeByUserID(ctx context.Context, userID string) error
 }
 
 type oauth2RefreshTokenRepository struct {
@@ -26,30 +28,24 @@ func NewOauth2RefreshTokenRepository(db *bun.DB) *oauth2RefreshTokenRepository {
 }
 
 func (r *oauth2RefreshTokenRepository) Create(ctx context.Context, model *oauth2models.Oauth2RefreshTokenModel) (string, error) {
-	const query = `
-		INSERT INTO oauth2_refresh_tokens (
-			refresh_token_id, user_id, client_id, oidc_session_id, scopes,
-			token, issued_at, expires_at, is_revoked
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`
-
 	if model.RefreshTokenID == "" {
 		model.RefreshTokenID = uuid.NewString()
 	}
 
-	_, err := r.db.ExecContext(
-		ctx,
-		query,
-		model.RefreshTokenID,
-		model.UserID,
-		model.ClientID,
-		model.OidcSessionID,
-		model.Scopes,
-		model.Token,
-		model.IssuedAt,
-		model.ExpiresAt,
-		model.IsRevoked,
-	)
+	_, err := r.db.NewInsert().
+		Model(model).
+		Column(
+			"refresh_token_id",
+			"user_id",
+			"client_id",
+			"oidc_session_id",
+			"scopes",
+			"token",
+			"issued_at",
+			"expires_at",
+			"is_revoked",
+		).
+		Exec(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -58,27 +54,12 @@ func (r *oauth2RefreshTokenRepository) Create(ctx context.Context, model *oauth2
 }
 
 func (r *oauth2RefreshTokenRepository) FindByToken(ctx context.Context, token string) (*oauth2models.Oauth2RefreshTokenModel, error) {
-	const query = `
-		SELECT refresh_token_id, user_id, client_id, oidc_session_id, scopes,
-			token, issued_at, expires_at, is_revoked, created_at
-		FROM oauth2_refresh_tokens
-		WHERE token = $1
-	`
-
-	var model oauth2models.Oauth2RefreshTokenModel
-	row := r.db.QueryRowContext(ctx, query, token)
-	err := row.Scan(
-		&model.RefreshTokenID,
-		&model.UserID,
-		&model.ClientID,
-		&model.OidcSessionID,
-		&model.Scopes,
-		&model.Token,
-		&model.IssuedAt,
-		&model.ExpiresAt,
-		&model.IsRevoked,
-		&model.CreatedAt,
-	)
+	model := new(oauth2models.Oauth2RefreshTokenModel)
+	err := r.db.NewSelect().
+		Model(model).
+		Where("ort.token = ?", token).
+		Limit(1).
+		Scan(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperrors.ErrRefreshTokenNotFound
@@ -86,16 +67,34 @@ func (r *oauth2RefreshTokenRepository) FindByToken(ctx context.Context, token st
 		return nil, err
 	}
 
-	return &model, nil
+	return model, nil
 }
 
 func (r *oauth2RefreshTokenRepository) Revoke(ctx context.Context, refreshTokenID string) error {
-	const query = `
-		UPDATE oauth2_refresh_tokens
-		SET is_revoked = true
-		WHERE refresh_token_id = $1
-	`
+	_, err := r.db.NewUpdate().
+		Model((*oauth2models.Oauth2RefreshTokenModel)(nil)).
+		Set("is_revoked = ?", true).
+		Where("refresh_token_id = ?", refreshTokenID).
+		Exec(ctx)
+	return err
+}
 
-	_, err := r.db.ExecContext(ctx, query, refreshTokenID)
+func (r *oauth2RefreshTokenRepository) RevokeByOidcSessionID(ctx context.Context, oidcSessionID string) error {
+	_, err := r.db.NewUpdate().
+		Model((*oauth2models.Oauth2RefreshTokenModel)(nil)).
+		Set("is_revoked = ?", true).
+		Where("oidc_session_id = ?", oidcSessionID).
+		Where("is_revoked = ?", false).
+		Exec(ctx)
+	return err
+}
+
+func (r *oauth2RefreshTokenRepository) RevokeByUserID(ctx context.Context, userID string) error {
+	_, err := r.db.NewUpdate().
+		Model((*oauth2models.Oauth2RefreshTokenModel)(nil)).
+		Set("is_revoked = ?", true).
+		Where("user_id = ?", userID).
+		Where("is_revoked = ?", false).
+		Exec(ctx)
 	return err
 }

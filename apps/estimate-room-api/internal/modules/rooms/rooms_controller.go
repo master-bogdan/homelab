@@ -33,7 +33,7 @@ type roomsController struct {
 	service       RoomsService
 	taskService   RoomsTaskService
 	inviteService invites.InvitesService
-	authService   oauth2.AuthService
+	authService   oauth2.Oauth2SessionAuthService
 	logger        *slog.Logger
 }
 
@@ -41,7 +41,7 @@ func NewRoomsController(
 	service RoomsService,
 	taskService RoomsTaskService,
 	inviteService invites.InvitesService,
-	authService oauth2.AuthService,
+	authService oauth2.Oauth2SessionAuthService,
 ) RoomsController {
 	return &roomsController{
 		service:       service,
@@ -71,6 +71,15 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
 	}
+
+	logger.FromRequest(r, c.logger).Info("create room dto accepted",
+		"path", r.URL.Path,
+		"name", dto.Name,
+		"invite_team_id_provided", dto.InviteTeamID != "",
+		"invite_emails_count", len(dto.InviteEmails),
+		"create_share_link", dto.CreateShareLink,
+		"has_deck", dto.Deck != nil,
+	)
 
 	deck := roomsmodels.RoomDeck{}
 	if dto.Deck != nil {
@@ -166,6 +175,12 @@ func (c *roomsController) UpdateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logger.FromRequest(r, c.logger).Info("update room dto accepted",
+		"path", r.URL.Path,
+		"name_provided", dto.Name != nil,
+		"status", dto.Status,
+	)
+
 	room, err := c.service.UpdateRoom(roomID, userID, UpdateRoomInput{
 		Name:   dto.Name,
 		Status: dto.Status,
@@ -200,6 +215,13 @@ func (c *roomsController) CreateTask(w http.ResponseWriter, r *http.Request) {
 		c.writeError(w, r, apperrors.ErrBadRequest, err.Error(), err)
 		return
 	}
+
+	logger.FromRequest(r, c.logger).Info("create task dto accepted",
+		"path", r.URL.Path,
+		"title", dto.Title,
+		"description_length", len(dto.Description),
+		"external_key_provided", dto.ExternalKey != "",
+	)
 
 	if strings.TrimSpace(dto.Title) == "" {
 		c.writeError(w, r, apperrors.ErrBadRequest, "title is required", nil)
@@ -274,6 +296,14 @@ func (c *roomsController) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logger.FromRequest(r, c.logger).Info("update task dto accepted",
+		"path", r.URL.Path,
+		"title_provided", dto.Title != nil,
+		"status", dto.Status,
+		"is_active", dto.IsActive,
+		"final_estimate_value_provided", dto.FinalEstimateValue != nil,
+	)
+
 	if dto.Title != nil && strings.TrimSpace(*dto.Title) == "" {
 		c.writeError(w, r, apperrors.ErrBadRequest, "title is required", nil)
 		return
@@ -324,7 +354,7 @@ func (c *roomsController) writeError(w http.ResponseWriter, r *http.Request, err
 		logArgs = append(logArgs, "err", cause)
 	}
 
-	c.logger.Error("request failed", logArgs...)
+	logger.FromRequest(r, c.logger).Error("request failed", logArgs...)
 
 	httputils.WriteResponseError(w, apperrors.CreateHttpError(
 		errType,

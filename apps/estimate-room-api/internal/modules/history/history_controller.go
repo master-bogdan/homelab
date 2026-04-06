@@ -21,11 +21,11 @@ type HistoryController interface {
 
 type historyController struct {
 	service     HistoryService
-	authService oauth2.AuthService
+	authService oauth2.Oauth2SessionAuthService
 	logger      *slog.Logger
 }
 
-func NewHistoryController(service HistoryService, authService oauth2.AuthService) HistoryController {
+func NewHistoryController(service HistoryService, authService oauth2.Oauth2SessionAuthService) HistoryController {
 	return &historyController{
 		service:     service,
 		authService: authService,
@@ -166,7 +166,7 @@ func (c *historyController) writeNotImplemented(w http.ResponseWriter, r *http.R
 		logArgs = append(logArgs, "err", cause)
 	}
 
-	c.logger.Error("request failed", logArgs...)
+	logger.FromRequest(r, c.logger).Error("request failed", logArgs...)
 
 	httputils.WriteResponseError(w, apperrors.HttpError{
 		Type:     "https://api.estimateroom.com/problems/not-implemented",
@@ -190,7 +190,7 @@ func (c *historyController) writeError(w http.ResponseWriter, r *http.Request, e
 		logArgs = append(logArgs, "err", cause)
 	}
 
-	c.logger.Error("request failed", logArgs...)
+	logger.FromRequest(r, c.logger).Error("request failed", logArgs...)
 
 	httputils.WriteResponseError(w, apperrors.CreateHttpError(
 		errType,

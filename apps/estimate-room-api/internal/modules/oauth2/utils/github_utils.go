@@ -275,7 +275,7 @@ func AuthorizeQueryFromState(state *GithubState) *AuthorizeQuery {
 	}
 }
 
-func AuthorizeQueryFromDTO(dto *oauth2dto.AuthorizeQueryDTO) *AuthorizeQuery {
+func AuthorizeQueryFromDTO(dto *oauth2dto.Oauth2AuthorizeQueryDTO) *AuthorizeQuery {
 	return &AuthorizeQuery{
 		ClientID:            dto.ClientID,
 		RedirectURI:         dto.RedirectURI,
@@ -288,8 +288,8 @@ func AuthorizeQueryFromDTO(dto *oauth2dto.AuthorizeQueryDTO) *AuthorizeQuery {
 	}
 }
 
-func (q *AuthorizeQuery) ToDTO() *oauth2dto.AuthorizeQueryDTO {
-	return &oauth2dto.AuthorizeQueryDTO{
+func (q *AuthorizeQuery) ToDTO() *oauth2dto.Oauth2AuthorizeQueryDTO {
+	return &oauth2dto.Oauth2AuthorizeQueryDTO{
 		ClientID:            q.ClientID,
 		RedirectURI:         q.RedirectURI,
 		ResponseType:        q.ResponseType,

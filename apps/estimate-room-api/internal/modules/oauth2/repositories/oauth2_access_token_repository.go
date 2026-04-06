@@ -15,6 +15,8 @@ type AccessTokenRepository interface {
 	Create(ctx context.Context, model *oauth2models.Oauth2AccessTokenModel) error
 	FindByToken(ctx context.Context, token string) (*oauth2models.Oauth2AccessTokenModel, error)
 	Revoke(ctx context.Context, accessTokenID string) error
+	RevokeByOidcSessionID(ctx context.Context, oidcSessionID string) error
+	RevokeByUserID(ctx context.Context, userID string) error
 }
 
 type oauth2AccessTokenRepository struct {
@@ -71,6 +73,26 @@ func (r *oauth2AccessTokenRepository) Revoke(ctx context.Context, accessTokenID 
 		Model((*oauth2models.Oauth2AccessTokenModel)(nil)).
 		Set("is_revoked = ?", true).
 		Where("access_token_id = ?", accessTokenID).
+		Exec(ctx)
+	return err
+}
+
+func (r *oauth2AccessTokenRepository) RevokeByOidcSessionID(ctx context.Context, oidcSessionID string) error {
+	_, err := r.db.NewUpdate().
+		Model((*oauth2models.Oauth2AccessTokenModel)(nil)).
+		Set("is_revoked = ?", true).
+		Where("oidc_session_id = ?", oidcSessionID).
+		Where("is_revoked = ?", false).
+		Exec(ctx)
+	return err
+}
+
+func (r *oauth2AccessTokenRepository) RevokeByUserID(ctx context.Context, userID string) error {
+	_, err := r.db.NewUpdate().
+		Model((*oauth2models.Oauth2AccessTokenModel)(nil)).
+		Set("is_revoked = ?", true).
+		Where("user_id = ?", userID).
+		Where("is_revoked = ?", false).
 		Exec(ctx)
 	return err
 }

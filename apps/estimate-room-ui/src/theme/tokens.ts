@@ -5,28 +5,35 @@ import type { AppThemeTokens, ThemeMode } from './types';
 
 const baseShadows = createTheme().shadows;
 
+const getInteractiveFocusRing = (theme: Theme) =>
+  theme.palette.mode === 'light'
+    ? `0 0 0 3px ${alpha(theme.palette.primary.main, 0.16)}`
+    : `0 0 0 2px ${theme.app.borders.focusRing}`;
+
+const getDisabledOpacity = (theme: Theme) => (theme.palette.mode === 'light' ? 0.52 : 0.44);
+
 const lightAppTokens: AppThemeTokens = {
   surfaces: {
     base: '#f8f9ff',
     section: '#eff4ff',
     card: '#ffffff',
-    cardHover: '#f5f8ff',
-    inset: '#e7eefc',
-    overlay: alpha('#ffffff', 0.82),
+    cardHover: '#dce9ff',
+    inset: '#e6eeff',
+    overlay: alpha('#ffffff', 0.9),
     bright: '#ffffff',
-    well: '#dfe9ff',
-    rowAlternate: '#f3f7ff'
+    well: '#d3e4ff',
+    rowAlternate: '#dce9ff'
   },
   borders: {
     ghost: alpha('#87b5f0', 0.15),
-    focusRing: alpha('#bcd0ff', 0.55)
+    focusRing: alpha('#5148d7', 0.16)
   },
   gradients: {
-    primary: 'linear-gradient(160deg, #0053db 0%, #0048c1 100%)'
+    primary: 'linear-gradient(135deg, #5148d7 0%, #4439cb 100%)'
   },
   effects: {
-    ambientShadow: '0 12px 32px rgba(0, 52, 94, 0.06)',
-    backdropBlur: '12px'
+    ambientShadow: '0 12px 32px -4px rgba(0, 52, 94, 0.08)',
+    backdropBlur: '8px'
   },
   layout: {
     pageGap: 16,
@@ -73,16 +80,16 @@ export const getPaletteTokens = (mode: ThemeMode): PaletteOptions => {
     return {
       mode,
       primary: {
-        contrastText: '#f7f9ff',
-        dark: '#0048c1',
-        light: '#4d84eb',
-        main: '#0053db'
+        contrastText: '#f7f7ff',
+        dark: '#4439cb',
+        light: '#736ce1',
+        main: '#5148d7'
       },
       secondary: {
-        contrastText: '#173057',
-        dark: '#d5e1ff',
-        light: '#f4f7ff',
-        main: '#e3ebff'
+        contrastText: '#00345e',
+        dark: '#c0d6fb',
+        light: '#eff4ff',
+        main: '#d3e4ff'
       },
       success: {
         contrastText: '#f7fffb',
@@ -114,14 +121,14 @@ export const getPaletteTokens = (mode: ThemeMode): PaletteOptions => {
       },
       divider: appTokens.borders.ghost,
       action: {
-        active: '#224271',
-        focus: alpha('#0053db', 0.12),
-        hover: '#e6eeff',
-        selected: alpha('#0053db', 0.1)
+        active: '#00345e',
+        focus: alpha('#5148d7', 0.1),
+        hover: '#dce9ff',
+        selected: alpha('#5148d7', 0.08)
       },
       text: {
-        primary: '#102440',
-        secondary: '#556b88'
+        primary: '#00345e',
+        secondary: '#5d7495'
       }
     };
   }
@@ -221,15 +228,15 @@ export const getTypographyTokens = (mode: ThemeMode): ThemeOptions['typography']
     },
     h5: {
       fontFamily: bodyFont,
-      fontSize: '1.125rem',
+      fontSize: mode === 'light' ? '1rem' : '1.125rem',
       fontWeight: 700,
-      lineHeight: 1.28
+      lineHeight: mode === 'light' ? 1.35 : 1.28
     },
     h6: {
       fontFamily: bodyFont,
-      fontSize: '1rem',
+      fontSize: mode === 'light' ? '0.9375rem' : '1rem',
       fontWeight: 700,
-      lineHeight: 1.36
+      lineHeight: mode === 'light' ? 1.42 : 1.36
     },
     subtitle1: {
       fontFamily: bodyFont,
@@ -245,13 +252,13 @@ export const getTypographyTokens = (mode: ThemeMode): ThemeOptions['typography']
     },
     body1: {
       fontFamily: bodyFont,
-      fontSize: '1rem',
-      lineHeight: 1.65
+      fontSize: mode === 'light' ? '0.875rem' : '1rem',
+      lineHeight: mode === 'light' ? 1.6 : 1.65
     },
     body2: {
       fontFamily: bodyFont,
-      fontSize: '0.9375rem',
-      lineHeight: 1.6
+      fontSize: mode === 'light' ? '0.875rem' : '0.9375rem',
+      lineHeight: mode === 'light' ? 1.55 : 1.6
     },
     caption: {
       fontFamily: bodyFont,
@@ -308,25 +315,40 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
     styleOverrides: {
       root: ({ theme }) => ({
         alignItems: 'center',
-        backgroundColor: theme.app.surfaces.section,
+        backgroundColor:
+          theme.palette.mode === 'light'
+            ? theme.app.surfaces.card
+            : theme.app.surfaces.section,
         border: 'none',
-        borderRadius: theme.shape.borderRadius * 2,
+        borderRadius: Number(theme.shape.borderRadius) * 2,
         boxShadow: 'none'
       }),
       standardError: ({ theme }) => ({
-        borderLeft: `4px solid ${theme.palette.error.main}`,
+        backgroundColor:
+          theme.palette.mode === 'light'
+            ? alpha(theme.palette.error.main, 0.1)
+            : theme.app.surfaces.section,
         color: theme.palette.text.primary
       }),
       standardInfo: ({ theme }) => ({
-        borderLeft: `4px solid ${theme.palette.info.main}`,
+        backgroundColor:
+          theme.palette.mode === 'light'
+            ? alpha(theme.palette.info.main, 0.1)
+            : theme.app.surfaces.section,
         color: theme.palette.text.primary
       }),
       standardSuccess: ({ theme }) => ({
-        borderLeft: `4px solid ${theme.palette.success.main}`,
+        backgroundColor:
+          theme.palette.mode === 'light'
+            ? alpha(theme.palette.success.main, 0.1)
+            : theme.app.surfaces.section,
         color: theme.palette.text.primary
       }),
       standardWarning: ({ theme }) => ({
-        borderLeft: `4px solid ${theme.palette.warning.main}`,
+        backgroundColor:
+          theme.palette.mode === 'light'
+            ? alpha(theme.palette.warning.main, 0.1)
+            : theme.app.surfaces.section,
         color: theme.palette.text.primary
       })
     }
@@ -338,14 +360,29 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
     styleOverrides: {
       root: ({ theme }) => ({
         borderRadius: theme.shape.borderRadius,
-        minHeight: 40,
-        paddingInline: theme.spacing(2),
-        transition: theme.transitions.create(['background-color', 'border-color', 'color'])
-      }),
-      contained: ({ theme }) => ({
         boxShadow: 'none',
-        '&:hover': {
-          boxShadow: 'none'
+        minHeight: 40,
+        paddingBlock: theme.spacing(1),
+        paddingInline: theme.spacing(2.75),
+        position: 'relative',
+        transition: theme.transitions.create(
+          ['background-color', 'border-color', 'box-shadow', 'color', 'opacity'],
+          { duration: theme.transitions.duration.shorter }
+        ),
+        '&:focus-visible': {
+          boxShadow: getInteractiveFocusRing(theme),
+          outline: 'none'
+        },
+        '&.Mui-disabled': {
+          opacity: getDisabledOpacity(theme)
+        }
+      }),
+      contained: () => ({
+        boxShadow: 'none',
+        '@media (hover: hover)': {
+          '&:hover': {
+            boxShadow: 'none'
+          }
         },
         '&.Mui-disabled': {
           backgroundImage: 'none'
@@ -353,28 +390,49 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
       }),
       containedPrimary: ({ theme }) => ({
         backgroundColor: 'transparent',
+        backgroundBlendMode: 'soft-light',
         backgroundImage: theme.app.gradients.primary,
         color: theme.palette.primary.contrastText,
-        '&:hover': {
-          backgroundColor: 'transparent',
-          backgroundImage: theme.app.gradients.primary,
-          filter: 'brightness(1.04)'
+        '@media (hover: hover)': {
+          '&:hover': {
+            backgroundColor: alpha(theme.palette.common.white, theme.palette.mode === 'light' ? 0.1 : 0.14),
+            backgroundImage: theme.app.gradients.primary,
+            boxShadow:
+              theme.palette.mode === 'light' ? theme.app.effects.ambientShadow : 'none'
+          }
         }
       }),
       containedSecondary: ({ theme }) => ({
-        backgroundColor: theme.palette.secondary.main,
+        backgroundColor:
+          theme.palette.mode === 'light'
+            ? theme.app.surfaces.well
+            : theme.palette.secondary.main,
         color: theme.palette.secondary.contrastText,
-        '&:hover': {
-          backgroundColor: theme.palette.secondary.dark
+        '@media (hover: hover)': {
+          '&:hover': {
+            backgroundColor:
+              theme.palette.mode === 'light'
+                ? theme.app.surfaces.rowAlternate
+                : theme.palette.secondary.dark,
+            boxShadow:
+              theme.palette.mode === 'light' ? theme.app.effects.ambientShadow : 'none'
+          }
         }
       }),
       outlined: ({ theme }) => ({
-        backgroundColor: 'transparent',
-        borderColor: theme.app.borders.ghost,
+        backgroundColor:
+          theme.palette.mode === 'light' ? theme.app.surfaces.inset : 'transparent',
+        borderColor: theme.palette.mode === 'light' ? 'transparent' : theme.app.borders.ghost,
         color: theme.palette.text.primary,
-        '&:hover': {
-          backgroundColor: theme.app.surfaces.section,
-          borderColor: theme.app.borders.ghost
+        '@media (hover: hover)': {
+          '&:hover': {
+            backgroundColor:
+              theme.palette.mode === 'light'
+                ? theme.app.surfaces.well
+                : theme.app.surfaces.section,
+            borderColor:
+              theme.palette.mode === 'light' ? 'transparent' : theme.app.borders.ghost
+          }
         }
       }),
       text: ({ theme }) => ({
@@ -382,8 +440,10 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
           theme.palette.mode === 'light'
             ? theme.palette.text.secondary
             : theme.palette.primary.light,
-        '&:hover': {
-          backgroundColor: theme.app.surfaces.section
+        '@media (hover: hover)': {
+          '&:hover': {
+            backgroundColor: theme.app.surfaces.section
+          }
         }
       })
     }
@@ -430,19 +490,31 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
       body: {
         backgroundImage:
           mode === 'light'
-            ? 'radial-gradient(circle at top left, rgba(0, 83, 219, 0.12), transparent 32%), linear-gradient(180deg, #f8f9ff 0%, #eff4ff 100%)'
+            ? 'radial-gradient(circle at top left, rgba(81, 72, 215, 0.12), transparent 30%), linear-gradient(180deg, #f8f9ff 0%, #eef4ff 100%)'
             : 'radial-gradient(circle at top left, rgba(37, 99, 235, 0.24), transparent 34%), linear-gradient(180deg, #0b1326 0%, #10182d 100%)'
+      },
+      '*, *::before, *::after': {
+        boxSizing: 'border-box'
       },
       '::selection': {
         backgroundColor:
-          mode === 'light' ? alpha('#0053db', 0.16) : alpha('#b4c5ff', 0.24)
+          mode === 'light' ? alpha('#5148d7', 0.16) : alpha('#b4c5ff', 0.24)
+      },
+      '@media (prefers-reduced-motion: reduce)': {
+        '*, *::before, *::after': {
+          animationDuration: '0.01ms !important',
+          animationIterationCount: '1 !important',
+          scrollBehavior: 'auto !important',
+          transitionDuration: '0.01ms !important'
+        }
       }
     }
   },
   MuiDivider: {
     styleOverrides: {
       root: ({ theme }) => ({
-        borderColor: theme.app.borders.ghost
+        borderColor:
+          theme.palette.mode === 'light' ? 'transparent' : theme.app.borders.ghost
       })
     }
   },
@@ -452,7 +524,7 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
         backgroundColor: theme.app.surfaces.section,
         backgroundImage:
           theme.palette.mode === 'light'
-            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(239, 244, 255, 0.85) 100%)'
+            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(239, 244, 255, 0.96) 100%)'
             : 'linear-gradient(180deg, rgba(49, 57, 77, 0.35) 0%, rgba(19, 27, 46, 1) 100%)',
         border: 'none'
       })
@@ -461,22 +533,74 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
   MuiInputBase: {
     styleOverrides: {
       input: ({ theme }) => ({
-        paddingBlock: theme.spacing(1.5)
+        paddingBlock: theme.spacing(1.5),
+        '&::placeholder': {
+          color: theme.palette.text.secondary,
+          opacity: 0.88
+        }
+      })
+    }
+  },
+  MuiFormHelperText: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        marginLeft: 0,
+        marginRight: 0,
+        marginTop: theme.spacing(0.75),
+        minHeight: theme.spacing(2.5)
+      })
+    }
+  },
+  MuiIconButton: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        borderRadius: theme.shape.borderRadius,
+        minHeight: 40,
+        minWidth: 40,
+        transition: theme.transitions.create(['background-color', 'box-shadow', 'color']),
+        '@media (hover: hover)': {
+          '&:hover': {
+            backgroundColor:
+              theme.palette.mode === 'light'
+                ? theme.app.surfaces.section
+                : alpha(theme.palette.common.white, 0.08)
+          }
+        },
+        '&:focus-visible': {
+          boxShadow: getInteractiveFocusRing(theme),
+          outline: 'none'
+        },
+        '&.Mui-disabled': {
+          opacity: getDisabledOpacity(theme)
+        }
       })
     }
   },
   MuiListItemButton: {
     styleOverrides: {
       root: ({ theme }) => ({
-        borderRadius: theme.shape.borderRadius * 2,
+        borderRadius:
+          theme.palette.mode === 'light'
+            ? Math.max(Number(theme.shape.borderRadius) / 3, 2)
+            : Number(theme.shape.borderRadius) * 2,
         marginBottom: theme.spacing(0.5),
         paddingBlock: theme.spacing(1.1),
         '&.Mui-selected': {
-          backgroundColor: theme.app.surfaces.card,
+          backgroundColor:
+            theme.palette.mode === 'light'
+              ? theme.app.surfaces.well
+              : theme.app.surfaces.card,
           color: theme.palette.text.primary,
           '&:hover': {
-            backgroundColor: theme.app.surfaces.card
+            backgroundColor:
+              theme.palette.mode === 'light'
+                ? theme.app.surfaces.well
+                : theme.app.surfaces.card
           }
+        },
+        '&:focus-visible': {
+          boxShadow: getInteractiveFocusRing(theme),
+          outline: 'none'
         },
         '&:hover': {
           backgroundColor: theme.app.surfaces.rowAlternate
@@ -487,27 +611,100 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
   MuiOutlinedInput: {
     styleOverrides: {
       notchedOutline: ({ theme }) => ({
-        borderColor: theme.app.borders.ghost
+        borderColor:
+          theme.palette.mode === 'light' ? 'transparent' : theme.app.borders.ghost
       }),
       root: ({ theme }) => ({
         backgroundColor:
           theme.palette.mode === 'light'
-            ? theme.app.surfaces.card
+            ? theme.app.surfaces.section
             : theme.app.surfaces.section,
         borderRadius: theme.shape.borderRadius,
         transition: theme.transitions.create(['background-color', 'box-shadow', 'border-color']),
+        '&:hover': {
+          backgroundColor:
+            theme.palette.mode === 'light'
+              ? theme.app.surfaces.inset
+              : theme.app.surfaces.section
+        },
         '&:hover .MuiOutlinedInput-notchedOutline': {
-          borderColor: alpha(theme.palette.primary.main, 0.3)
+          borderColor:
+            theme.palette.mode === 'light'
+              ? alpha(theme.palette.primary.main, 0.24)
+              : alpha(theme.palette.primary.main, 0.3)
         },
         '&.Mui-focused': {
           backgroundColor: theme.app.surfaces.card,
-          boxShadow: `0 0 0 2px ${theme.app.borders.focusRing}`
+          boxShadow: getInteractiveFocusRing(theme)
         },
         '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-          borderColor: alpha(theme.palette.primary.main, 0.5)
+          borderColor:
+            theme.palette.mode === 'light'
+              ? theme.palette.primary.main
+              : alpha(theme.palette.primary.main, 0.5)
         },
         '&.Mui-error .MuiOutlinedInput-notchedOutline': {
-          borderColor: alpha(theme.palette.error.main, 0.7)
+          borderColor:
+            theme.palette.mode === 'light'
+              ? theme.palette.error.main
+              : alpha(theme.palette.error.main, 0.7)
+        },
+        '&.Mui-disabled': {
+          backgroundColor:
+            theme.palette.mode === 'light'
+              ? alpha(theme.app.surfaces.section, 0.72)
+              : alpha(theme.app.surfaces.section, 0.8)
+        }
+      })
+    }
+  },
+  MuiLink: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        borderRadius: Math.max(Number(theme.shape.borderRadius) / 2, 4),
+        textDecorationColor: 'transparent',
+        textUnderlineOffset: '0.2em',
+        transition: theme.transitions.create(['box-shadow', 'color', 'text-decoration-color']),
+        '@media (hover: hover)': {
+          '&:hover': {
+            textDecorationColor: 'currentColor'
+          }
+        },
+        '&:focus-visible': {
+          boxShadow: getInteractiveFocusRing(theme),
+          outline: 'none',
+          textDecorationColor: 'currentColor'
+        }
+      })
+    }
+  },
+  MuiMenuItem: {
+    styleOverrides: {
+      root: ({ theme }) => ({
+        borderRadius:
+          theme.palette.mode === 'light'
+            ? Math.max(Number(theme.shape.borderRadius) / 3, 2)
+            : Number(theme.shape.borderRadius),
+        marginInline: theme.spacing(0.5),
+        marginBlock: theme.spacing(0.25),
+        transition: theme.transitions.create(['background-color', 'color']),
+        '&:hover': {
+          backgroundColor:
+            theme.palette.mode === 'light'
+              ? theme.app.surfaces.rowAlternate
+              : theme.app.surfaces.section
+        },
+        '&.Mui-selected': {
+          backgroundColor:
+            theme.palette.mode === 'light'
+              ? theme.app.surfaces.well
+              : theme.app.surfaces.card,
+          '&:hover': {
+            backgroundColor:
+              theme.palette.mode === 'light'
+                ? theme.app.surfaces.cardHover
+                : theme.app.surfaces.card
+          }
         }
       })
     }

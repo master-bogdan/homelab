@@ -6,17 +6,20 @@
 - Docker and Docker Compose
 - PostgreSQL
 - Redis
+- `air` for live reload if you want automatic restarts
 
 The easiest local path is to run PostgreSQL and Redis through Docker Compose and run the API with the local Go toolchain.
 
 ## Environment Setup
 
 Copy `.env.example` to `.env` and fill in values.
+The API loads `.env` automatically on startup if the file is present.
 
 Minimum variables:
 
 - `HOST`
 - `PORT`
+- `FRONTEND_BASE_URL`
 - `DATABASE_URL`
 - `REDIS_URL`
 - `PASETO_SYMMETRIC_KEY`
@@ -25,9 +28,30 @@ Minimum variables:
 Optional but recommended:
 
 - `WS_ALLOWED_ORIGINS`
+- `TRUST_PROXY_HEADERS` when the API is behind a trusted TLS-terminating proxy and should treat `X-Forwarded-Proto: https` as secure
 - `HTTP_RATE_LIMIT_PER_MINUTE`
 - `WS_RATE_LIMIT_PER_MINUTE`
 - GitHub OAuth variables if GitHub login is required
+- Email SMTP variables if local password reset emails should be delivered
+
+`FRONTEND_BASE_URL` is used by `/api/v1/oauth2/authorize` to redirect unauthenticated users to the frontend login page with a `continue` URL.
+The server now validates `FRONTEND_BASE_URL` during startup and exits early if it is missing.
+
+OAuth browser `continue` values are intentionally relative path-plus-query values such as `/api/v1/oauth2/authorize?...`.
+The frontend can still resolve those relative paths against `VITE_API_BASE_URL` for browser navigation, but the backend no longer accepts absolute `continue` URLs from clients.
+
+Access and refresh tokens are now issued as backend-owned `HttpOnly` cookies on the API origin.
+This works cleanly for same-origin deployments and same-site subdomain deployments with `credentials: include`.
+If you deploy the frontend and API on different sites, plan additional cookie settings and CSRF hardening before relying on browser cookie auth.
+
+The checked-in local defaults are aligned to the dev compose stack:
+
+- API: `http://localhost:8080`
+- Frontend: `http://localhost:5173`
+- PostgreSQL: `postgres://postgres:password@localhost:5432/estimate_room?sslmode=disable`
+- Redis: `redis://localhost:6379/0`
+- SMTP: `localhost:1025`
+- Mail inbox UI: `http://localhost:8025`
 
 ## Start Dependencies
 
@@ -35,7 +59,35 @@ Optional but recommended:
 make compose-up
 ```
 
-This starts the local PostgreSQL and Redis stack from `docker-compose.dev.yaml`.
+This starts the local PostgreSQL and Redis stack from `docker-compose.dev.yaml`, plus:
+
+- pgAdmin: `http://localhost:5050`
+- RedisInsight: `http://localhost:5540`
+- Mailpit: `http://localhost:8025`
+
+Default pgAdmin login:
+
+- Email: `admin@estimate-room.dev`
+- Password: `admin`
+
+When connecting from pgAdmin to the database container, use:
+
+- Host: `postgres`
+- Port: `5432`
+- Username: `postgres`
+- Password: `password`
+- Database: `estimate_room`
+
+When connecting from RedisInsight to the Redis container, use:
+
+- Host: `redis`
+- Port: `6379`
+
+When connecting the API to the local mail inbox, use:
+
+- SMTP host: `localhost`
+- SMTP port: `1025`
+- Mailpit UI: `http://localhost:8025`
 
 ## Run the API
 
@@ -43,7 +95,28 @@ This starts the local PostgreSQL and Redis stack from `docker-compose.dev.yaml`.
 make run
 ```
 
-If `IS_AUTO_MIGRATIONS=true`, the API applies pending migrations at boot.
+With the default local `.env`, `IS_AUTO_MIGRATIONS=true`, so the API applies pending migrations at boot.
+If you disable auto-migrations, run `make migrate-up` manually before starting the API.
+
+## Live Reload
+
+Install `air` once:
+
+```bash
+go install github.com/air-verse/air@latest
+```
+
+Run the API with automatic restart on code or `.env` changes:
+
+```bash
+make dev
+```
+
+If you also want the Docker dependencies started first:
+
+```bash
+make dev-compose
+```
 
 ## Useful Commands
 
@@ -77,6 +150,14 @@ Rollback migrations:
 make migrate-down
 ```
 
+## Migration Notes
+
+- Migration files live in `migrations/`.
+- The initial schema is already checked in as `1767825448_initial.*.sql`.
+- Auto-migrations only run when `IS_AUTO_MIGRATIONS=true`.
+- Manual migration commands use `DATABASE_URL` from your `.env`.
+- The schema does not seed OAuth clients. If you need the browser OAuth2 authorization flow, insert at least one row into `oauth2_clients`.
+
 Generate Swagger docs:
 
 ```bash
@@ -101,6 +182,18 @@ Health:
 
 - `/api/v1/health/healthz`
 - `/api/v1/health/readyz`
+
+Auth:
+
+- `/api/v1/auth/login`
+- `/api/v1/auth/register`
+- `/api/v1/auth/session`
+- `/api/v1/auth/logout`
+- `/api/v1/auth/forgot-password`
+- `/api/v1/auth/reset-password/validate`
+- `/api/v1/auth/reset-password`
+- `/api/v1/auth/github/login`
+- `/api/v1/auth/github/callback`
 
 Swagger UI:
 

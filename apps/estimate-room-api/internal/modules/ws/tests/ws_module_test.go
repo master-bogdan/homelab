@@ -38,7 +38,7 @@ func (*authServiceStub) CreateAccessToken(context.Context, *oauth2models.Oauth2A
 	return nil
 }
 
-var _ oauth2.AuthService = (*authServiceStub)(nil)
+var _ oauth2.Oauth2SessionAuthService = (*authServiceStub)(nil)
 
 func TestWsModule_RejectsAccessTokenInQuery(t *testing.T) {
 	authService := &authServiceStub{

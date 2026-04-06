@@ -18,11 +18,11 @@ type UsersController interface {
 
 type usersController struct {
 	service     UsersService
-	authService oauth2.AuthService
+	authService oauth2.Oauth2SessionAuthService
 	logger      *slog.Logger
 }
 
-func NewUsersController(service UsersService, authService oauth2.AuthService) UsersController {
+func NewUsersController(service UsersService, authService oauth2.Oauth2SessionAuthService) UsersController {
 	return &usersController{
 		service:     service,
 		authService: authService,
@@ -75,7 +75,7 @@ func (c *usersController) GetMe(w http.ResponseWriter, r *http.Request) {
 				},
 			))
 		default:
-			c.logger.Error("failed to get current user", "err", err)
+			logger.FromRequest(r, c.logger).Error("failed to get current user", "err", err)
 			httputils.WriteResponseError(w, apperrors.CreateHttpError(
 				apperrors.ErrInternal,
 				apperrors.HttpError{

@@ -15,7 +15,7 @@ type GamificationModule struct {
 type GamificationModuleDeps struct {
 	Router      chi.Router
 	DB          *bun.DB
-	AuthService oauth2.AuthService
+	AuthService oauth2.Oauth2SessionAuthService
 	WsService   *ws.Service
 }
 

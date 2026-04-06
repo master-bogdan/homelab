@@ -26,7 +26,7 @@ type WsModule struct {
 
 type WsModuleDeps struct {
 	Router               chi.Router
-	AuthService          oauth2.AuthService
+	AuthService          oauth2.Oauth2SessionAuthService
 	TokenKey             string
 	Server               PubSub
 	OriginPatterns       []string
@@ -66,7 +66,7 @@ type guestTokenClaims struct {
 	ExpiresAt     time.Time `json:"expiresAt"`
 }
 
-func resolveIdentity(r *http.Request, authService oauth2.AuthService, tokenKey []byte) (ConnectIdentity, error) {
+func resolveIdentity(r *http.Request, authService oauth2.Oauth2SessionAuthService, tokenKey []byte) (ConnectIdentity, error) {
 	if hasQueryAccessToken(r) {
 		return ConnectIdentity{}, errQueryAccessTokenNotAllowed
 	}

@@ -24,7 +24,7 @@ func setupUsersTest(t *testing.T) (*chi.Mux, *bun.DB) {
 
 	router := chi.NewRouter()
 
-	authService := oauth2.NewAuthServiceFromDB(testutils.TestTokenKey, db)
+	authService := oauth2.NewOauth2SessionAuthServiceFromDB(testutils.TestTokenKey, db)
 
 	router.Route("/api/v1", func(r chi.Router) {
 		users.NewUsersModule(users.UsersModuleDeps{

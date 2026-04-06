@@ -1,6 +1,6 @@
 import { Chip, Stack, Typography } from '@mui/material';
 
-import { SectionCard } from '@/shared/ui';
+import { AppPageState, SectionCard } from '@/shared/ui';
 import { formatDateTime, formatDimensions } from '@/shared/utils';
 
 import { useRoomDetailsPage } from './hooks/useRoomDetailsPage';
@@ -29,9 +29,11 @@ export const RoomDetailsPage = () => {
           </Typography>
         </Stack>
       ) : (
-        <Typography color="text.secondary" variant="body2">
-          No room data is available for this route yet.
-        </Typography>
+        <AppPageState
+          description="Connect the room details endpoint to populate dimensions, status, and team context."
+          title="No room data yet"
+          titleVariant="body1"
+        />
       )}
     </SectionCard>
   );

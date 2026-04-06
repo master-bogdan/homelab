@@ -89,7 +89,7 @@ func (s *Server) Shutdown() {
 		return
 	}
 
-	logger.L().Info("Shutting down WebSocket server...")
+	logger.L().Info("[SHUTDOWN][WS] Shutting down WebSocket server")
 	if s.cancel != nil {
 		s.cancel()
 	}
@@ -102,8 +102,8 @@ func (s *Server) Shutdown() {
 
 	select {
 	case <-done:
-		logger.L().Info("WebSocket server shut down gracefully")
+		logger.L().Info("[SHUTDOWN][WS] WebSocket server shut down gracefully")
 	case <-time.After(5 * time.Second):
-		logger.L().Warn("WebSocket server shutdown timeout")
+		logger.L().Warn("[SHUTDOWN][WS] WebSocket server shutdown timeout")
 	}
 }

@@ -198,7 +198,7 @@ func (s *roomsService) CreateRoom(ctx context.Context, input CreateRoomInput) (*
 	}
 
 	metrics.RecordRoomLifecycle("created")
-	s.logger.Info("room created", "room_id", result.Room.RoomID, "admin_user_id", input.AdminUserID, "team_id", result.Room.TeamID)
+	logger.FromContext(ctx, s.logger).Info(roomsServiceLog("Room created"), "room_id", result.Room.RoomID, "admin_user_id", input.AdminUserID, "team_id", result.Room.TeamID)
 
 	return result, nil
 }
@@ -282,12 +282,12 @@ func (s *roomsService) UpdateRoom(roomID, userID string, input UpdateRoomInput) 
 		appliedRewards := s.applyTerminalRewardsBestEffort(updatedRoom)
 		if len(appliedRewards) > 0 {
 			if err := s.rewardService.NotifyAppliedRewards(context.Background(), appliedRewards); err != nil {
-				s.logger.Error("failed to notify room rewards", "room_id", roomID, "err", err)
+				s.logger.Error(roomsServiceLog("Failed to notify room rewards"), "room_id", roomID, "err", err)
 			}
 		}
 	}
 
-	s.logger.Info("room updated", "room_id", updatedRoom.RoomID, "status", updatedRoom.Status, "admin_user_id", userID)
+	s.logger.Info(roomsServiceLog("Room updated"), "room_id", updatedRoom.RoomID, "status", updatedRoom.Status, "admin_user_id", userID)
 
 	return updatedRoom, nil
 }
@@ -308,11 +308,15 @@ func (s *roomsService) applyTerminalRewardsBestEffort(room *roomsmodels.RoomsMod
 		return nil
 	})
 	if err != nil {
-		s.logger.Error("failed to apply room rewards", "room_id", room.RoomID, "status", room.Status, "err", err)
+		s.logger.Error(roomsServiceLog("Failed to apply room rewards"), "room_id", room.RoomID, "status", room.Status, "err", err)
 		return nil
 	}
 
 	return appliedRewards
+}
+
+func roomsServiceLog(message string) string {
+	return logger.Prefix("MODULE", "ROOMS", message)
 }
 
 func roomPatchIsNoop(room *roomsmodels.RoomsModel, input UpdateRoomInput) bool {

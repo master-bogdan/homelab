@@ -17,9 +17,12 @@ type UserRepository interface {
 	FindByGithubID(githubID string) (*usersmodels.UserModel, error)
 	HasSoftDeletedEmail(email string) (bool, error)
 	HasSoftDeletedGithubID(githubID string) (bool, error)
-	Create(email, passwordHash string) (string, error)
+	Create(email, passwordHash, displayName string, organization, occupation *string) (string, error)
 	CreateWithGithub(email *string, githubID, displayName string, avatarURL *string) (string, error)
 	UpdateGithubProfile(userID, githubID, displayName string, avatarURL *string, email *string) error
+	UpdateDisplayName(userID, displayName string) error
+	UpdatePasswordHash(userID, passwordHash string) error
+	UpdateLastLoginAt(userID string) error
 }
 
 type userRepository struct {
@@ -99,10 +102,13 @@ func (r *userRepository) hasSoftDeletedUser(whereClause string, value string) (b
 		Exists(context.Background())
 }
 
-func (r *userRepository) Create(email, passwordHash string) (string, error) {
+func (r *userRepository) Create(email, passwordHash, displayName string, organization, occupation *string) (string, error) {
 	user := &usersmodels.UserModel{
-		UserID: uuid.NewString(),
-		Email:  &email,
+		UserID:       uuid.NewString(),
+		Email:        &email,
+		DisplayName:  displayName,
+		Organization: organization,
+		Occupation:   occupation,
 	}
 	if passwordHash != "" {
 		user.PasswordHash = &passwordHash
@@ -110,7 +116,7 @@ func (r *userRepository) Create(email, passwordHash string) (string, error) {
 
 	_, err := r.db.NewInsert().
 		Model(user).
-		Column("user_id", "email", "password_hash").
+		Column("user_id", "email", "password_hash", "display_name", "organization", "occupation").
 		Exec(context.Background())
 	if err != nil {
 		return "", err
@@ -147,6 +153,39 @@ func (r *userRepository) UpdateGithubProfile(userID, githubID, displayName strin
 		Set("display_name = ?", displayName).
 		Set("avatar_url = ?", avatarURL).
 		Set("email = COALESCE(?, email)", email).
+		Set("updated_at = NOW()").
+		Where("user_id = ?", userID).
+		Exec(context.Background())
+
+	return err
+}
+
+func (r *userRepository) UpdateDisplayName(userID, displayName string) error {
+	_, err := r.db.NewUpdate().
+		Model((*usersmodels.UserModel)(nil)).
+		Set("display_name = ?", displayName).
+		Set("updated_at = NOW()").
+		Where("user_id = ?", userID).
+		Exec(context.Background())
+
+	return err
+}
+
+func (r *userRepository) UpdatePasswordHash(userID, passwordHash string) error {
+	_, err := r.db.NewUpdate().
+		Model((*usersmodels.UserModel)(nil)).
+		Set("password_hash = ?", passwordHash).
+		Set("updated_at = NOW()").
+		Where("user_id = ?", userID).
+		Exec(context.Background())
+
+	return err
+}
+
+func (r *userRepository) UpdateLastLoginAt(userID string) error {
+	_, err := r.db.NewUpdate().
+		Model((*usersmodels.UserModel)(nil)).
+		Set("last_login_at = NOW()").
 		Set("updated_at = NOW()").
 		Where("user_id = ?", userID).
 		Exec(context.Background())
