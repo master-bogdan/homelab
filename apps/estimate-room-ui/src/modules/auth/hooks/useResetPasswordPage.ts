@@ -46,7 +46,7 @@ export const useResetPasswordPage = () => {
 
     const validateToken = async () => {
       try {
-        const response = await authService.validateResetPasswordToken(token);
+        const response = await authService.validateResetPasswordToken(dispatch, token);
 
         if (!isMounted) {
           return;
@@ -105,7 +105,7 @@ export const useResetPasswordPage = () => {
     }
 
     try {
-      await authService.resetPassword({
+      await authService.resetPassword(dispatch, {
         password: nextPassword,
         token
       });

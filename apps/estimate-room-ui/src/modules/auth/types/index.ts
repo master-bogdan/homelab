@@ -1,6 +1,12 @@
 import type { AuthUser } from '@/shared/types';
 
-export type AuthStatus = 'authenticated' | 'unauthenticated' | 'unknown';
+export const AUTH_STATUSES = {
+  AUTHENTICATED: 'authenticated',
+  UNAUTHENTICATED: 'unauthenticated',
+  UNKNOWN: 'unknown'
+} as const;
+
+export type AuthStatus = (typeof AUTH_STATUSES)[keyof typeof AUTH_STATUSES];
 export type ResetPasswordValidationReason = 'expired' | 'invalid' | 'used';
 
 export interface AuthState {

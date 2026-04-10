@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	invitesdto "github.com/master-bogdan/estimate-room-api/internal/modules/invites/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/oauth2"
+	roomsdto "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/dto"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/httputils"
 	"github.com/master-bogdan/estimate-room-api/internal/pkg/logger"
@@ -26,6 +27,11 @@ type invitesController struct {
 	service     InvitesService
 	authService oauth2.Oauth2SessionAuthService
 	logger      *slog.Logger
+}
+
+type acceptInvitationRoomResponse struct {
+	Room        *roomsdto.RoomResponse           `json:"room"`
+	Participant roomsdto.RoomParticipantResponse `json:"participant"`
 }
 
 func NewInvitesController(service InvitesService, authService oauth2.Oauth2SessionAuthService) InvitesController {
@@ -87,9 +93,9 @@ func (c *invitesController) AcceptInvitation(w http.ResponseWriter, r *http.Requ
 	}
 
 	if result.Room != nil {
-		httputils.WriteResponse(w, map[string]any{
-			"room":        result.Room,
-			"participant": result.Participant,
+		httputils.WriteResponse(w, acceptInvitationRoomResponse{
+			Room:        roomsdto.NewRoomResponse(result.Room),
+			Participant: roomsdto.NewRoomParticipantResponse(result.Participant),
 		})
 		return
 	}

@@ -1,5 +1,6 @@
 import { Route, Routes, useLocation } from 'react-router-dom';
 
+import { AUTH_STATUSES } from '@/modules/auth/types';
 import { appRoutes } from '@/shared/constants/routes';
 import { renderWithProviders, screen } from '@/test/test-utils';
 
@@ -25,7 +26,7 @@ describe('ProtectedRoute', () => {
       {
         preloadedState: {
           auth: {
-            status: 'unauthenticated',
+            status: AUTH_STATUSES.UNAUTHENTICATED,
             user: null
           }
         },

@@ -5,7 +5,7 @@ import (
 )
 
 type UpdateRoomDTO struct {
-	Name   *string `json:"name" validate:"omitempty,min=1,max=30"`
+	Name   *string `json:"name" validate:"omitempty,min=1,max=100"`
 	Status *string `json:"status" validate:"omitempty,oneof=ACTIVE FINISHED EXPIRED"`
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAppDispatch } from '@/app/store/hooks';
+import type { AppDispatch } from '@/app/store/store';
 import type { AuthUser } from '@/shared/types';
 
 import { authService } from '../services';
@@ -23,6 +24,7 @@ const callbackRequests = new Map<string, Promise<OAuthCallbackResult>>();
 const createCallbackRequestKey = (code: string, state: string) => `${state}:${code}`;
 
 const finalizeOAuthCallbackRequest = async (
+  dispatch: AppDispatch,
   code: string,
   state: string
 ): Promise<OAuthCallbackResult> => {
@@ -32,14 +34,14 @@ const finalizeOAuthCallbackRequest = async (
     throw new Error('Your sign-in session expired. Please try signing in again.');
   }
 
-  await authService.exchangeAuthorizationCode({
+  await authService.exchangeAuthorizationCode(dispatch, {
     clientId: pendingRequest.clientId,
     code,
     codeVerifier: pendingRequest.codeVerifier,
     redirectUri: pendingRequest.redirectUri
   });
 
-  const user = await authService.fetchSession();
+  const user = await authService.fetchSession(dispatch);
 
   if (!user) {
     throw new Error('Sign-in completed, but the session could not be restored.');
@@ -48,7 +50,7 @@ const finalizeOAuthCallbackRequest = async (
   return { pendingRequest, user };
 };
 
-const getOrCreateCallbackRequest = (code: string, state: string) => {
+const getOrCreateCallbackRequest = (dispatch: AppDispatch, code: string, state: string) => {
   const requestKey = createCallbackRequestKey(code, state);
   const inFlightRequest = callbackRequests.get(requestKey);
 
@@ -56,7 +58,7 @@ const getOrCreateCallbackRequest = (code: string, state: string) => {
     return inFlightRequest;
   }
 
-  const request = finalizeOAuthCallbackRequest(code, state).finally(() => {
+  const request = finalizeOAuthCallbackRequest(dispatch, code, state).finally(() => {
     if (callbackRequests.get(requestKey) === request) {
       callbackRequests.delete(requestKey);
     }
@@ -87,7 +89,7 @@ export const useOAuthCallbackPage = () => {
           throw new Error('Your sign-in session expired. Please try signing in again.');
         }
 
-        const { pendingRequest, user } = await getOrCreateCallbackRequest(code, state);
+        const { pendingRequest, user } = await getOrCreateCallbackRequest(dispatch, code, state);
 
         if (!isMounted) {
           return;

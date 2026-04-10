@@ -59,7 +59,7 @@ export const useRegisterPage = () => {
 
     try {
       const pendingRequest = await createPendingRequest();
-      const user = await authService.register({
+      const user = await authService.register(dispatch, {
         continue: pendingRequest.continueUrl,
         displayName: values.displayName.trim(),
         email: values.email,

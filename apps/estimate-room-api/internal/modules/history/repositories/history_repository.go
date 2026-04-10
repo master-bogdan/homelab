@@ -39,9 +39,9 @@ func (r *historyRepository) ListMySessions(
 	userID = strings.TrimSpace(userID)
 	whereSQL, whereArgs := buildListMySessionsWhere(userID, query)
 	return r.listSessions(ctx, buildListSessionsInput{
-		WhereSQL: whereSQL,
-		WhereArgs: whereArgs,
-		Query:    query.PaginationQuery,
+		WhereSQL:   whereSQL,
+		WhereArgs:  whereArgs,
+		Query:      query.PaginationQuery,
 		RoleUserID: userID,
 	})
 }
@@ -59,9 +59,9 @@ func (r *historyRepository) ListTeamSessions(
 	userID = strings.TrimSpace(userID)
 	whereSQL, whereArgs := buildListTeamSessionsWhere(teamID, query)
 	return r.listSessions(ctx, buildListSessionsInput{
-		WhereSQL: whereSQL,
-		WhereArgs: whereArgs,
-		Query:    query.PaginationQuery,
+		WhereSQL:   whereSQL,
+		WhereArgs:  whereArgs,
+		Query:      query.PaginationQuery,
 		RoleUserID: userID,
 	})
 }
@@ -468,7 +468,22 @@ func buildListMySessionsWhere(userID string, query historydto.MySessionsQuery) (
 				  AND rp_user.user_id = ?
 			)
 		)
-		AND (? = 'ALL' OR r.status = ?)
+	`
+
+	args := []any{
+		userID,
+		userID,
+	}
+
+	if query.Status != historydto.SessionStatusAll {
+		whereSQL += `
+		AND r.status = ?
+	`
+
+		args = append(args, string(query.Status))
+	}
+
+	whereSQL += `
 		AND (
 			? = 'ALL'
 			OR (? = 'ADMIN' AND r.admin_user_id = ?)
@@ -485,18 +500,14 @@ func buildListMySessionsWhere(userID string, query historydto.MySessionsQuery) (
 		)
 	`
 
-	args := []any{
-		userID,
-		userID,
-		string(query.Status),
-		string(query.Status),
+	args = append(args,
 		string(query.Role),
 		string(query.Role),
 		userID,
 		string(query.Role),
 		userID,
 		userID,
-	}
+	)
 
 	return whereSQL, args
 }
@@ -504,13 +515,18 @@ func buildListMySessionsWhere(userID string, query historydto.MySessionsQuery) (
 func buildListTeamSessionsWhere(teamID string, query historydto.TeamSessionsQuery) (string, []any) {
 	whereSQL := `
 		r.team_id = ?
-		AND (? = 'ALL' OR r.status = ?)
 	`
 
 	args := []any{
 		teamID,
-		string(query.Status),
-		string(query.Status),
+	}
+
+	if query.Status != historydto.SessionStatusAll {
+		whereSQL += `
+		AND r.status = ?
+	`
+
+		args = append(args, string(query.Status))
 	}
 
 	return whereSQL, args

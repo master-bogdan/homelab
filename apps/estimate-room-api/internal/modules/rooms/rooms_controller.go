@@ -113,7 +113,7 @@ func (c *roomsController) CreateRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := roomsdto.CreateRoomResponse{
-		Room:              createdRoom.Room,
+		Room:              roomsdto.NewRoomResponse(createdRoom.Room),
 		EmailInvites:      make([]invitesdto.InvitationWithTokenResponse, 0, len(createdRoom.EmailInvitations)),
 		SkippedRecipients: make([]roomsdto.CreateRoomSkippedRecipientResponse, 0, len(createdRoom.SkippedRecipients)),
 	}
@@ -153,7 +153,7 @@ func (c *roomsController) GetRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputils.WriteResponse(w, room)
+	httputils.WriteResponse(w, roomsdto.NewRoomResponse(room))
 }
 
 func (c *roomsController) UpdateRoom(w http.ResponseWriter, r *http.Request) {
@@ -194,7 +194,7 @@ func (c *roomsController) UpdateRoom(w http.ResponseWriter, r *http.Request) {
 		// TODO: emit websocket event when room is finished.
 	}
 
-	httputils.WriteResponse(w, room)
+	httputils.WriteResponse(w, roomsdto.NewRoomResponse(room))
 }
 
 func (c *roomsController) CreateTask(w http.ResponseWriter, r *http.Request) {

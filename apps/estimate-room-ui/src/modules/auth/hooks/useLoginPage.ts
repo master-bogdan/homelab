@@ -32,7 +32,7 @@ export const useLoginPage = () => {
 
     try {
       const pendingRequest = await createPendingRequest();
-      const user = await authService.login({
+      const user = await authService.login(dispatch, {
         continue: pendingRequest.continueUrl,
         email: values.email,
         password: values.password

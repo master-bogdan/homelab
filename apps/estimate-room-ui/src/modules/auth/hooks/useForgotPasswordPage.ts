@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+import { useAppDispatch } from '@/app/store/hooks';
+
 import { authService } from '../services';
 import { resolveApiErrorMessage } from '../utils';
 
@@ -9,6 +11,7 @@ interface ForgotPasswordFormValues {
 }
 
 export const useForgotPasswordPage = () => {
+  const dispatch = useAppDispatch();
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
   const form = useForm<ForgotPasswordFormValues>({
@@ -23,7 +26,7 @@ export const useForgotPasswordPage = () => {
     form.clearErrors();
 
     try {
-      await authService.forgotPassword({ email });
+      await authService.forgotPassword(dispatch, { email });
       setSubmittedEmail(email);
     } catch (error) {
       form.setError('root', {
@@ -41,7 +44,7 @@ export const useForgotPasswordPage = () => {
     setIsResending(true);
 
     try {
-      await authService.forgotPassword({ email: submittedEmail });
+      await authService.forgotPassword(dispatch, { email: submittedEmail });
     } finally {
       setIsResending(false);
     }

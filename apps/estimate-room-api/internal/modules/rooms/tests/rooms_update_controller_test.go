@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
+	roomsdto "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/dto"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
 	apperrors "github.com/master-bogdan/estimate-room-api/internal/pkg/apperrors"
 	"github.com/uptrace/bun"
@@ -50,7 +51,7 @@ func TestUpdateRoom_ChangesFieldsForCreator(t *testing.T) {
 		t.Fatalf("expected 200 OK, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	var room roomsmodels.RoomsModel
+	var room roomsdto.RoomResponse
 	if err := json.NewDecoder(rr.Body).Decode(&room); err != nil {
 		t.Fatalf("failed to decode room response: %v", err)
 	}
@@ -77,7 +78,7 @@ func TestUpdateRoom_FinishingSetsFinishedAt(t *testing.T) {
 		t.Fatalf("expected 200 OK, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	var room roomsmodels.RoomsModel
+	var room roomsdto.RoomResponse
 	if err := json.NewDecoder(rr.Body).Decode(&room); err != nil {
 		t.Fatalf("failed to decode room response: %v", err)
 	}

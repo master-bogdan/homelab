@@ -1,21 +1,35 @@
 import { useEffect } from 'react';
 
 import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
+import type { AppDispatch } from '@/app/store/store';
 import { appRoutes } from '@/shared/constants/routes';
 import type { AuthUser } from '@/shared/types';
 
 import { authService } from '../services';
-import { selectAuthStatus } from '../selectors';
+import { selectAuthStatus } from '../store';
 import { clearSession, setSession } from '../store';
+import { AUTH_STATUSES } from '../types';
 
 let sessionBootstrapRequest: Promise<AuthUser | null> | null = null;
 
-const getOrCreateSessionBootstrapRequest = () => {
+const getOrCreateSessionBootstrapRequest = (dispatch: AppDispatch) => {
   if (sessionBootstrapRequest) {
     return sessionBootstrapRequest;
   }
 
-  const request = authService.fetchSession().finally(() => {
+  const request = (async () => {
+    if (!authService.hasStoredAccessToken()) {
+      try {
+        await authService.refreshAccessToken(dispatch);
+      } catch {
+        await authService.logout(dispatch).catch(() => undefined);
+
+        return null;
+      }
+    }
+
+    return authService.fetchSession(dispatch);
+  })().finally(() => {
     if (sessionBootstrapRequest === request) {
       sessionBootstrapRequest = null;
     }
@@ -31,7 +45,7 @@ export const useAuthSessionBootstrap = () => {
   const authStatus = useAppSelector(selectAuthStatus);
 
   useEffect(() => {
-    if (authStatus !== 'unknown') {
+    if (authStatus !== AUTH_STATUSES.UNKNOWN) {
       return;
     }
 
@@ -46,7 +60,7 @@ export const useAuthSessionBootstrap = () => {
 
     const hydrateSession = async () => {
       try {
-        const user = await getOrCreateSessionBootstrapRequest();
+        const user = await getOrCreateSessionBootstrapRequest(dispatch);
 
         if (!isMounted) {
           return;

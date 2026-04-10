@@ -2,10 +2,10 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { AuthUser } from '@/shared/types';
 
-import type { AuthState } from '../types';
+import { AUTH_STATUSES, type AuthState } from '../types';
 
 const initialState: AuthState = {
-  status: 'unknown',
+  status: AUTH_STATUSES.UNKNOWN,
   user: null
 };
 
@@ -14,12 +14,12 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     clearSession: (state) => {
-      state.status = 'unauthenticated';
+      state.status = AUTH_STATUSES.UNAUTHENTICATED;
       state.user = null;
     },
     hydrateSession: (_state, action: PayloadAction<AuthState>) => action.payload,
     setSession: (state, action: PayloadAction<AuthUser>) => {
-      state.status = 'authenticated';
+      state.status = AUTH_STATUSES.AUTHENTICATED;
       state.user = action.payload;
     }
   }

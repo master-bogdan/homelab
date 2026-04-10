@@ -58,17 +58,10 @@ func (r *roomsRepository) FindByID(roomID string) (*roomsmodels.RoomsModel, erro
 			return q.
 				Where("rp.left_at IS NULL").
 				OrderExpr("rp.joined_at ASC").
-				Relation("User").
-				Relation("Votes", func(vq *bun.SelectQuery) *bun.SelectQuery {
-					return vq.OrderExpr("v.created_at ASC")
-				})
+				Relation("User")
 		}).
 		Relation("Tasks", func(q *bun.SelectQuery) *bun.SelectQuery {
-			return q.
-				OrderExpr("t.created_at ASC").
-				Relation("Votes", func(vq *bun.SelectQuery) *bun.SelectQuery {
-					return vq.OrderExpr("v.created_at ASC")
-				})
+			return q.OrderExpr("t.created_at ASC")
 		}).
 		Limit(1).
 		Scan(context.Background())

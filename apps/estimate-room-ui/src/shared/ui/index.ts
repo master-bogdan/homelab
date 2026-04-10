@@ -1,5 +1,7 @@
 export { AppButton } from './AppButton';
 export type { AppButtonProps } from './AppButton';
+export { AppDialog } from './AppDialog';
+export type { AppDialogProps } from './AppDialog';
 export { AppPageState } from './AppPageState';
 export type { AppPageStateProps } from './AppPageState';
 export { AppTextField } from './AppTextField';

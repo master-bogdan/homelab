@@ -7,13 +7,15 @@ import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
 
 import { rootReducer } from '@/app/store/rootReducer';
 import type { RootState } from '@/app/store/store';
+import { api } from '@/shared/api';
 import { createAppTheme } from '@/theme';
 
 export const createTestStore = (preloadedState?: Partial<RootState>) =>
   configureStore({
-    reducer: rootReducer,
+    devTools: false,
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(api.middleware),
     preloadedState,
-    devTools: false
+    reducer: rootReducer
   });
 
 interface ExtendedRenderOptions extends Omit<RenderOptions, 'wrapper'> {

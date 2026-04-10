@@ -1,104 +1,67 @@
-import { apiClient } from '@/shared/api';
-import type { AuthUser } from '@/shared/types';
+import type { AppDispatch } from '@/app/store/store';
+import { accessTokenStorage } from '@/shared/api';
 
 import { createApiUrl } from '../utils';
 import type {
   ForgotPasswordPayload,
   LoginPayload,
-  OAuthTokenResponse,
-  OAuthTokenResponseDto,
   RegisterPayload,
-  ResetPasswordPayload,
-  ResetPasswordValidationResponseDto,
-  SessionResponseDto,
-  SessionUserResponseDto
+  ResetPasswordPayload
 } from '../types';
 
-const mapSessionUser = (user: SessionUserResponseDto | null): AuthUser | null => {
-  if (!user) {
-    return null;
-  }
-
-  return {
-    avatarUrl: user.avatarUrl ?? null,
-    displayName: user.displayName,
-    email: user.email ?? '',
-    id: user.id,
-    occupation: user.occupation ?? null,
-    organization: user.organization ?? null
-  };
-};
-
-const mapRequiredUser = (response: SessionResponseDto) => {
-  const user = response.authenticated ? mapSessionUser(response.user) : null;
-
-  if (!user) {
-    throw new Error('Authentication did not return an active session.');
-  }
-
-  return user;
-};
-
-const mapTokenResponse = (response: OAuthTokenResponseDto): OAuthTokenResponse => ({
-  accessToken: response.access_token,
-  expiresIn: response.expires_in,
-  idToken: response.id_token,
-  refreshToken: response.refresh_token,
-  tokenType: response.token_type
-});
+import { authApi } from './authApi';
 
 export const authService = {
-  exchangeAuthorizationCode: async ({
-    clientId,
-    code,
-    codeVerifier,
-    redirectUri
-  }: {
-    readonly clientId: string;
-    readonly code: string;
-    readonly codeVerifier: string;
-    readonly redirectUri: string;
-  }) => {
-    const form = new URLSearchParams({
-      client_id: clientId,
+  exchangeAuthorizationCode: async (
+    dispatch: AppDispatch,
+    {
+      clientId,
       code,
-      code_verifier: codeVerifier,
-      grant_type: 'authorization_code',
-      redirect_uri: redirectUri
-    });
-
-    const response = await apiClient.post<OAuthTokenResponseDto>('oauth2/token', form, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    });
-
-    return mapTokenResponse(response);
-  },
-  fetchSession: async () => {
-    const response = await apiClient.get<SessionResponseDto>('auth/session');
-
-    return response.authenticated ? mapSessionUser(response.user) : null;
-  },
-  forgotPassword: async (payload: ForgotPasswordPayload) =>
-    apiClient.post<{ submitted: boolean }>('auth/forgot-password', payload),
+      codeVerifier,
+      redirectUri
+    }: {
+      readonly clientId: string;
+      readonly code: string;
+      readonly codeVerifier: string;
+      readonly redirectUri: string;
+    }
+  ) =>
+    dispatch(
+      authApi.endpoints.exchangeAuthorizationCode.initiate({
+        clientId,
+        code,
+        codeVerifier,
+        redirectUri
+      })
+    ).unwrap(),
+  fetchSession: async (dispatch: AppDispatch) =>
+    dispatch(authApi.endpoints.fetchSession.initiate(undefined, {
+      forceRefetch: true,
+      subscribe: false
+    })).unwrap(),
+  forgotPassword: async (dispatch: AppDispatch, payload: ForgotPasswordPayload) =>
+    dispatch(authApi.endpoints.forgotPassword.initiate(payload)).unwrap(),
   getGithubLoginUrl: (continueUrl: string) =>
     createApiUrl('auth/github/login', { continue: continueUrl }).toString(),
-  login: async (payload: LoginPayload) => {
-    const response = await apiClient.post<SessionResponseDto>('auth/login', payload);
-
-    return mapRequiredUser(response);
+  hasStoredAccessToken: () => Boolean(accessTokenStorage.get()),
+  login: async (dispatch: AppDispatch, payload: LoginPayload) =>
+    dispatch(authApi.endpoints.login.initiate(payload)).unwrap(),
+  logout: async (dispatch: AppDispatch) => {
+    try {
+      return await dispatch(authApi.endpoints.logout.initiate()).unwrap();
+    } finally {
+      accessTokenStorage.clear();
+    }
   },
-  logout: async () => apiClient.post<{ loggedOut: boolean }>('auth/logout'),
-  register: async (payload: RegisterPayload) => {
-    const response = await apiClient.post<SessionResponseDto>('auth/register', payload);
-
-    return mapRequiredUser(response);
-  },
-  resetPassword: async (payload: ResetPasswordPayload) =>
-    apiClient.post<{ reset: boolean }>('auth/reset-password', payload),
-  validateResetPasswordToken: async (token: string) =>
-    apiClient.get<ResetPasswordValidationResponseDto>('auth/reset-password/validate', {
-      query: { token }
-    })
+  refreshAccessToken: async (dispatch: AppDispatch) =>
+    dispatch(authApi.endpoints.refreshAccessToken.initiate()).unwrap(),
+  register: async (dispatch: AppDispatch, payload: RegisterPayload) =>
+    dispatch(authApi.endpoints.register.initiate(payload)).unwrap(),
+  resetPassword: async (dispatch: AppDispatch, payload: ResetPasswordPayload) =>
+    dispatch(authApi.endpoints.resetPassword.initiate(payload)).unwrap(),
+  validateResetPasswordToken: async (dispatch: AppDispatch, token: string) =>
+    dispatch(authApi.endpoints.validateResetPasswordToken.initiate(token, {
+      forceRefetch: true,
+      subscribe: false
+    })).unwrap()
 };

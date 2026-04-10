@@ -187,10 +187,10 @@ func (r *gamificationRepository) ApplyUserStatsDelta(
 		Model(stats).
 		Column("user_id", "sessions_participated", "sessions_admined", "tasks_estimated", "xp").
 		On("CONFLICT (user_id) DO UPDATE").
-		Set("sessions_participated = user_stats.sessions_participated + EXCLUDED.sessions_participated").
-		Set("sessions_admined = user_stats.sessions_admined + EXCLUDED.sessions_admined").
-		Set("tasks_estimated = user_stats.tasks_estimated + EXCLUDED.tasks_estimated").
-		Set("xp = user_stats.xp + EXCLUDED.xp").
+		Set("sessions_participated = us.sessions_participated + EXCLUDED.sessions_participated").
+		Set("sessions_admined = us.sessions_admined + EXCLUDED.sessions_admined").
+		Set("tasks_estimated = us.tasks_estimated + EXCLUDED.tasks_estimated").
+		Set("xp = us.xp + EXCLUDED.xp").
 		Returning("*").
 		Exec(ctx)
 	if err != nil {
