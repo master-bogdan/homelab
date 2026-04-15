@@ -1,6 +1,6 @@
 import { AUTH_STATUSES } from '../types';
 import type { AuthState } from '../types';
-import { authStateKey } from './auth.store';
+import { authStateKey } from './authStore';
 
 type AuthStateRoot = {
   readonly [authStateKey]: AuthState;

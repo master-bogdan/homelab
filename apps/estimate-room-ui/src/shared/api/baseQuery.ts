@@ -64,7 +64,7 @@ async function refreshAccessToken(
           body: new URLSearchParams({
             client_id: clientId,
             grant_type: 'refresh_token'
-          }),
+          }).toString(),
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
           },

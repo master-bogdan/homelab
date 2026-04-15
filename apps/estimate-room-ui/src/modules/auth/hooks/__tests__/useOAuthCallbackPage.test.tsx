@@ -5,18 +5,16 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { createTestStore } from '@/test/test-utils';
 
-import { authService } from '../../services';
 import { AUTH_STATUSES } from '../../types';
 import { useOAuthCallbackPage } from '../useOAuthCallbackPage';
 
-vi.mock('@/modules/auth/services', () => ({
-  authService: {
-    exchangeAuthorizationCode: vi.fn(),
-    fetchSession: vi.fn()
-  }
-}));
-
-const mockedAuthService = vi.mocked(authService);
+const createJsonResponse = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    headers: {
+      'content-type': 'application/json'
+    },
+    status
+  });
 
 const OAuthCallbackRoute = () => {
   const { errorMessage, isLoading } = useOAuthCallbackPage();
@@ -25,9 +23,17 @@ const OAuthCallbackRoute = () => {
 };
 
 describe('useOAuthCallbackPage', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     sessionStorage.clear();
-    vi.clearAllMocks();
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('exchanges the authorization code only once in StrictMode', async () => {
@@ -43,21 +49,24 @@ describe('useOAuthCallbackPage', () => {
       })
     );
 
-    mockedAuthService.exchangeAuthorizationCode.mockResolvedValue({
-      accessToken: 'access-token',
-      expiresIn: 900,
-      idToken: 'id-token',
-      refreshToken: 'refresh-token',
-      tokenType: 'Bearer'
-    });
-    mockedAuthService.fetchSession.mockResolvedValue({
-      avatarUrl: null,
-      displayName: 'Test User',
-      email: 'test@example.com',
-      id: 'user-1',
-      occupation: null,
-      organization: null
-    });
+    fetchMock
+      .mockResolvedValueOnce(createJsonResponse({
+        access_token: 'access-token',
+        expires_in: 900,
+        id_token: 'id-token',
+        token_type: 'Bearer'
+      }))
+      .mockResolvedValueOnce(createJsonResponse({
+        authenticated: true,
+        user: {
+          avatarUrl: null,
+          displayName: 'Test User',
+          email: 'test@example.com',
+          id: 'user-1',
+          occupation: null,
+          organization: null
+        }
+      }));
 
     const store = createTestStore();
     render(
@@ -74,10 +83,7 @@ describe('useOAuthCallbackPage', () => {
     );
 
     await waitFor(() => {
-      expect(mockedAuthService.exchangeAuthorizationCode).toHaveBeenCalledTimes(1);
-    });
-    await waitFor(() => {
-      expect(mockedAuthService.fetchSession).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
     });
     await screen.findByText('Dashboard');
     await waitFor(() => {

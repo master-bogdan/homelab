@@ -1,8 +1,8 @@
 import { combineReducers } from '@reduxjs/toolkit';
 
-import { authStore } from '@/modules/auth/store';
-import { dashboardStore } from '@/modules/dashboard/store';
-import { systemStore } from '@/modules/system/store';
+import { authStore } from '@/modules/auth/store/authStore';
+import { dashboardStore } from '@/modules/dashboard/store/dashboardStore';
+import { systemStore } from '@/modules/system/store/systemStore';
 import { api } from '@/shared/api';
 
 export const rootReducer = combineReducers({

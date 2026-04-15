@@ -4,7 +4,7 @@ import type {
   SystemNotification,
   SystemState
 } from '../types';
-import { systemStateKey } from './system.store';
+import { systemStateKey } from './systemStore';
 
 type SystemStateRoot = {
   readonly [systemStateKey]: SystemState;

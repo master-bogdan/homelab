@@ -1,6 +1,6 @@
 import { createTestStore } from '@/test/test-utils';
 
-import { dashboardService } from '../dashboardService';
+import { fetchDashboardPage, submitCreateRoom, submitJoinRoom } from '../dashboardThunks';
 
 const createRoomDto = {
   adminUserId: 'user-1',
@@ -70,7 +70,7 @@ const createJsonResponse = (payload: unknown, status = 200) =>
     status
   });
 
-describe('dashboardService', () => {
+describe('dashboardThunks', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -150,7 +150,7 @@ describe('dashboardService', () => {
 
     const store = createTestStore();
 
-    const result = await dashboardService.fetchDashboardPageData(store.dispatch);
+    const result = await store.dispatch(fetchDashboardPage()).unwrap();
 
     expect(result.view).toBe('active');
     expect(result.activeRoom?.id).toBe('room-1');
@@ -195,7 +195,7 @@ describe('dashboardService', () => {
 
     const store = createTestStore();
 
-    const result = await dashboardService.fetchDashboardPageData(store.dispatch);
+    const result = await store.dispatch(fetchDashboardPage()).unwrap();
 
     expect(result.view).toBe('noActive');
     expect(result.activeRoom).toBeNull();
@@ -219,13 +219,15 @@ describe('dashboardService', () => {
 
     const store = createTestStore();
 
-    const result = await dashboardService.createRoom(store.dispatch, {
-      createShareLink: true,
-      deckKey: 'fibonacci',
-      inviteEmails: 'first@example.com, second@example.com',
-      inviteTeamId: '',
-      name: 'Refinement: Microservices Core'
-    });
+    const result = await store.dispatch(
+      submitCreateRoom({
+        createShareLink: true,
+        deckKey: 'fibonacci',
+        inviteEmails: 'first@example.com, second@example.com',
+        inviteTeamId: '',
+        name: 'Refinement: Microservices Core'
+      })
+    ).unwrap();
 
     expect(result.roomCode).toBe('01HRXGQW4QK8M3C1A4Q0R2D8TM');
     expect(result.inviteLink).toBe('http://localhost:3000/join/01HRXGQW4QK8M3C1A4Q0R2D8TM');
@@ -255,10 +257,9 @@ describe('dashboardService', () => {
 
     const store = createTestStore();
 
-    const result = await dashboardService.joinRoom(
-      store.dispatch,
-      'https://app.example.com/invites/token-123'
-    );
+    const result = await store.dispatch(
+      submitJoinRoom('https://app.example.com/invites/token-123')
+    ).unwrap();
 
     expect(result.roomId).toBe('room-1');
     expect(result.roomName).toBe('Refinement: Microservices Core');
@@ -283,7 +284,7 @@ describe('dashboardService', () => {
 
     const store = createTestStore();
 
-    await expect(dashboardService.joinRoom(store.dispatch, 'team-code-1')).rejects.toThrow(
+    await expect(store.dispatch(submitJoinRoom('team-code-1')).unwrap()).rejects.toBe(
       'This code belongs to a team invitation, not a room session.'
     );
   });

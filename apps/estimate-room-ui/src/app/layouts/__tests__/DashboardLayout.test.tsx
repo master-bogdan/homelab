@@ -2,7 +2,6 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 
 import { AUTH_STATUSES } from '@/modules/auth';
-import { dashboardService } from '@/modules/dashboard/services/dashboardService';
 import { appRoutes } from '@/shared/constants/routes';
 import { renderWithProviders, screen, waitFor } from '@/test/test-utils';
 
@@ -19,13 +18,22 @@ const LoginStateProbe = () => {
   );
 };
 
+const createJsonResponse = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    headers: {
+      'content-type': 'application/json'
+    },
+    status
+  });
+
 describe('DashboardLayout', () => {
   beforeEach(() => {
-    vi.spyOn(dashboardService, 'fetchTeams').mockResolvedValue([]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(createJsonResponse([])));
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('renders route-aware metadata for protected pages', () => {

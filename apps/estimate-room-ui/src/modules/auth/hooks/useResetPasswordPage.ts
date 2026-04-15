@@ -5,9 +5,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppDispatch } from '@/shared/store';
 import { appRoutes } from '@/shared/constants/routes';
 
-import { authService } from '../services';
 import type { ResetPasswordValidationReason } from '../types';
-import { clearSession } from '../store';
+import { submitResetPassword, useLazyValidateResetPasswordTokenQuery } from '../store';
 import { getResetLinkCopy, resolveApiErrorMessage } from '../utils';
 
 interface ResetPasswordFormValues {
@@ -20,6 +19,7 @@ type ResetPasswordPageState = 'invalid' | 'ready' | 'validating';
 export const useResetPasswordPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [validateResetPasswordToken] = useLazyValidateResetPasswordTokenQuery();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token')?.trim() ?? '';
   const [pageState, setPageState] = useState<ResetPasswordPageState>(
@@ -46,7 +46,7 @@ export const useResetPasswordPage = () => {
 
     const validateToken = async () => {
       try {
-        const response = await authService.validateResetPasswordToken(dispatch, token);
+        const response = await validateResetPasswordToken(token, true).unwrap();
 
         if (!isMounted) {
           return;
@@ -105,12 +105,11 @@ export const useResetPasswordPage = () => {
     }
 
     try {
-      await authService.resetPassword(dispatch, {
+      await dispatch(submitResetPassword({
         password: nextPassword,
         token
-      });
+      })).unwrap();
 
-      dispatch(clearSession());
       navigate(appRoutes.resetPasswordSuccess, { replace: true });
     } catch (error) {
       const message = resolveApiErrorMessage(error, 'Unable to reset your password right now.');

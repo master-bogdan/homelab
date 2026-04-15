@@ -72,7 +72,7 @@ export const authApi = api.injectEndpoints({
           code_verifier: codeVerifier,
           grant_type: 'authorization_code',
           redirect_uri: redirectUri
-        }),
+        }).toString(),
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
@@ -128,7 +128,7 @@ export const authApi = api.injectEndpoints({
         body: new URLSearchParams({
           client_id: appConfig.oauthClientId.trim(),
           grant_type: 'refresh_token'
-        }),
+        }).toString(),
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
@@ -163,3 +163,10 @@ export const authApi = api.injectEndpoints({
   }),
   overrideExisting: false
 });
+
+export const {
+  useForgotPasswordMutation,
+  useLazyValidateResetPasswordTokenQuery,
+  useResetPasswordMutation,
+  useValidateResetPasswordTokenQuery
+} = authApi;

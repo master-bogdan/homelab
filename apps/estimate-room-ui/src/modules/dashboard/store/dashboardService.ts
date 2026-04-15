@@ -176,3 +176,12 @@ export const dashboardApi = api.injectEndpoints({
   }),
   overrideExisting: false
 });
+
+export const {
+  useCreateRoomMutation,
+  useFetchDashboardLedgerQuery,
+  useFetchDashboardRoomQuery,
+  useFetchDashboardSessionsQuery,
+  useFetchDashboardTeamsQuery,
+  usePreviewInvitationQuery
+} = dashboardApi;

@@ -8,7 +8,7 @@ import type {
   DashboardState,
   DashboardView
 } from '../types';
-import { dashboardStateKey } from './dashboard.store';
+import { dashboardStateKey } from './dashboardStore';
 
 type DashboardStateRoot = {
   readonly [dashboardStateKey]: DashboardState;

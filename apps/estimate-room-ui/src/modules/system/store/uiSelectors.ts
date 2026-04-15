@@ -1,7 +1,7 @@
 import type { ThemeMode } from '@/shared/theme';
 
 import type { SystemUiState } from '../types';
-import { systemStateKey } from './system.store';
+import { systemStateKey } from './systemStore';
 
 type SystemUiStateRoot = {
   readonly [systemStateKey]: {

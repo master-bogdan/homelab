@@ -10,10 +10,20 @@ export { useLogout } from './hooks';
 export {
   AUTH_STATUSES,
   authStore,
+  bootstrapAuthSession,
   clearSession,
+  completeOAuthCallback,
   hydrateSession,
   selectAuthStatus,
   selectAuthUser,
   selectIsAuthenticated,
-  setSession
+  setSession,
+  submitLogin,
+  submitLogout,
+  submitRegister,
+  submitResetPassword,
+  useForgotPasswordMutation,
+  useLazyValidateResetPasswordTokenQuery,
+  useResetPasswordMutation,
+  useValidateResetPasswordTokenQuery
 } from './store';

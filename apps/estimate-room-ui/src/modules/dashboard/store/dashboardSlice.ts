@@ -1,16 +1,17 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-import { createAppAsyncThunk } from '@/shared/store';
-
-import { dashboardService } from '../services/dashboardService';
 import type {
-  DashboardCreateRoomFormValues,
   DashboardCreateRoomState,
   DashboardJoinRoomState,
   DashboardPageState,
   DashboardState
 } from '../types';
-import { getDashboardErrorMessage } from '../utils';
+import {
+  fetchCreateRoomTeams,
+  fetchDashboardPage,
+  submitCreateRoom,
+  submitJoinRoom
+} from './dashboardThunks';
 
 const initialPageState: DashboardPageState = {
   data: null,
@@ -34,58 +35,6 @@ const initialState: DashboardState = {
   joinRoom: initialJoinRoomState,
   page: initialPageState
 };
-
-export const fetchDashboardPage = createAppAsyncThunk(
-  'dashboard/fetchDashboardPage',
-  async (_, { dispatch, rejectWithValue }) => {
-    try {
-      return await dashboardService.fetchDashboardPageData(dispatch);
-    } catch (error) {
-      return rejectWithValue(
-        getDashboardErrorMessage(error, 'Dashboard data could not be loaded right now.')
-      );
-    }
-  }
-);
-
-export const fetchCreateRoomTeams = createAppAsyncThunk(
-  'dashboard/fetchCreateRoomTeams',
-  async (_, { dispatch, rejectWithValue }) => {
-    try {
-      return await dashboardService.fetchTeams(dispatch);
-    } catch (error) {
-      return rejectWithValue(
-        getDashboardErrorMessage(error, 'Teams could not be loaded for room creation.')
-      );
-    }
-  }
-);
-
-export const submitCreateRoom = createAppAsyncThunk(
-  'dashboard/submitCreateRoom',
-  async (values: DashboardCreateRoomFormValues, { dispatch, rejectWithValue }) => {
-    try {
-      return await dashboardService.createRoom(dispatch, values);
-    } catch (error) {
-      return rejectWithValue(
-        getDashboardErrorMessage(error, 'The room could not be created right now.')
-      );
-    }
-  }
-);
-
-export const submitJoinRoom = createAppAsyncThunk(
-  'dashboard/submitJoinRoom',
-  async (code: string, { dispatch, rejectWithValue }) => {
-    try {
-      return await dashboardService.joinRoom(dispatch, code);
-    } catch (error) {
-      return rejectWithValue(
-        getDashboardErrorMessage(error, 'Invalid or expired room code. Please check and try again.')
-      );
-    }
-  }
-);
 
 const dashboardSlice = createSlice({
   name: 'dashboard',

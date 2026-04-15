@@ -57,3 +57,6 @@ export const resolveApiHref = (pathOrUrl: string) => {
 
   return createApiUrl(pathOrUrl).toString();
 };
+
+export const createGithubLoginUrl = (continueUrl: string) =>
+  createApiUrl('auth/github/login', { continue: continueUrl }).toString();

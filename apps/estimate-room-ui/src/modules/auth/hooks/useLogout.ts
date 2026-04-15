@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAppDispatch } from '@/shared/store';
 import { appRoutes } from '@/shared/constants/routes';
-import { api } from '@/shared/api';
 
-import { authService } from '../services';
-import { clearSession } from '../store';
+import { submitLogout } from '../store';
 
 export const useLogout = () => {
   const dispatch = useAppDispatch();
@@ -21,10 +19,8 @@ export const useLogout = () => {
     setIsLoggingOut(true);
 
     try {
-      await authService.logout(dispatch);
+      await dispatch(submitLogout()).unwrap();
     } finally {
-      dispatch(api.util.resetApiState());
-      dispatch(clearSession());
       navigate(appRoutes.login, { replace: true });
       setIsLoggingOut(false);
     }

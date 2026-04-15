@@ -3,9 +3,8 @@ import { useForm } from 'react-hook-form';
 
 import { useAppDispatch } from '@/shared/store';
 
-import { authService } from '../services';
-import { setSession } from '../store';
-import { isInvalidCredentialsError, resolveApiErrorMessage, resolveApiHref } from '../utils';
+import { submitLogin } from '../store';
+import { createGithubLoginUrl, resolveApiErrorMessage, resolveApiHref } from '../utils';
 
 import { useAuthContinuation } from './useAuthContinuation';
 
@@ -32,18 +31,15 @@ export const useLoginPage = () => {
 
     try {
       const pendingRequest = await createPendingRequest();
-      const user = await authService.login(dispatch, {
+      await dispatch(submitLogin({
         continue: pendingRequest.continueUrl,
         email: values.email,
         password: values.password
-      });
+      })).unwrap();
 
-      dispatch(setSession(user));
       window.location.assign(resolveApiHref(pendingRequest.continueUrl));
     } catch (error) {
-      const message = isInvalidCredentialsError(error)
-        ? 'Email or password is incorrect.'
-        : resolveApiErrorMessage(error, 'Unable to sign in right now.');
+      const message = resolveApiErrorMessage(error, 'Unable to sign in right now.');
 
       form.setError('root', {
         message,
@@ -63,7 +59,7 @@ export const useLoginPage = () => {
     try {
       const pendingRequest = await createPendingRequest();
 
-      window.location.assign(authService.getGithubLoginUrl(pendingRequest.continueUrl));
+      window.location.assign(createGithubLoginUrl(pendingRequest.continueUrl));
     } catch (error) {
       setIsGithubLoading(false);
       form.setError('root', {

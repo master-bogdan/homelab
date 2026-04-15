@@ -3,9 +3,8 @@ import { useForm, useWatch } from 'react-hook-form';
 
 import { useAppDispatch } from '@/shared/store';
 
-import { authService } from '../services';
-import { setSession } from '../store';
-import { isEmailAlreadyInUseError, resolveApiErrorMessage, resolveApiHref } from '../utils';
+import { submitRegister } from '../store';
+import { createGithubLoginUrl, resolveApiErrorMessage, resolveApiHref } from '../utils';
 
 import { useAuthContinuation } from './useAuthContinuation';
 
@@ -59,28 +58,29 @@ export const useRegisterPage = () => {
 
     try {
       const pendingRequest = await createPendingRequest();
-      const user = await authService.register(dispatch, {
+      await dispatch(submitRegister({
         continue: pendingRequest.continueUrl,
         displayName: values.displayName.trim(),
         email: values.email,
         occupation: normalizeOptionalField(values.occupation),
         organization: normalizeOptionalField(values.organization),
         password: values.password
-      });
+      })).unwrap();
 
-      dispatch(setSession(user));
       window.location.assign(resolveApiHref(pendingRequest.continueUrl));
     } catch (error) {
-      if (isEmailAlreadyInUseError(error)) {
+      const message = resolveApiErrorMessage(error, 'Unable to create your account right now.');
+
+      if (message === 'This email is already registered.') {
         form.setError('email', {
-          message: 'This email is already registered.',
+          message,
           type: 'server'
         });
         return;
       }
 
       form.setError('root', {
-        message: resolveApiErrorMessage(error, 'Unable to create your account right now.'),
+        message,
         type: 'server'
       });
     }
@@ -97,7 +97,7 @@ export const useRegisterPage = () => {
     try {
       const pendingRequest = await createPendingRequest();
 
-      window.location.assign(authService.getGithubLoginUrl(pendingRequest.continueUrl));
+      window.location.assign(createGithubLoginUrl(pendingRequest.continueUrl));
     } catch (error) {
       setIsGithubLoading(false);
       form.setError('root', {

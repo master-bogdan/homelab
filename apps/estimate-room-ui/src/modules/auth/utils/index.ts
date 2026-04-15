@@ -1,4 +1,4 @@
-export { createApiPath, createApiUrl, resolveApiHref } from './apiUrl';
+export { createApiPath, createApiUrl, createGithubLoginUrl, resolveApiHref } from './apiUrl';
 export {
   clearPendingAuthorizationRequest,
   createPendingAuthorizationRequest,
