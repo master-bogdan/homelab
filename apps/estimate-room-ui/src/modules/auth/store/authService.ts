@@ -63,7 +63,9 @@ export const authApi = api.injectEndpoints({
           const { data } = await queryFulfilled;
 
           accessTokenStorage.set(data.accessToken);
-        } catch {}
+        } catch {
+          return;
+        }
       },
       query: ({ clientId, code, codeVerifier, redirectUri }) => ({
         body: new URLSearchParams({
@@ -122,7 +124,9 @@ export const authApi = api.injectEndpoints({
           const { data } = await queryFulfilled;
 
           accessTokenStorage.set(data.accessToken);
-        } catch {}
+        } catch {
+          return;
+        }
       },
       query: () => ({
         body: new URLSearchParams({

@@ -20,7 +20,6 @@ import { formatRelativeTime, formatStatusLabel } from '../../utils';
 import {
   recentRoomsCardActionLinkSx,
   recentRoomsCardArrowSx,
-  recentRoomsCardEmptyStateSx,
   recentRoomsCardItemIconSx,
   recentRoomsCardItemLinkSx,
   recentRoomsCardRootSx

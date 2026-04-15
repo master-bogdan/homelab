@@ -206,8 +206,24 @@ describe('dashboardThunks', () => {
 
   it('maps the create-room response into the success dialog result', async () => {
     fetchMock.mockResolvedValueOnce(createJsonResponse({
-      inviteToken: 'share-token-1',
+      inviteToken: 'fallback-token-1',
       room: createRoomDto,
+      shareLink: {
+        acceptedAt: null,
+        createdAt: '2026-04-07T10:00:00.000Z',
+        createdByUserId: 'user-1',
+        declinedAt: null,
+        invitedEmail: null,
+        invitedUserId: null,
+        invitationId: 'invite-1',
+        kind: 'ROOM_LINK',
+        revokedAt: null,
+        roomId: 'room-1',
+        status: 'ACTIVE',
+        teamId: null,
+        token: 'share-token-1',
+        updatedAt: '2026-04-07T10:00:00.000Z'
+      },
       skippedRecipients: [
         {
           email: 'already@joined.dev',
@@ -229,9 +245,31 @@ describe('dashboardThunks', () => {
       })
     ).unwrap();
 
-    expect(result.roomCode).toBe('01HRXGQW4QK8M3C1A4Q0R2D8TM');
-    expect(result.inviteLink).toBe('http://localhost:3000/join/01HRXGQW4QK8M3C1A4Q0R2D8TM');
+    expect(result.roomCode).toBe('share-token-1');
+    expect(result.inviteLink).toBe('http://localhost:3000/join/share-token-1');
     expect(result.skippedRecipients).toHaveLength(1);
+  });
+
+  it('falls back to inviteToken when no share link object is returned', async () => {
+    fetchMock.mockResolvedValueOnce(createJsonResponse({
+      inviteToken: 'fallback-token-1',
+      room: createRoomDto
+    }));
+
+    const store = createTestStore();
+
+    const result = await store.dispatch(
+      submitCreateRoom({
+        createShareLink: true,
+        deckKey: 'fibonacci',
+        inviteEmails: '',
+        inviteTeamId: '',
+        name: 'Refinement: Microservices Core'
+      })
+    ).unwrap();
+
+    expect(result.roomCode).toBe('fallback-token-1');
+    expect(result.inviteLink).toBe('http://localhost:3000/join/fallback-token-1');
   });
 
   it('joins a room from a pasted invite URL', async () => {

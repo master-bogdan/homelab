@@ -85,7 +85,9 @@ export const useCreateRoomDialog = () => {
         })
       );
       void dispatch(fetchDashboardPage());
-    } catch {}
+    } catch {
+      return;
+    }
   });
 
   return {

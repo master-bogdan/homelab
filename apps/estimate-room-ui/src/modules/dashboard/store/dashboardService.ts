@@ -94,13 +94,21 @@ const mapActiveRoom = (room: DashboardRoomDto): DashboardActiveRoom => {
 
 const mapCreateRoomResult = (
   response: DashboardCreateRoomResponseDto
-): DashboardCreateRoomResult => ({
-  inviteLink: buildDashboardInviteLink(response.room.code),
-  roomCode: response.room.code,
-  roomId: response.room.roomId,
-  roomName: response.room.name,
-  skippedRecipients: response.skippedRecipients ?? []
-});
+): DashboardCreateRoomResult => {
+  const shareToken = response.shareLink?.token ?? response.inviteToken;
+
+  if (!shareToken) {
+    throw new Error('The room was created, but no invitation token was returned.');
+  }
+
+  return {
+    inviteLink: buildDashboardInviteLink(shareToken),
+    roomCode: shareToken,
+    roomId: response.room.roomId,
+    roomName: response.room.name,
+    skippedRecipients: response.skippedRecipients ?? []
+  };
+};
 
 export const dashboardApi = api.injectEndpoints({
   endpoints: (builder) => ({

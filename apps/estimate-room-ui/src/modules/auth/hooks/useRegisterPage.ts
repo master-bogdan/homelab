@@ -53,7 +53,7 @@ export const useRegisterPage = () => {
     void form.trigger('confirmPassword');
   }, [confirmPasswordTouched, form, password]);
 
-  const submit = form.handleSubmit(async ({ confirmPassword: _confirmPassword, ...values }) => {
+  const submit = form.handleSubmit(async (values) => {
     form.clearErrors();
 
     try {

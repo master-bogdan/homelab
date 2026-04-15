@@ -2,8 +2,7 @@ import { createAppAsyncThunk } from '@/shared/store';
 
 import type {
   DashboardActiveRoom,
-  DashboardCreateRoomFormValues,
-  DashboardTeamSummary
+  DashboardCreateRoomFormValues
 } from '../types';
 import { extractInviteToken, getDashboardErrorMessage } from '../utils';
 import {

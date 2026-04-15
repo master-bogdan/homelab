@@ -7,6 +7,8 @@ export const appRoutes = {
   resetPasswordSuccess: '/reset-password/success',
   authCallback: '/auth/callback',
   dashboard: '/dashboard',
+  joinRoom: '/join/:token',
+  joinRoomPath: (token: string) => `/join/${encodeURIComponent(token)}`,
   roomsNew: '/rooms/new',
   roomDetails: '/rooms/:id',
   roomDetailsPath: (id: string) => `/rooms/${id}`,

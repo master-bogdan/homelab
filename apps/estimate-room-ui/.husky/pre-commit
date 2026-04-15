@@ -1,0 +1,2 @@
+cd apps/estimate-room-ui
+npm run precommit
