@@ -2,15 +2,15 @@ import type { SxProps, Theme } from '@mui/material/styles';
 
 export const ledgerCardRootSx = (hasContent: boolean): SxProps<Theme> => ({
   border: (theme) => `1px solid ${theme.app.borders.ghost}`,
-  borderRadius: 3,
+  borderRadius: (theme) => theme.app.radii.lg,
   minHeight: 260,
   p: hasContent ? 3.5 : 3
 });
 
 export const ledgerCardBadgeSx: SxProps<Theme> = {
   alignItems: 'center',
-  bgcolor: 'secondary.light',
-  borderRadius: 2,
+  bgcolor: (theme) => theme.app.stateLayers.secondaryPanel,
+  borderRadius: (theme) => theme.app.radii.md,
   color: 'primary.main',
   display: 'flex',
   height: 64,
@@ -19,7 +19,7 @@ export const ledgerCardBadgeSx: SxProps<Theme> = {
 };
 
 export const ledgerCardProgressBarSx: SxProps<Theme> = {
-  borderRadius: 999,
+  borderRadius: (theme) => theme.app.radii.pill,
   height: 8
 };
 

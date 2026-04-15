@@ -1,4 +1,13 @@
 import { Box, DialogActions, DialogContent, styled } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
+
+export const appDialogPaperSx = (theme: Theme) => ({
+  backdropFilter: `blur(${theme.app.effects.backdropBlur})`,
+  border: `1px solid ${theme.app.borders.ghost}`,
+  borderRadius: theme.app.radii.xl,
+  boxShadow: theme.app.effects.ambientShadow,
+  overflow: 'hidden'
+});
 
 export const AppDialogHeaderRoot = styled(Box)(({ theme }) => ({
   alignItems: 'center',

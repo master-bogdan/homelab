@@ -7,7 +7,9 @@ describe.each([
     expectedDisplayFont: 'Manrope',
     expectedGradient: 'linear-gradient(135deg, #5148d7 0%, #4439cb 100%)',
     expectedPrimary: '#5148d7',
+    expectedRadius: 12,
     expectedSection: '#eff4ff',
+    expectedStateLayer: '#eff4ff',
     expectedTextPrimary: '#00345e',
     mode: 'light' as const
   },
@@ -17,7 +19,9 @@ describe.each([
     expectedDisplayFont: 'Manrope',
     expectedGradient: 'linear-gradient(135deg, #b4c5ff 0%, #2563eb 100%)',
     expectedPrimary: '#2563eb',
+    expectedRadius: 8,
     expectedSection: '#131b2e',
+    expectedStateLayer: '#3c5293',
     expectedTextPrimary: '#dae2fd',
     mode: 'dark' as const
   }
@@ -29,7 +33,9 @@ describe.each([
     expectedDisplayFont,
     expectedGradient,
     expectedPrimary,
+    expectedRadius,
     expectedSection,
+    expectedStateLayer,
     expectedTextPrimary,
     mode
   }) => {
@@ -41,6 +47,10 @@ describe.each([
       expect(theme.app.surfaces.section).toBe(expectedSection);
       expect(theme.app.gradients.primary).toBe(expectedGradient);
       expect(theme.app.effects.backdropBlur).toBe(expectedBackdropBlur);
+      expect(theme.app.backgrounds.body).toContain('radial-gradient');
+      expect(theme.app.backgrounds.drawer).toContain('linear-gradient');
+      expect(theme.app.radii.lg).toBe(expectedRadius);
+      expect(theme.app.stateLayers.secondaryPanel).toBe(expectedStateLayer);
       expect(theme.typography.h1?.fontFamily).toContain(expectedDisplayFont);
       expect(theme.typography.body1?.fontFamily).toContain(expectedBodyFont);
       expect(theme.shadows[12]).not.toBe('none');

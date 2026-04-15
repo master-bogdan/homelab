@@ -28,7 +28,7 @@ export const dashboardSidebarBrandSx: SxProps<Theme> = {
 export const dashboardSidebarBrandIconSx: SxProps<Theme> = {
   alignItems: 'center',
   backgroundImage: (theme) => theme.app.gradients.primary,
-  borderRadius: 1.5,
+  borderRadius: (theme) => theme.app.radii.md,
   color: 'primary.contrastText',
   display: 'flex',
   height: 40,
@@ -47,7 +47,7 @@ export const dashboardSidebarSecondaryListSx: SxProps<Theme> = {
 };
 
 export const dashboardSidebarItemSx: SxProps<Theme> = {
-  borderRadius: 1.5
+  borderRadius: (theme) => theme.app.radii.md
 };
 
 export const dashboardSidebarItemIconSx: SxProps<Theme> = {

@@ -2,7 +2,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 
 export const teamsCardRootSx = (isEmptyOrError: boolean): SxProps<Theme> => ({
   bgcolor: (theme) => theme.app.surfaces.section,
-  borderRadius: 3,
+  borderRadius: (theme) => theme.app.radii.lg,
   minHeight: 260,
   p: isEmptyOrError ? 3 : 1
 });
@@ -12,7 +12,7 @@ export const teamsCardItemLinkSx: SxProps<Theme> = {
     bgcolor: (theme) => theme.app.surfaces.cardHover
   },
   alignItems: 'center',
-  borderRadius: 2,
+  borderRadius: (theme) => theme.app.radii.md,
   color: 'inherit',
   display: 'flex',
   gap: 1.5,

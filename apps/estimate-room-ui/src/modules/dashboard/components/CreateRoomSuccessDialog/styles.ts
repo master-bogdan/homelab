@@ -2,8 +2,8 @@ import type { SxProps, Theme } from '@mui/material/styles';
 
 export const createRoomSuccessIconSx: SxProps<Theme> = {
   alignItems: 'center',
-  bgcolor: (theme) => `${theme.palette.primary.main}1f`,
-  borderRadius: 2.5,
+  bgcolor: (theme) => theme.app.stateLayers.primarySoft,
+  borderRadius: (theme) => theme.app.radii.lg,
   color: 'primary.main',
   display: 'flex',
   height: 68,
@@ -19,8 +19,8 @@ export const createRoomSuccessTitleSx: SxProps<Theme> = {
 
 export const createRoomSuccessCopyFieldSx: SxProps<Theme> = {
   alignItems: 'center',
-  bgcolor: 'secondary.light',
-  borderRadius: 2,
+  bgcolor: (theme) => theme.app.stateLayers.secondaryPanel,
+  borderRadius: (theme) => theme.app.radii.md,
   display: 'flex',
   gap: 1,
   minWidth: 0,

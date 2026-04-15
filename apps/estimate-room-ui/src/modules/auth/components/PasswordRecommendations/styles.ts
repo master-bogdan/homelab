@@ -2,7 +2,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 
 export const passwordRecommendationsRootSx: SxProps<Theme> = {
   bgcolor: 'secondary.light',
-  borderRadius: 0.5,
+  borderRadius: (theme) => theme.app.radii.sm,
   px: 2,
   py: 1.75
 };

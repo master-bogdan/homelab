@@ -4,8 +4,8 @@ export const createRoomDialogFieldsRowSx: SxProps<Theme> = {};
 
 export const createRoomDialogShareLinkPanelSx: SxProps<Theme> = {
   alignItems: 'center',
-  bgcolor: 'secondary.light',
-  borderRadius: 2,
+  bgcolor: (theme) => theme.app.stateLayers.secondaryPanel,
+  borderRadius: (theme) => theme.app.radii.md,
   display: 'flex',
   justifyContent: 'space-between',
   px: 2,

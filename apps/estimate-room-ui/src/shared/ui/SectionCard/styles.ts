@@ -1,11 +1,7 @@
 import { Box, Paper, Stack, styled } from '@mui/material';
 
 export const SectionCardRoot = styled(Paper)(({ theme }) => ({
-  // MUI types borderRadius as number | string, so cast before applying arithmetic.
-  borderRadius:
-    theme.palette.mode === 'light'
-      ? Number(theme.shape.borderRadius) * 1.25
-      : Number(theme.shape.borderRadius) * 2,
+  borderRadius: theme.app.radii.lg,
   backgroundColor: theme.app.surfaces.card,
   border:
     theme.palette.mode === 'light' ? `1px solid ${theme.app.borders.ghost}` : 'none',

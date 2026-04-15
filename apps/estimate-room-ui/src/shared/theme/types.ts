@@ -26,16 +26,40 @@ export interface AppThemeEffects {
   readonly backdropBlur: string;
 }
 
+export interface AppThemeBackgrounds {
+  readonly authAmbient: string;
+  readonly authDots: string;
+  readonly body: string;
+  readonly drawer: string;
+}
+
+export interface AppThemeRadii {
+  readonly sm: number;
+  readonly md: number;
+  readonly lg: number;
+  readonly xl: number;
+  readonly pill: number;
+  readonly circle: string;
+}
+
+export interface AppThemeStateLayers {
+  readonly primarySoft: string;
+  readonly secondaryPanel: string;
+}
+
 export interface AppThemeLayout {
   readonly sectionGap: number;
   readonly pageGap: number;
 }
 
 export interface AppThemeTokens {
+  readonly backgrounds: AppThemeBackgrounds;
   readonly surfaces: AppThemeSurfaces;
   readonly borders: AppThemeBorders;
   readonly gradients: AppThemeGradients;
   readonly effects: AppThemeEffects;
+  readonly radii: AppThemeRadii;
+  readonly stateLayers: AppThemeStateLayers;
   readonly layout: AppThemeLayout;
 }
 

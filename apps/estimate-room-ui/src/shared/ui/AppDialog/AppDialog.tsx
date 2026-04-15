@@ -10,7 +10,8 @@ import {
   AppDialogActionsRoot,
   AppDialogBodyRoot,
   AppDialogHeaderRoot,
-  AppDialogTitleRoot
+  AppDialogTitleRoot,
+  appDialogPaperSx
 } from './styles';
 
 export interface AppDialogProps extends Omit<DialogProps, 'title'> {
@@ -54,13 +55,7 @@ export const AppDialog = ({
 }: AppDialogProps) => {
   const titleId = useId();
   const hasTitle = Boolean(title);
-  const basePaperSx: SxProps<Theme> = (theme) => ({
-    backdropFilter: `blur(${theme.app.effects.backdropBlur})`,
-    border: `1px solid ${theme.app.borders.ghost}`,
-    borderRadius: theme.spacing(2),
-    boxShadow: theme.app.effects.ambientShadow,
-    overflow: 'hidden'
-  });
+  const basePaperSx: SxProps<Theme> = appDialogPaperSx;
   const inheritedPaperSx = PaperProps?.sx;
   const paperSx: SxProps<Theme> = Array.isArray(inheritedPaperSx)
     ? [basePaperSx, ...inheritedPaperSx]

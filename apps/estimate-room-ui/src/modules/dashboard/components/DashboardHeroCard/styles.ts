@@ -53,12 +53,12 @@ export const dashboardHeroCardMetricGridSx: SxProps<Theme> = {
 };
 
 export const dashboardHeroCardMetricCardSx: SxProps<Theme> = {
-  bgcolor: 'secondary.light',
-  borderRadius: 2,
+  bgcolor: (theme) => theme.app.stateLayers.secondaryPanel,
+  borderRadius: (theme) => theme.app.radii.md,
   p: 1.75
 };
 
 export const dashboardHeroCardProgressBarSx: SxProps<Theme> = {
-  borderRadius: 999,
+  borderRadius: (theme) => theme.app.radii.pill,
   height: 8
 };

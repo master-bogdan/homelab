@@ -12,11 +12,9 @@ export const authShellRootSx: SxProps<Theme> = {
 };
 
 export const getAuthShellBackdropSx = (pattern: AuthShellPattern): SxProps<Theme> => ({
-  backgroundImage:
-    pattern === 'dots'
-      ? (theme) =>
-          `radial-gradient(${theme.app.borders.ghost} 0.6px, transparent 0.6px), linear-gradient(90deg, rgba(81, 72, 215, 0.04) 0%, transparent 36%, rgba(81, 72, 215, 0.05) 72%, transparent 100%)`
-      : 'linear-gradient(90deg, rgba(81, 72, 215, 0.04) 0%, transparent 36%, rgba(81, 72, 215, 0.05) 72%, transparent 100%)',
+  '--app-auth-dot-color': (theme) => theme.app.borders.ghost,
+  backgroundImage: (theme) =>
+    pattern === 'dots' ? theme.app.backgrounds.authDots : theme.app.backgrounds.authAmbient,
   backgroundPosition: pattern === 'dots' ? '0 0, 0 0' : '0 0',
   backgroundSize: pattern === 'dots' ? '24px 24px, auto' : 'auto',
   inset: 0,
@@ -27,7 +25,7 @@ export const getAuthShellBackdropSx = (pattern: AuthShellPattern): SxProps<Theme
 
 export const authShellGlowTopSx: SxProps<Theme> = {
   bgcolor: 'primary.main',
-  borderRadius: '50%',
+  borderRadius: (theme) => theme.app.radii.circle,
   filter: 'blur(120px)',
   height: 320,
   opacity: 0.08,
@@ -39,7 +37,7 @@ export const authShellGlowTopSx: SxProps<Theme> = {
 
 export const authShellGlowBottomSx: SxProps<Theme> = {
   bgcolor: 'secondary.main',
-  borderRadius: '50%',
+  borderRadius: (theme) => theme.app.radii.circle,
   bottom: '-10%',
   filter: 'blur(120px)',
   height: 260,

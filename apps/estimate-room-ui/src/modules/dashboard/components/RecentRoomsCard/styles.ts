@@ -6,7 +6,7 @@ export const recentRoomsCardActionLinkSx: SxProps<Theme> = {
 
 export const recentRoomsCardRootSx = (isEmpty: boolean): SxProps<Theme> => ({
   bgcolor: (theme) => theme.app.surfaces.section,
-  borderRadius: 3,
+  borderRadius: (theme) => theme.app.radii.lg,
   minHeight: 320,
   overflow: 'hidden',
   p: isEmpty ? 3 : 1
@@ -17,7 +17,7 @@ export const recentRoomsCardItemLinkSx: SxProps<Theme> = {
     bgcolor: (theme) => theme.app.surfaces.cardHover
   },
   alignItems: 'center',
-  borderRadius: 2,
+  borderRadius: (theme) => theme.app.radii.md,
   color: 'inherit',
   display: 'flex',
   gap: 1.5,

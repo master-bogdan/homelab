@@ -13,6 +13,16 @@ const getInteractiveFocusRing = (theme: Theme) =>
 const getDisabledOpacity = (theme: Theme) => (theme.palette.mode === 'light' ? 0.52 : 0.44);
 
 const lightAppTokens: AppThemeTokens = {
+  backgrounds: {
+    authAmbient:
+      'linear-gradient(90deg, rgba(81, 72, 215, 0.04) 0%, transparent 36%, rgba(81, 72, 215, 0.05) 72%, transparent 100%)',
+    authDots:
+      'radial-gradient(var(--app-auth-dot-color) 0.6px, transparent 0.6px), linear-gradient(90deg, rgba(81, 72, 215, 0.04) 0%, transparent 36%, rgba(81, 72, 215, 0.05) 72%, transparent 100%)',
+    body:
+      'radial-gradient(circle at top left, rgba(81, 72, 215, 0.12), transparent 30%), linear-gradient(180deg, #f8f9ff 0%, #eef4ff 100%)',
+    drawer:
+      'linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(239, 244, 255, 0.96) 100%)'
+  },
   surfaces: {
     base: '#f8f9ff',
     section: '#eff4ff',
@@ -35,6 +45,18 @@ const lightAppTokens: AppThemeTokens = {
     ambientShadow: '0 12px 32px -4px rgba(0, 52, 94, 0.08)',
     backdropBlur: '8px'
   },
+  radii: {
+    circle: '50%',
+    lg: 12,
+    md: 8,
+    pill: 999,
+    sm: 4,
+    xl: 16
+  },
+  stateLayers: {
+    primarySoft: alpha('#5148d7', 0.12),
+    secondaryPanel: '#eff4ff'
+  },
   layout: {
     pageGap: 16,
     sectionGap: 12
@@ -42,6 +64,16 @@ const lightAppTokens: AppThemeTokens = {
 };
 
 const darkAppTokens: AppThemeTokens = {
+  backgrounds: {
+    authAmbient:
+      'linear-gradient(90deg, rgba(37, 99, 235, 0.12) 0%, transparent 36%, rgba(180, 197, 255, 0.08) 72%, transparent 100%)',
+    authDots:
+      'radial-gradient(var(--app-auth-dot-color) 0.6px, transparent 0.6px), linear-gradient(90deg, rgba(37, 99, 235, 0.12) 0%, transparent 36%, rgba(180, 197, 255, 0.08) 72%, transparent 100%)',
+    body:
+      'radial-gradient(circle at top left, rgba(37, 99, 235, 0.24), transparent 34%), linear-gradient(180deg, #0b1326 0%, #10182d 100%)',
+    drawer:
+      'linear-gradient(180deg, rgba(49, 57, 77, 0.35) 0%, rgba(19, 27, 46, 1) 100%)'
+  },
   surfaces: {
     base: '#0b1326',
     section: '#131b2e',
@@ -63,6 +95,18 @@ const darkAppTokens: AppThemeTokens = {
   effects: {
     ambientShadow: '0 12px 32px rgba(0, 0, 0, 0.25)',
     backdropBlur: '20px'
+  },
+  radii: {
+    circle: '50%',
+    lg: 8,
+    md: 6,
+    pill: 999,
+    sm: 3,
+    xl: 12
+  },
+  stateLayers: {
+    primarySoft: alpha('#2563eb', 0.2),
+    secondaryPanel: '#3c5293'
   },
   layout: {
     pageGap: 16,
@@ -488,10 +532,7 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
   MuiCssBaseline: {
     styleOverrides: {
       body: {
-        backgroundImage:
-          mode === 'light'
-            ? 'radial-gradient(circle at top left, rgba(81, 72, 215, 0.12), transparent 30%), linear-gradient(180deg, #f8f9ff 0%, #eef4ff 100%)'
-            : 'radial-gradient(circle at top left, rgba(37, 99, 235, 0.24), transparent 34%), linear-gradient(180deg, #0b1326 0%, #10182d 100%)'
+        backgroundImage: getAppTokens(mode).backgrounds.body
       },
       '*, *::before, *::after': {
         boxSizing: 'border-box'
@@ -522,10 +563,7 @@ export const getComponentOverrides = (mode: ThemeMode): Components<Theme> => ({
     styleOverrides: {
       paper: ({ theme }) => ({
         backgroundColor: theme.app.surfaces.section,
-        backgroundImage:
-          theme.palette.mode === 'light'
-            ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(239, 244, 255, 0.96) 100%)'
-            : 'linear-gradient(180deg, rgba(49, 57, 77, 0.35) 0%, rgba(19, 27, 46, 1) 100%)',
+        backgroundImage: theme.app.backgrounds.drawer,
         border: 'none'
       })
     }

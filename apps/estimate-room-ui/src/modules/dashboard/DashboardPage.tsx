@@ -11,6 +11,12 @@ import {
   RecentRoomsCard,
   TeamsCard
 } from './components';
+import {
+  dashboardPageActiveGridSx,
+  dashboardPageNoActiveSx,
+  dashboardPageSectionsGridSx,
+  dashboardPageStateCardSx
+} from './DashboardPage.styles';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { useDashboardPage } from './hooks/useDashboardPage';
 
@@ -21,14 +27,7 @@ export const DashboardPage = () => {
 
   if (status === 'loading') {
     return (
-      <Paper
-        elevation={0}
-        sx={{
-          border: (theme) => `1px solid ${theme.app.borders.ghost}`,
-          minHeight: 360,
-          p: { xs: 3, md: 4 }
-        }}
-      >
+      <Paper elevation={0} sx={dashboardPageStateCardSx}>
         <AppPageState
           description="Pulling your session history, teams, and architect ledger."
           isLoading
@@ -40,14 +39,7 @@ export const DashboardPage = () => {
 
   if (status === 'error' || !data) {
     return (
-      <Paper
-        elevation={0}
-        sx={{
-          border: (theme) => `1px solid ${theme.app.borders.ghost}`,
-          minHeight: 360,
-          p: { xs: 3, md: 4 }
-        }}
-      >
+      <Paper elevation={0} sx={dashboardPageStateCardSx}>
         <AppPageState
           action={
             <AppButton onClick={retry} variant="contained">
@@ -68,16 +60,7 @@ export const DashboardPage = () => {
         <Alert severity="warning">{data.activeRoomError.message}</Alert>
       ) : null}
       {data.view === 'active' ? (
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 4,
-            gridTemplateColumns: {
-              xs: 'minmax(0, 1fr)',
-              xl: 'minmax(0, 6fr) minmax(320px, 4fr)'
-            }
-          }}
-        >
+        <Box sx={dashboardPageActiveGridSx}>
           <DashboardHeroCard
             onCreateRoom={openCreateRoom}
             onOpenRoom={(roomId) => navigate(appRoutes.roomDetailsPath(roomId))}
@@ -89,11 +72,7 @@ export const DashboardPage = () => {
           />
         </Box>
       ) : (
-        <Box
-          sx={{
-            minWidth: 0
-          }}
-        >
+        <Box sx={dashboardPageNoActiveSx}>
           {data.view === 'noActive' ? (
             <RecentRoomsCard onCreateRoom={openCreateRoom} rooms={data.recentRooms} />
           ) : (
@@ -105,16 +84,7 @@ export const DashboardPage = () => {
           )}
         </Box>
       )}
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 4,
-          gridTemplateColumns: {
-            xs: 'minmax(0, 1fr)',
-            xl: 'repeat(2, minmax(0, 1fr))'
-          }
-        }}
-      >
+      <Box sx={dashboardPageSectionsGridSx}>
         <TeamsCard
           errorMessage={data.teamsError?.message ?? null}
           onRetry={retry}
