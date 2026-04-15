@@ -1,9 +1,8 @@
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
-import { Link } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { AppButton, AppPageState } from '@/shared/ui';
+import { AppButton, AppLink, AppPageState } from '@/shared/ui';
 
 import { AuthCard, AuthShell } from './components';
 import { useOAuthCallbackPage } from './hooks';
@@ -21,7 +20,7 @@ export const OAuthCallbackPage = () => {
                 <AppButton component={RouterLink} fullWidth to={appRoutes.login} variant="contained">
                   Return to Sign In
                 </AppButton>
-                <Link
+                <AppLink
                   color="text.secondary"
                   component={RouterLink}
                   sx={{
@@ -36,7 +35,7 @@ export const OAuthCallbackPage = () => {
                 >
                   <ArrowBackRoundedIcon fontSize="inherit" />
                   Back to Sign In
-                </Link>
+                </AppLink>
               </>
             ) : null
           }

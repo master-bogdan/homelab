@@ -1,7 +1,9 @@
-import { Button, CircularProgress } from '@mui/material';
+import { Button } from '@mui/material';
 import type { ButtonProps } from '@mui/material';
 import type { ReactNode } from 'react';
 import type { LinkProps as RouterLinkProps } from 'react-router-dom';
+
+import { AppProgress } from '../AppProgress';
 
 export interface AppButtonProps extends ButtonProps {
   readonly loading?: boolean;
@@ -26,7 +28,7 @@ export const AppButton = ({
     endIcon={loading ? undefined : endIcon}
     startIcon={
       loading
-        ? (loadingIndicator ?? <CircularProgress color="inherit" size={16} />)
+        ? (loadingIndicator ?? <AppProgress color="inherit" size={16} />)
         : startIcon
     }
     {...buttonProps}

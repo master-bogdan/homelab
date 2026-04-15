@@ -1,10 +1,16 @@
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import { ListItemIcon, Menu, MenuItem, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
+import {
+  AppListItemIcon,
+  AppMenu,
+  AppMenuItem,
+  AppStack,
+  AppTypography
+} from '@/shared/ui';
 
 import {
   dashboardUserMenuPaperSx,
@@ -28,7 +34,7 @@ export const DashboardUserMenu = ({
   onClose,
   onLogout
 }: DashboardUserMenuProps) => (
-  <Menu
+  <AppMenu
     anchorEl={anchorEl}
     anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
     onClose={onClose}
@@ -39,35 +45,35 @@ export const DashboardUserMenu = ({
     }}
     transformOrigin={{ horizontal: 'right', vertical: 'top' }}
   >
-    <Stack spacing={0.25} sx={dashboardUserMenuSummarySx}>
-      <Typography variant="subtitle2">{displayName}</Typography>
-      <Typography color="text.secondary" variant="caption">
+    <AppStack spacing={0.25} sx={dashboardUserMenuSummarySx}>
+      <AppTypography variant="subtitle2">{displayName}</AppTypography>
+      <AppTypography color="text.secondary" variant="caption">
         {email ?? 'No active session'}
-      </Typography>
-    </Stack>
-    <MenuItem component={RouterLink} onClick={onClose} to={appRoutes.profile}>
-      <ListItemIcon>
+      </AppTypography>
+    </AppStack>
+    <AppMenuItem component={RouterLink} onClick={onClose} to={appRoutes.profile}>
+      <AppListItemIcon>
         <PersonRoundedIcon fontSize="small" />
-      </ListItemIcon>
+      </AppListItemIcon>
       Profile
-    </MenuItem>
-    <MenuItem component={RouterLink} onClick={onClose} to={appRoutes.settings}>
-      <ListItemIcon>
+    </AppMenuItem>
+    <AppMenuItem component={RouterLink} onClick={onClose} to={appRoutes.settings}>
+      <AppListItemIcon>
         <SettingsRoundedIcon fontSize="small" />
-      </ListItemIcon>
+      </AppListItemIcon>
       Settings
-    </MenuItem>
-    <MenuItem
+    </AppMenuItem>
+    <AppMenuItem
       disabled={isLoggingOut}
       onClick={() => {
         onClose();
         onLogout();
       }}
     >
-      <ListItemIcon>
+      <AppListItemIcon>
         <LogoutRoundedIcon fontSize="small" />
-      </ListItemIcon>
+      </AppListItemIcon>
       {isLoggingOut ? 'Logging out...' : 'Log out'}
-    </MenuItem>
-  </Menu>
+    </AppMenuItem>
+  </AppMenu>
 );

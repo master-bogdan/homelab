@@ -1,11 +1,18 @@
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import MeetingRoomRoundedIcon from '@mui/icons-material/MeetingRoomRounded';
 import NoteAltRoundedIcon from '@mui/icons-material/NoteAltRounded';
-import { Box, Chip, Paper, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { AppButton, AppPageState } from '@/shared/ui';
+import {
+  AppBox,
+  AppButton,
+  AppChip,
+  AppPageState,
+  AppStack,
+  AppSurface,
+  AppTypography
+} from '@/shared/ui';
 
 import type { DashboardSession } from '../../types';
 import { formatRelativeTime, formatStatusLabel } from '../../utils';
@@ -30,12 +37,12 @@ export interface RecentRoomsCardProps {
 }
 
 export const RecentRoomsCard = ({ onCreateRoom, rooms }: RecentRoomsCardProps) => (
-  <Stack spacing={1.5}>
-    <Stack alignItems="center" direction="row" justifyContent="space-between">
-      <Typography color="text.secondary" variant="overline">
+  <AppStack spacing={1.5}>
+    <AppStack alignItems="center" direction="row" justifyContent="space-between">
+      <AppTypography color="text.secondary" variant="overline">
         Recent Rooms
-      </Typography>
-      <Typography
+      </AppTypography>
+      <AppTypography
         color="primary.main"
         component={RouterLink}
         sx={recentRoomsCardActionLinkSx}
@@ -43,9 +50,9 @@ export const RecentRoomsCard = ({ onCreateRoom, rooms }: RecentRoomsCardProps) =
         variant="caption"
       >
         View all
-      </Typography>
-    </Stack>
-    <Paper elevation={0} sx={recentRoomsCardRootSx(rooms.length === 0)}>
+      </AppTypography>
+    </AppStack>
+    <AppSurface sx={recentRoomsCardRootSx(rooms.length === 0)}>
       {rooms.length === 0 ? (
         <AppPageState
           action={
@@ -58,48 +65,48 @@ export const RecentRoomsCard = ({ onCreateRoom, rooms }: RecentRoomsCardProps) =
           visual={<MeetingRoomRoundedIcon color="disabled" fontSize="large" />}
         />
       ) : (
-        <Stack spacing={0.5}>
+        <AppStack spacing={0.5}>
           {rooms.map((room) => (
-            <Box
+            <AppBox
               component={RouterLink}
               key={`${room.id}-${room.lastActivityAt}`}
               sx={recentRoomsCardItemLinkSx}
               to={getRoomRoute(room)}
             >
-              <Stack alignItems="center" direction="row" spacing={1.5}>
-                <Paper elevation={0} sx={recentRoomsCardItemIconSx(room.status === 'ACTIVE')}>
+              <AppStack alignItems="center" direction="row" spacing={1.5}>
+                <AppSurface sx={recentRoomsCardItemIconSx(room.status === 'ACTIVE')}>
                   {room.status === 'ACTIVE' ? (
                     <MeetingRoomRoundedIcon fontSize="small" />
                   ) : (
                     <NoteAltRoundedIcon fontSize="small" />
                   )}
-                </Paper>
-                <Stack spacing={0.25}>
-                  <Typography variant="subtitle2">{room.name}</Typography>
-                  <Typography color="text.secondary" variant="caption">
+                </AppSurface>
+                <AppStack spacing={0.25}>
+                  <AppTypography variant="subtitle2">{room.name}</AppTypography>
+                  <AppTypography color="text.secondary" variant="caption">
                     Modified {formatRelativeTime(room.lastActivityAt)}
-                  </Typography>
-                </Stack>
-              </Stack>
-              <Stack alignItems="flex-end" spacing={0.75}>
-                <Chip
+                  </AppTypography>
+                </AppStack>
+              </AppStack>
+              <AppStack alignItems="flex-end" spacing={0.75}>
+                <AppChip
                   color={room.status === 'ACTIVE' ? 'success' : 'default'}
                   label={formatStatusLabel(room.status)}
                   size="small"
                   variant={room.status === 'ACTIVE' ? 'filled' : 'outlined'}
                 />
-                <Typography color="text.secondary" variant="caption">
+                <AppTypography color="text.secondary" variant="caption">
                   {room.participantsCount} participants
-                </Typography>
-                <Typography color="primary.main" variant="caption">
+                </AppTypography>
+                <AppTypography color="primary.main" variant="caption">
                   Open
                   <ArrowForwardRoundedIcon fontSize="inherit" sx={recentRoomsCardArrowSx} />
-                </Typography>
-              </Stack>
-            </Box>
+                </AppTypography>
+              </AppStack>
+            </AppBox>
           ))}
-        </Stack>
+        </AppStack>
       )}
-    </Paper>
-  </Stack>
+    </AppSurface>
+  </AppStack>
 );

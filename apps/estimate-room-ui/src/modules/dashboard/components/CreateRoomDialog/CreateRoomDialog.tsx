@@ -1,16 +1,17 @@
 import RocketLaunchRoundedIcon from '@mui/icons-material/RocketLaunchRounded';
-import {
-  Alert,
-  Box,
-  FormControlLabel,
-  MenuItem,
-  Stack,
-  Switch,
-  Typography
-} from '@mui/material';
 import type { UseFormReturn } from 'react-hook-form';
 
-import { AppDialog, AppTextField } from '@/shared/ui';
+import {
+  AppAlert,
+  AppBox,
+  AppDialog,
+  AppFormControlLabel,
+  AppMenuItem,
+  AppStack,
+  AppSwitch,
+  AppTextField,
+  AppTypography
+} from '@/shared/ui';
 
 import type {
   DashboardCreateRoomFormValues,
@@ -77,13 +78,13 @@ export const CreateRoomDialog = ({
       open={open}
       title="Create New Room"
     >
-      <Box component="form" noValidate onSubmit={onSubmit}>
-        <Stack spacing={2.5}>
-          {submitErrorMessage ? <Alert severity="error">{submitErrorMessage}</Alert> : null}
+      <AppBox component="form" noValidate onSubmit={onSubmit}>
+        <AppStack spacing={2.5}>
+          {submitErrorMessage ? <AppAlert severity="error">{submitErrorMessage}</AppAlert> : null}
           {teamErrorMessage ? (
-            <Alert severity="warning">
+            <AppAlert severity="warning">
               {teamErrorMessage} You can still create a room without linking a team.
-            </Alert>
+            </AppAlert>
           ) : null}
           <AppTextField
             autoFocus
@@ -101,7 +102,7 @@ export const CreateRoomDialog = ({
               required: 'Room name is required.'
             })}
           />
-          <Stack direction={{ md: 'row' }} spacing={2} sx={createRoomDialogFieldsRowSx}>
+          <AppStack direction={{ md: 'row' }} spacing={2} sx={createRoomDialogFieldsRowSx}>
             <AppTextField
               error={Boolean(errors.inviteTeamId)}
               helperText={
@@ -112,11 +113,11 @@ export const CreateRoomDialog = ({
               value={inviteTeamId}
               {...register('inviteTeamId')}
             >
-              <MenuItem value="">No team</MenuItem>
+              <AppMenuItem value="">No team</AppMenuItem>
               {teamOptions.map((team) => (
-                <MenuItem key={team.id} value={team.id}>
+                <AppMenuItem key={team.id} value={team.id}>
                   {team.name}
-                </MenuItem>
+                </AppMenuItem>
               ))}
             </AppTextField>
             <AppTextField
@@ -130,12 +131,12 @@ export const CreateRoomDialog = ({
               })}
             >
               {dashboardDeckPresets.map((preset) => (
-                <MenuItem key={preset.key} value={preset.key}>
+                <AppMenuItem key={preset.key} value={preset.key}>
                   {preset.label}
-                </MenuItem>
+                </AppMenuItem>
               ))}
             </AppTextField>
-          </Stack>
+          </AppStack>
           <AppTextField
             error={Boolean(errors.inviteEmails)}
             helperText={
@@ -148,23 +149,23 @@ export const CreateRoomDialog = ({
             placeholder="engineer@company.com, architect@company.com"
             {...register('inviteEmails')}
           />
-          <Box sx={createRoomDialogShareLinkPanelSx}>
-            <Stack spacing={0.5}>
-              <Typography variant="subtitle2">Public share link</Typography>
-              <Typography color="text.secondary" variant="caption">
+          <AppBox sx={createRoomDialogShareLinkPanelSx}>
+            <AppStack spacing={0.5}>
+              <AppTypography variant="subtitle2">Public share link</AppTypography>
+              <AppTypography color="text.secondary" variant="caption">
                 {createShareLink
                   ? 'A join token will be generated for quick room access.'
                   : 'Only invited participants will be able to join.'}
-              </Typography>
-            </Stack>
-            <FormControlLabel
-              control={<Switch {...register('createShareLink')} checked={createShareLink} />}
+              </AppTypography>
+            </AppStack>
+            <AppFormControlLabel
+              control={<AppSwitch {...register('createShareLink')} checked={createShareLink} />}
               label=""
               sx={createRoomDialogSwitchLabelSx}
             />
-          </Box>
-        </Stack>
-      </Box>
+          </AppBox>
+        </AppStack>
+      </AppBox>
     </AppDialog>
   );
 };

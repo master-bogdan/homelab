@@ -51,6 +51,7 @@ describe.each([
       expect(theme.app.backgrounds.drawer).toContain('linear-gradient');
       expect(theme.app.radii.lg).toBe(expectedRadius);
       expect(theme.app.stateLayers.secondaryPanel).toBe(expectedStateLayer);
+      expect(theme.app.layout.drawerWidth).toBe(288);
       expect(theme.typography.h1?.fontFamily).toContain(expectedDisplayFont);
       expect(theme.typography.body1?.fontFamily).toContain(expectedBodyFont);
       expect(theme.shadows[12]).not.toBe('none');

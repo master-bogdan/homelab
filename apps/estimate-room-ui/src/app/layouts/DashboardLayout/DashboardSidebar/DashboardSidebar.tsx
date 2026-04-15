@@ -1,15 +1,16 @@
 import ArchitectureRoundedIcon from '@mui/icons-material/ArchitectureRounded';
-import {
-  Box,
-  Drawer,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Stack,
-  Typography
-} from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
+
+import {
+  AppBox,
+  AppDrawer,
+  AppList,
+  AppListItemButton,
+  AppListItemIcon,
+  AppListItemText,
+  AppStack,
+  AppTypography
+} from '@/shared/ui';
 
 import {
   primaryNavigationItems,
@@ -49,7 +50,7 @@ export const DashboardSidebar = ({
       const isSelected = isPathSelected(pathname, to);
 
       return (
-        <ListItemButton
+        <AppListItemButton
           component={RouterLink}
           key={to}
           onClick={() => {
@@ -61,47 +62,47 @@ export const DashboardSidebar = ({
           sx={dashboardSidebarItemSx}
           to={to}
         >
-          <ListItemIcon sx={dashboardSidebarItemIconSx}>
+          <AppListItemIcon sx={dashboardSidebarItemIconSx}>
             <Icon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText
+          </AppListItemIcon>
+          <AppListItemText
             primary={label}
             primaryTypographyProps={{
               fontWeight: isSelected ? 700 : 600,
               variant: 'body2'
             }}
           />
-        </ListItemButton>
+        </AppListItemButton>
       );
     });
 
   return (
-    <Drawer
+    <AppDrawer
       ModalProps={{ keepMounted: true }}
       onClose={onClose}
       open={isDesktop ? true : isOpen}
       sx={dashboardSidebarDrawerSx}
       variant={isDesktop ? 'permanent' : 'temporary'}
     >
-      <Box sx={dashboardSidebarContentSx}>
-        <Stack direction="row" spacing={1.5} sx={dashboardSidebarBrandSx}>
-          <Box sx={dashboardSidebarBrandIconSx}>
+      <AppBox sx={dashboardSidebarContentSx}>
+        <AppStack direction="row" spacing={1.5} sx={dashboardSidebarBrandSx}>
+          <AppBox sx={dashboardSidebarBrandIconSx}>
             <ArchitectureRoundedIcon fontSize="small" />
-          </Box>
-          <Stack spacing={0.25}>
-            <Typography variant="h6">EstimateRoom</Typography>
-            <Typography color="primary.main" variant="overline">
+          </AppBox>
+          <AppStack spacing={0.25}>
+            <AppTypography variant="h6">EstimateRoom</AppTypography>
+            <AppTypography color="primary.main" variant="overline">
               {occupationLabel}
-            </Typography>
-          </Stack>
-        </Stack>
-        <List disablePadding sx={dashboardSidebarListSx}>
+            </AppTypography>
+          </AppStack>
+        </AppStack>
+        <AppList disablePadding sx={dashboardSidebarListSx}>
           {renderNavigationItems(primaryNavigationItems)}
-        </List>
-        <List disablePadding sx={dashboardSidebarSecondaryListSx}>
+        </AppList>
+        <AppList disablePadding sx={dashboardSidebarSecondaryListSx}>
           {renderNavigationItems(secondaryNavigationItems)}
-        </List>
-      </Box>
-    </Drawer>
+        </AppList>
+      </AppBox>
+    </AppDrawer>
   );
 };

@@ -1,14 +1,12 @@
-import type { SxProps, Theme } from '@mui/material';
-
-import { APP_DRAWER_WIDTH } from '@/shared/constants/layout';
+import type { SxProps, Theme } from '@mui/material/styles';
 
 export const dashboardSidebarDrawerSx: SxProps<Theme> = {
   '& .MuiDrawer-paper': {
     borderRight: 'none',
     boxSizing: 'border-box',
-    width: APP_DRAWER_WIDTH
+    width: (theme) => theme.app.layout.drawerWidth
   },
-  width: APP_DRAWER_WIDTH
+  width: (theme) => theme.app.layout.drawerWidth
 };
 
 export const dashboardSidebarContentSx: SxProps<Theme> = {

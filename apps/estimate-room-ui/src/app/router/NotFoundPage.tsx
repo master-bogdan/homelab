@@ -1,7 +1,6 @@
-import { Stack } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { AppButton, AppPageState, SectionCard } from '@/shared/ui';
+import { AppButton, AppPageState, AppStack, SectionCard } from '@/shared/ui';
 import { appRoutes } from '@/shared/constants/routes';
 import { usePageTitle } from '@/shared/hooks';
 
@@ -9,7 +8,7 @@ export const NotFoundPage = () => {
   usePageTitle('Not Found');
 
   return (
-    <Stack
+    <AppStack
       sx={{
         display: 'grid',
         placeItems: 'center',
@@ -35,6 +34,6 @@ export const NotFoundPage = () => {
           titleVariant="body1"
         />
       </SectionCard>
-    </Stack>
+    </AppStack>
   );
 };

@@ -1,6 +1,4 @@
-import { Stack, Typography } from '@mui/material';
-
-import { AppPageState, SectionCard } from '@/shared/ui';
+import { AppPageState, AppStack, AppTypography, SectionCard } from '@/shared/ui';
 
 import { useTeamDetailsPage } from './hooks/useTeamDetailsPage';
 
@@ -13,15 +11,15 @@ export const TeamDetailsPage = () => {
       title={`Team ${teamId}`}
     >
       {team ? (
-        <Stack spacing={1}>
-          <Typography variant="h4">{team.name}</Typography>
-          <Typography color="text.secondary" variant="body2">
+        <AppStack spacing={1}>
+          <AppTypography variant="h4">{team.name}</AppTypography>
+          <AppTypography color="text.secondary" variant="body2">
             Region: {team.region}
-          </Typography>
-          <Typography color="text.secondary" variant="body2">
+          </AppTypography>
+          <AppTypography color="text.secondary" variant="body2">
             Members: {team.memberCount}
-          </Typography>
-        </Stack>
+          </AppTypography>
+        </AppStack>
       ) : (
         <AppPageState
           description="Connect the team details API to show membership, access, and activity here."

@@ -1,4 +1,4 @@
-import type { SxProps, Theme } from '@mui/material';
+import type { SxProps, Theme } from '@mui/material/styles';
 
 export const dashboardLayoutRootSx: SxProps<Theme> = {
   bgcolor: 'background.default',

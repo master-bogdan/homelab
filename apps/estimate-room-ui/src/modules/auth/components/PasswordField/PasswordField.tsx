@@ -1,14 +1,13 @@
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
-import { IconButton, InputAdornment } from '@mui/material';
-import type { TextFieldProps } from '@mui/material';
 import { useState, type MouseEvent } from 'react';
 
-import { AppTextField } from '@/shared/ui';
+import { AppIconButton, AppInputAdornment, AppTextField } from '@/shared/ui';
+import type { AppTextFieldProps } from '@/shared/ui';
 
 import { passwordFieldToggleButtonSx } from './styles';
 
-export interface PasswordFieldProps extends Omit<TextFieldProps, 'type'> {
+export interface PasswordFieldProps extends Omit<AppTextFieldProps, 'type'> {
   readonly hideLabel?: string;
   readonly showLabel?: string;
 }
@@ -37,8 +36,8 @@ export const PasswordField = ({
         endAdornment: (
           <>
             {InputProps?.endAdornment}
-            <InputAdornment position="end">
-              <IconButton
+            <AppInputAdornment position="end">
+              <AppIconButton
                 aria-label={isVisible ? hideLabel : showLabel}
                 aria-pressed={isVisible}
                 edge="end"
@@ -48,8 +47,8 @@ export const PasswordField = ({
                 sx={passwordFieldToggleButtonSx}
               >
                 {isVisible ? <VisibilityOffRoundedIcon /> : <VisibilityRoundedIcon />}
-              </IconButton>
-            </InputAdornment>
+              </AppIconButton>
+            </AppInputAdornment>
           </>
         )
       }}

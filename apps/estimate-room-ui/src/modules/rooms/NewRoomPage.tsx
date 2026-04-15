@@ -1,6 +1,12 @@
-import { Alert, Box, Stack, Typography } from '@mui/material';
-
-import { AppButton, AppTextField, SectionCard } from '@/shared/ui';
+import {
+  AppAlert,
+  AppBox,
+  AppButton,
+  AppStack,
+  AppTextField,
+  AppTypography,
+  SectionCard
+} from '@/shared/ui';
 
 import { useNewRoomForm } from './hooks/useNewRoomForm';
 import styles from './NewRoomPage.module.scss';
@@ -16,23 +22,23 @@ export const NewRoomPage = () => {
   } = useNewRoomForm();
 
   return (
-    <Stack spacing={3}>
+    <AppStack spacing={3}>
       <SectionCard
         description="Example React Hook Form page using typed values, MUI fields, and service-based submission."
         title="Create New Room"
       >
-        <Typography color="text.secondary" variant="body2">
+        <AppTypography color="text.secondary" variant="body2">
           Form state remains local to the page while backend interaction stays in the
           module service layer.
-        </Typography>
+        </AppTypography>
       </SectionCard>
 
       <SectionCard
         description="Wire this page to the Go API once the create-room contract is available."
         title="Room Details"
       >
-        <Box component="form" noValidate onSubmit={onSubmit}>
-          <Stack spacing={3}>
+        <AppBox component="form" noValidate onSubmit={onSubmit}>
+          <AppStack spacing={3}>
             <div className={styles.formGrid}>
               <AppTextField
                 error={Boolean(errors.name)}
@@ -96,9 +102,9 @@ export const NewRoomPage = () => {
               />
             </div>
 
-            {submitMessage ? <Alert severity="success">{submitMessage}</Alert> : null}
+            {submitMessage ? <AppAlert severity="success">{submitMessage}</AppAlert> : null}
 
-            <Box>
+            <AppBox>
               <AppButton
                 disabled={!isValid}
                 loading={isSubmitting}
@@ -108,10 +114,10 @@ export const NewRoomPage = () => {
               >
                 Create room scaffold
               </AppButton>
-            </Box>
-          </Stack>
-        </Box>
+            </AppBox>
+          </AppStack>
+        </AppBox>
       </SectionCard>
-    </Stack>
+    </AppStack>
   );
 };

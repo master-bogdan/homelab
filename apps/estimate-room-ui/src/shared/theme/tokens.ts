@@ -58,6 +58,7 @@ const lightAppTokens: AppThemeTokens = {
     secondaryPanel: '#eff4ff'
   },
   layout: {
+    drawerWidth: 288,
     pageGap: 16,
     sectionGap: 12
   }
@@ -109,6 +110,7 @@ const darkAppTokens: AppThemeTokens = {
     secondaryPanel: '#3c5293'
   },
   layout: {
+    drawerWidth: 288,
     pageGap: 16,
     sectionGap: 12
   }

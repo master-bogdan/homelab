@@ -1,10 +1,19 @@
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import MailOutlineRoundedIcon from '@mui/icons-material/MailOutlineRounded';
-import { Alert, Box, CircularProgress, Link, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { AppButton, AppTextField, OverlineText } from '@/shared/ui';
+import {
+  AppAlert,
+  AppBox,
+  AppButton,
+  AppLink,
+  AppProgress,
+  AppStack,
+  AppTextField,
+  AppTypography,
+  OverlineText
+} from '@/shared/ui';
 
 import { createEmailValidationRules } from './utils';
 import { AuthCard, AuthIntro, AuthShell } from './components';
@@ -34,10 +43,10 @@ export const ForgotPasswordPage = () => {
       />
       <AuthCard>
         {isSubmitted ? (
-          <Stack spacing={3}>
-            <Typography align="center" color="text.secondary" variant="body2">
+          <AppStack spacing={3}>
+            <AppTypography align="center" color="text.secondary" variant="body2">
               Please check your inbox and follow the instructions to reset your password.
-            </Typography>
+            </AppTypography>
             <AppButton
               color="secondary"
               component="a"
@@ -48,14 +57,14 @@ export const ForgotPasswordPage = () => {
             >
               Open Email App
             </AppButton>
-            <Box
+            <AppBox
               sx={{
                 borderTop: (theme) => `1px solid ${theme.app.borders.ghost}`,
                 pt: 3
               }}
             >
-              <Stack alignItems="center" spacing={1.5}>
-                <Link
+              <AppStack alignItems="center" spacing={1.5}>
+                <AppLink
                   color="primary"
                   component={RouterLink}
                   sx={{ alignItems: 'center', display: 'inline-flex', gap: 1 }}
@@ -65,15 +74,15 @@ export const ForgotPasswordPage = () => {
                 >
                   <ArrowBackRoundedIcon fontSize="inherit" />
                   Back to Sign In
-                </Link>
-              </Stack>
-            </Box>
-          </Stack>
+                </AppLink>
+              </AppStack>
+            </AppBox>
+          </AppStack>
         ) : (
-          <Box component="form" noValidate onSubmit={onSubmit}>
-            <Stack spacing={2.5}>
-              {errors.root?.message ? <Alert severity="error">{errors.root.message}</Alert> : null}
-              <Stack spacing={1}>
+          <AppBox component="form" noValidate onSubmit={onSubmit}>
+            <AppStack spacing={2.5}>
+              {errors.root?.message ? <AppAlert severity="error">{errors.root.message}</AppAlert> : null}
+              <AppStack spacing={1}>
                 <OverlineText>Email Address</OverlineText>
                 <AppTextField
                   autoComplete="email"
@@ -83,7 +92,7 @@ export const ForgotPasswordPage = () => {
                   type="email"
                   {...register('email', createEmailValidationRules())}
                 />
-              </Stack>
+              </AppStack>
               <AppButton
                 disabled={!isValid}
                 fullWidth
@@ -94,7 +103,7 @@ export const ForgotPasswordPage = () => {
               >
                 Send Reset Link
               </AppButton>
-              <Link
+              <AppLink
                 color="primary"
                 component={RouterLink}
                 sx={{ alignItems: 'center', display: 'inline-flex', gap: 1, mx: 'auto' }}
@@ -104,15 +113,15 @@ export const ForgotPasswordPage = () => {
               >
                 <ArrowBackRoundedIcon fontSize="inherit" />
                 Back to Sign In
-              </Link>
-            </Stack>
-          </Box>
+              </AppLink>
+            </AppStack>
+          </AppBox>
         )}
       </AuthCard>
       {isSubmitted ? (
-        <Typography sx={{ mt: 3, textAlign: 'center' }} variant="body2">
+        <AppTypography sx={{ mt: 3, textAlign: 'center' }} variant="body2">
           Didn&apos;t receive the email?{' '}
-          <Link
+          <AppLink
             color="primary"
             component="button"
             disabled={isResending}
@@ -131,10 +140,10 @@ export const ForgotPasswordPage = () => {
             type="button"
             underline="none"
           >
-            {isResending ? <CircularProgress color="inherit" size={14} /> : null}
+            {isResending ? <AppProgress color="inherit" size={14} /> : null}
             {isResending ? 'Resending...' : 'Click to resend link'}
-          </Link>
-        </Typography>
+          </AppLink>
+        </AppTypography>
       ) : null}
     </AuthShell>
   );

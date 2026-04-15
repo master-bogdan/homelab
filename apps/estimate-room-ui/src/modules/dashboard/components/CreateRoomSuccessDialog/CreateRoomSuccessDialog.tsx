@@ -1,10 +1,16 @@
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
-import { Alert, Box, IconButton, Stack, Typography } from '@mui/material';
 import { useState } from 'react';
 
-import { AppDialog } from '@/shared/ui';
+import {
+  AppAlert,
+  AppBox,
+  AppDialog,
+  AppIconButton,
+  AppStack,
+  AppTypography
+} from '@/shared/ui';
 
 import type { DashboardCreateRoomResult } from '../../types';
 
@@ -54,41 +60,41 @@ export const CreateRoomSuccessDialog = ({
       onConfirm={onOpenRoom}
       open
     >
-      <Stack spacing={4}>
-        <Stack alignItems="center" spacing={2} textAlign="center">
-          <Box sx={createRoomSuccessIconSx}>
+      <AppStack spacing={4}>
+        <AppStack alignItems="center" spacing={2} textAlign="center">
+          <AppBox sx={createRoomSuccessIconSx}>
             <CheckCircleRoundedIcon sx={{ fontSize: 34 }} />
-          </Box>
-          <Stack spacing={1}>
-            <Typography variant="h4">Room Created Successfully</Typography>
-            <Typography color="text.secondary" variant="body2">
+          </AppBox>
+          <AppStack spacing={1}>
+            <AppTypography variant="h4">Room Created Successfully</AppTypography>
+            <AppTypography color="text.secondary" variant="body2">
               Your technical estimation workspace is ready for your team.
-            </Typography>
-          </Stack>
-        </Stack>
-        <Stack spacing={3}>
-          <Stack spacing={1}>
-            <Typography color="text.secondary" variant="overline">
+            </AppTypography>
+          </AppStack>
+        </AppStack>
+        <AppStack spacing={3}>
+          <AppStack spacing={1}>
+            <AppTypography color="text.secondary" variant="overline">
               Room Name
-            </Typography>
-            <Typography sx={createRoomSuccessTitleSx} title={result.roomName} variant="h6">
+            </AppTypography>
+            <AppTypography sx={createRoomSuccessTitleSx} title={result.roomName} variant="h6">
               {result.roomName}
-            </Typography>
-          </Stack>
-          <Stack spacing={1}>
-            <Typography color="text.secondary" variant="overline">
+            </AppTypography>
+          </AppStack>
+          <AppStack spacing={1}>
+            <AppTypography color="text.secondary" variant="overline">
               Room Code
-            </Typography>
-            <Box alignItems="center" sx={createRoomSuccessCopyFieldSx}>
-              <Typography
+            </AppTypography>
+            <AppBox alignItems="center" sx={createRoomSuccessCopyFieldSx}>
+              <AppTypography
                 color="primary.main"
                 sx={createRoomSuccessCopyValueSx}
                 title={result.roomCode}
                 variant="h6"
               >
                 {result.roomCode}
-              </Typography>
-              <IconButton
+              </AppTypography>
+              <AppIconButton
                 aria-label="Copy room code"
                 onClick={() => {
                   void handleCopy(result.roomCode);
@@ -97,24 +103,24 @@ export const CreateRoomSuccessDialog = ({
                 sx={createRoomSuccessCopyButtonSx}
               >
                 <ContentCopyRoundedIcon fontSize="small" />
-              </IconButton>
-            </Box>
+              </AppIconButton>
+            </AppBox>
             {copiedValue === result.roomCode ? (
-              <Typography color="primary.main" variant="caption">
+              <AppTypography color="primary.main" variant="caption">
                 Room code copied.
-              </Typography>
+              </AppTypography>
             ) : null}
-          </Stack>
-        </Stack>
-        <Stack spacing={1.5}>
-          <Typography color="text.secondary" variant="overline">
+          </AppStack>
+        </AppStack>
+        <AppStack spacing={1.5}>
+          <AppTypography color="text.secondary" variant="overline">
             Shareable Link
-          </Typography>
-          <Box sx={createRoomSuccessCopyFieldSx}>
-            <Typography sx={createRoomSuccessLinkValueSx} title={result.inviteLink} variant="body2">
+          </AppTypography>
+          <AppBox sx={createRoomSuccessCopyFieldSx}>
+            <AppTypography sx={createRoomSuccessLinkValueSx} title={result.inviteLink} variant="body2">
               {result.inviteLink}
-            </Typography>
-            <IconButton
+            </AppTypography>
+            <AppIconButton
               aria-label="Copy shareable link"
               onClick={() => {
                 void handleCopy(result.inviteLink);
@@ -123,21 +129,21 @@ export const CreateRoomSuccessDialog = ({
               sx={createRoomSuccessCopyButtonSx}
             >
               <ContentCopyRoundedIcon fontSize="small" />
-            </IconButton>
-          </Box>
+            </AppIconButton>
+          </AppBox>
           {copiedValue === result.inviteLink ? (
-            <Typography color="primary.main" variant="caption">
+            <AppTypography color="primary.main" variant="caption">
               Shareable link copied.
-            </Typography>
+            </AppTypography>
           ) : null}
-        </Stack>
+        </AppStack>
         {result.skippedRecipients.length > 0 ? (
-          <Alert icon={<WarningAmberRoundedIcon fontSize="inherit" />} severity="warning">
+          <AppAlert icon={<WarningAmberRoundedIcon fontSize="inherit" />} severity="warning">
             {result.skippedRecipients.length} participant invitation
             {result.skippedRecipients.length === 1 ? ' was' : 's were'} skipped.
-          </Alert>
+          </AppAlert>
         ) : null}
-      </Stack>
+      </AppStack>
     </AppDialog>
   );
 };

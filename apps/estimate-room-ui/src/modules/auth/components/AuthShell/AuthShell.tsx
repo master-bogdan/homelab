@@ -1,10 +1,9 @@
 import ArchitectureRoundedIcon from '@mui/icons-material/ArchitectureRounded';
-import { Box, Link, Stack, Typography } from '@mui/material';
 import type { PropsWithChildren } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { OverlineText } from '@/shared/ui';
+import { AppBox, AppLink, AppStack, AppTypography, OverlineText } from '@/shared/ui';
 
 import {
   type AuthShellPattern,
@@ -31,13 +30,13 @@ export const AuthShell = ({
   children,
   pattern = 'ambient'
 }: AuthShellProps) => (
-  <Box sx={authShellRootSx}>
-    <Box aria-hidden sx={getAuthShellBackdropSx(pattern)} />
-    <Box aria-hidden sx={authShellGlowTopSx} />
-    <Box aria-hidden sx={authShellGlowBottomSx} />
+  <AppBox sx={authShellRootSx}>
+    <AppBox aria-hidden sx={getAuthShellBackdropSx(pattern)} />
+    <AppBox aria-hidden sx={authShellGlowTopSx} />
+    <AppBox aria-hidden sx={authShellGlowBottomSx} />
 
-    <Box component="header" sx={authShellHeaderRootSx}>
-      <Link
+    <AppBox component="header" sx={authShellHeaderRootSx}>
+      <AppLink
         color="inherit"
         component={RouterLink}
         sx={authShellHomeLinkSx}
@@ -45,18 +44,18 @@ export const AuthShell = ({
         underline="none"
       >
         <ArchitectureRoundedIcon color="primary" />
-        <Typography color="text.primary" variant="h6">
+        <AppTypography color="text.primary" variant="h6">
           EstimateRoom
-        </Typography>
-      </Link>
-    </Box>
+        </AppTypography>
+      </AppLink>
+    </AppBox>
 
-    <Box component="main" sx={authShellMainRootSx}>
-      <Box sx={authShellInnerSx}>{children}</Box>
-    </Box>
+    <AppBox component="main" sx={authShellMainRootSx}>
+      <AppBox sx={authShellInnerSx}>{children}</AppBox>
+    </AppBox>
 
-    <Box component="footer" sx={authShellFooterRootSx}>
-      <Stack
+    <AppBox component="footer" sx={authShellFooterRootSx}>
+      <AppStack
         alignItems={{ xs: 'flex-start', md: 'center' }}
         direction={{ xs: 'column', md: 'row' }}
         justifyContent="space-between"
@@ -64,9 +63,9 @@ export const AuthShell = ({
         sx={authShellFooterStackSx}
       >
         <OverlineText>© 2026 EstimateRoom. All rights reserved.</OverlineText>
-        <Stack direction="row" spacing={3}>
+        <AppStack direction="row" spacing={3}>
           {footerLinks.map((label) => (
-            <Link
+            <AppLink
               key={label}
               color="text.secondary"
               href="#"
@@ -76,10 +75,10 @@ export const AuthShell = ({
               variant="overline"
             >
               {label}
-            </Link>
+            </AppLink>
           ))}
-        </Stack>
-      </Stack>
-    </Box>
-  </Box>
+        </AppStack>
+      </AppStack>
+    </AppBox>
+  </AppBox>
 );

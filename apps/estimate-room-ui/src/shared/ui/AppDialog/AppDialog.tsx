@@ -1,11 +1,13 @@
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
-import { Dialog, IconButton, Typography } from '@mui/material';
+import { Dialog } from '@mui/material';
 import type { DialogProps } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useId } from 'react';
 import type { ReactNode } from 'react';
 
 import { AppButton } from '../AppButton';
+import { AppIconButton } from '../AppIconButton';
+import { AppTypography } from '../AppTypography';
 import {
   AppDialogActionsRoot,
   AppDialogBodyRoot,
@@ -92,21 +94,21 @@ export const AppDialog = ({
       <AppDialogHeaderRoot>
         <AppDialogTitleRoot id={hasTitle ? titleId : undefined}>
           {typeof title === 'string' || typeof title === 'number' ? (
-            <Typography component="span" fontWeight={800} variant="h5">
+            <AppTypography component="span" fontWeight={800} variant="h5">
               {title}
-            </Typography>
+            </AppTypography>
           ) : (
             title
           )}
         </AppDialogTitleRoot>
-        <IconButton
+        <AppIconButton
           aria-label={closeButtonAriaLabel}
           disabled={cancelDisabled}
           onClick={handleClose}
           size="small"
         >
           <CloseRoundedIcon />
-        </IconButton>
+        </AppIconButton>
       </AppDialogHeaderRoot>
 
       <AppDialogBodyRoot>{children}</AppDialogBodyRoot>

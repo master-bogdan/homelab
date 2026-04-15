@@ -48,6 +48,7 @@ export interface AppThemeStateLayers {
 }
 
 export interface AppThemeLayout {
+  readonly drawerWidth: number;
   readonly sectionGap: number;
   readonly pageGap: number;
 }

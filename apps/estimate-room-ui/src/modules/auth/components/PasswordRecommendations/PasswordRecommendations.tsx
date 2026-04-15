@@ -1,8 +1,7 @@
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUncheckedRounded';
-import { Box, Stack, Typography } from '@mui/material';
 
-import { OverlineText } from '@/shared/ui';
+import { AppBox, AppStack, AppTypography, OverlineText } from '@/shared/ui';
 
 import {
   passwordRecommendationsGridSx,
@@ -38,16 +37,16 @@ export const PasswordRecommendations = ({
   const recommendations = getRecommendations(password);
 
   return (
-    <Box sx={passwordRecommendationsRootSx}>
+    <AppBox sx={passwordRecommendationsRootSx}>
       <OverlineText sx={{ mb: 1.5 }}>Recommendations</OverlineText>
-      <Box sx={passwordRecommendationsGridSx}>
+      <AppBox sx={passwordRecommendationsGridSx}>
         {recommendations.map((recommendation) => {
           const Icon = recommendation.isMet
             ? CheckCircleRoundedIcon
             : RadioButtonUncheckedRoundedIcon;
 
           return (
-            <Stack
+            <AppStack
               key={recommendation.label}
               alignItems="center"
               direction="row"
@@ -57,13 +56,13 @@ export const PasswordRecommendations = ({
                 color={recommendation.isMet ? 'primary' : 'disabled'}
                 fontSize="small"
               />
-              <Typography color="text.secondary" variant="caption">
+              <AppTypography color="text.secondary" variant="caption">
                 {recommendation.label}
-              </Typography>
-            </Stack>
+              </AppTypography>
+            </AppStack>
           );
         })}
-      </Box>
-    </Box>
+      </AppBox>
+    </AppBox>
   );
 };

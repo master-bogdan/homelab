@@ -1,9 +1,16 @@
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded';
 import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
-import { Avatar, Box, IconButton, Stack, Toolbar, Typography } from '@mui/material';
 import type { MouseEvent } from 'react';
 
-import { AppButton } from '@/shared/ui';
+import {
+  AppAvatar,
+  AppBox,
+  AppButton,
+  AppIconButton,
+  AppStack,
+  AppToolbar,
+  AppTypography
+} from '@/shared/ui';
 
 import type { DashboardLayoutMeta } from '../dashboardLayout.meta';
 import {
@@ -38,25 +45,25 @@ export const DashboardHeader = ({
   userAvatarUrl,
   userInitials
 }: DashboardHeaderProps) => (
-  <Box component="header" sx={dashboardHeaderRootSx}>
-    <Toolbar sx={dashboardHeaderToolbarSx}>
+  <AppBox component="header" sx={dashboardHeaderRootSx}>
+    <AppToolbar sx={dashboardHeaderToolbarSx}>
       {!isDesktop ? (
-        <IconButton
+        <AppIconButton
           color="inherit"
           edge="start"
           onClick={onOpenSidebar}
           sx={dashboardHeaderMenuButtonSx}
         >
           <MenuRoundedIcon />
-        </IconButton>
+        </AppIconButton>
       ) : null}
-      <Stack minWidth={0} spacing={0.5} sx={dashboardHeaderTitleSx}>
-        <Typography variant="h6">{routeMeta.title}</Typography>
-        <Typography color="text.secondary" variant="body2">
+      <AppStack minWidth={0} spacing={0.5} sx={dashboardHeaderTitleSx}>
+        <AppTypography variant="h6">{routeMeta.title}</AppTypography>
+        <AppTypography color="text.secondary" variant="body2">
           {routeMeta.description}
-        </Typography>
-      </Stack>
-      <Stack
+        </AppTypography>
+      </AppStack>
+      <AppStack
         alignItems="center"
         direction="row"
         flexWrap="wrap"
@@ -70,11 +77,11 @@ export const DashboardHeader = ({
         <AppButton onClick={onOpenCreateRoom} variant="contained">
           Create room
         </AppButton>
-        <Box sx={dashboardHeaderDividerSx} />
-        <IconButton aria-label="Notifications" color="inherit">
+        <AppBox sx={dashboardHeaderDividerSx} />
+        <AppIconButton aria-label="Notifications" color="inherit">
           <NotificationsRoundedIcon />
-        </IconButton>
-        <IconButton
+        </AppIconButton>
+        <AppIconButton
           aria-label="Open user menu"
           color="inherit"
           onClick={(event: MouseEvent<HTMLElement>) => {
@@ -82,11 +89,11 @@ export const DashboardHeader = ({
           }}
           sx={dashboardHeaderAvatarButtonSx}
         >
-          <Avatar src={userAvatarUrl ?? undefined} sx={dashboardHeaderAvatarSx}>
+          <AppAvatar src={userAvatarUrl ?? undefined} sx={dashboardHeaderAvatarSx}>
             {userInitials}
-          </Avatar>
-        </IconButton>
-      </Stack>
-    </Toolbar>
-  </Box>
+          </AppAvatar>
+        </AppIconButton>
+      </AppStack>
+    </AppToolbar>
+  </AppBox>
 );

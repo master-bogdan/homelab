@@ -1,7 +1,8 @@
-import { Box, useMediaQuery } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
+import { useAppMediaQuery } from '@/shared/hooks';
+import { AppBox } from '@/shared/ui';
 import { useAppDispatch, useAppSelector } from '@/shared/store';
 import { closeSidebar, setSidebarOpen } from '@/modules/system';
 import { selectIsSidebarOpen } from '@/modules/system';
@@ -21,7 +22,7 @@ import {
 export const DashboardLayoutContent = () => {
   const dispatch = useAppDispatch();
   const location = useLocation();
-  const isDesktop = useMediaQuery((theme) => theme.breakpoints.up('lg'));
+  const isDesktop = useAppMediaQuery((theme) => theme.breakpoints.up('lg'));
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
   const user = useAppSelector(selectAuthUser);
   const { isLoggingOut, logout } = useLogout();
@@ -37,7 +38,7 @@ export const DashboardLayoutContent = () => {
   }, [dispatch, isDesktop]);
 
   return (
-    <Box sx={dashboardLayoutRootSx}>
+    <AppBox sx={dashboardLayoutRootSx}>
       <DashboardSidebar
         isDesktop={isDesktop}
         isOpen={isSidebarOpen}
@@ -45,7 +46,7 @@ export const DashboardLayoutContent = () => {
         onClose={() => dispatch(closeSidebar())}
         pathname={location.pathname}
       />
-      <Box sx={dashboardLayoutBodySx}>
+      <AppBox sx={dashboardLayoutBodySx}>
         <DashboardHeader
           isDesktop={isDesktop}
           onOpenCreateRoom={openCreateRoom}
@@ -56,10 +57,10 @@ export const DashboardLayoutContent = () => {
           userAvatarUrl={user?.avatarUrl ?? null}
           userInitials={userInitials}
         />
-        <Box component="main" sx={dashboardLayoutMainSx}>
+        <AppBox component="main" sx={dashboardLayoutMainSx}>
           <Outlet />
-        </Box>
-      </Box>
+        </AppBox>
+      </AppBox>
       <DashboardUserMenu
         anchorEl={userMenuAnchor}
         displayName={displayName}
@@ -69,6 +70,6 @@ export const DashboardLayoutContent = () => {
         onLogout={logout}
       />
       <DashboardDialogs />
-    </Box>
+    </AppBox>
   );
 };

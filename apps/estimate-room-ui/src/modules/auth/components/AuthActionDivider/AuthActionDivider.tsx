@@ -1,6 +1,4 @@
-import { Box, Stack } from '@mui/material';
-
-import { OverlineText } from '@/shared/ui';
+import { AppBox, AppStack, OverlineText } from '@/shared/ui';
 
 import { authActionDividerLineSx } from './styles';
 
@@ -11,9 +9,9 @@ export interface AuthActionDividerProps {
 export const AuthActionDivider = ({
   label = 'Or continue with'
 }: AuthActionDividerProps) => (
-  <Stack alignItems="center" direction="row" spacing={2}>
-    <Box sx={authActionDividerLineSx} />
+  <AppStack alignItems="center" direction="row" spacing={2}>
+    <AppBox sx={authActionDividerLineSx} />
     <OverlineText>{label}</OverlineText>
-    <Box sx={authActionDividerLineSx} />
-  </Stack>
+    <AppBox sx={authActionDividerLineSx} />
+  </AppStack>
 );

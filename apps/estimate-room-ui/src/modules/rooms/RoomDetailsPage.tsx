@@ -1,6 +1,4 @@
-import { Chip, Stack, Typography } from '@mui/material';
-
-import { AppPageState, SectionCard } from '@/shared/ui';
+import { AppChip, AppPageState, AppStack, AppTypography, SectionCard } from '@/shared/ui';
 import { formatDateTime, formatDimensions } from '@/shared/utils';
 
 import { useRoomDetailsPage } from './hooks/useRoomDetailsPage';
@@ -15,19 +13,19 @@ export const RoomDetailsPage = () => {
       title={`Room ${roomId}`}
     >
       {room ? (
-        <Stack spacing={2}>
-          <Typography variant="h4">{room.name}</Typography>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            <Chip color="primary" label={mapRoomStatusLabel(room.estimateStatus)} />
-            <Chip label={`Team: ${room.teamId ?? 'Unassigned'}`} variant="outlined" />
-          </Stack>
-          <Typography color="text.secondary" variant="body2">
+        <AppStack spacing={2}>
+          <AppTypography variant="h4">{room.name}</AppTypography>
+          <AppStack direction="row" flexWrap="wrap" gap={1}>
+            <AppChip color="primary" label={mapRoomStatusLabel(room.estimateStatus)} />
+            <AppChip label={`Team: ${room.teamId ?? 'Unassigned'}`} variant="outlined" />
+          </AppStack>
+          <AppTypography color="text.secondary" variant="body2">
             Dimensions: {formatDimensions(room.dimensions)}
-          </Typography>
-          <Typography color="text.secondary" variant="body2">
+          </AppTypography>
+          <AppTypography color="text.secondary" variant="body2">
             Updated: {formatDateTime(room.updatedAt)}
-          </Typography>
-        </Stack>
+          </AppTypography>
+        </AppStack>
       ) : (
         <AppPageState
           description="Connect the room details endpoint to populate dimensions, status, and team context."

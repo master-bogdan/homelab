@@ -1,9 +1,8 @@
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
-import { Alert, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { AppButton, AppPageState } from '@/shared/ui';
+import { AppAlert, AppBox, AppButton, AppPageState, AppStack, AppSurface } from '@/shared/ui';
 
 import {
   DashboardHeroCard,
@@ -27,19 +26,19 @@ export const DashboardPage = () => {
 
   if (status === 'loading') {
     return (
-      <Paper elevation={0} sx={dashboardPageStateCardSx}>
+      <AppSurface sx={dashboardPageStateCardSx}>
         <AppPageState
           description="Pulling your session history, teams, and architect ledger."
           isLoading
           title="Loading dashboard"
         />
-      </Paper>
+      </AppSurface>
     );
   }
 
   if (status === 'error' || !data) {
     return (
-      <Paper elevation={0} sx={dashboardPageStateCardSx}>
+      <AppSurface sx={dashboardPageStateCardSx}>
         <AppPageState
           action={
             <AppButton onClick={retry} variant="contained">
@@ -50,17 +49,17 @@ export const DashboardPage = () => {
           title="Dashboard unavailable"
           visual={<WarningAmberRoundedIcon color="warning" fontSize="large" />}
         />
-      </Paper>
+      </AppSurface>
     );
   }
 
   return (
-    <Stack spacing={4}>
+    <AppStack spacing={4}>
       {data.activeRoomError && data.view !== 'active' ? (
-        <Alert severity="warning">{data.activeRoomError.message}</Alert>
+        <AppAlert severity="warning">{data.activeRoomError.message}</AppAlert>
       ) : null}
       {data.view === 'active' ? (
-        <Box sx={dashboardPageActiveGridSx}>
+        <AppBox sx={dashboardPageActiveGridSx}>
           <DashboardHeroCard
             onCreateRoom={openCreateRoom}
             onOpenRoom={(roomId) => navigate(appRoutes.roomDetailsPath(roomId))}
@@ -70,9 +69,9 @@ export const DashboardPage = () => {
             onCreateRoom={openCreateRoom}
             rooms={data.recentRooms.filter((room) => room.id !== data.activeRoom?.id)}
           />
-        </Box>
+        </AppBox>
       ) : (
-        <Box sx={dashboardPageNoActiveSx}>
+        <AppBox sx={dashboardPageNoActiveSx}>
           {data.view === 'noActive' ? (
             <RecentRoomsCard onCreateRoom={openCreateRoom} rooms={data.recentRooms} />
           ) : (
@@ -82,9 +81,9 @@ export const DashboardPage = () => {
               room={null}
             />
           )}
-        </Box>
+        </AppBox>
       )}
-      <Box sx={dashboardPageSectionsGridSx}>
+      <AppBox sx={dashboardPageSectionsGridSx}>
         <TeamsCard
           errorMessage={data.teamsError?.message ?? null}
           onRetry={retry}
@@ -95,7 +94,7 @@ export const DashboardPage = () => {
           ledger={data.ledger}
           onRetry={retry}
         />
-      </Box>
-    </Stack>
+      </AppBox>
+    </AppStack>
   );
 };

@@ -1,5 +1,6 @@
 import ArchitectureRoundedIcon from '@mui/icons-material/ArchitectureRounded';
-import { Box, Stack, Typography } from '@mui/material';
+
+import { AppBox, AppStack, AppTypography } from '@/shared/ui';
 
 import { authIntroIconSx, authIntroRootSx } from './styles';
 
@@ -9,17 +10,17 @@ export interface AuthIntroProps {
 }
 
 export const AuthIntro = ({ description, title }: AuthIntroProps) => (
-  <Stack alignItems="center" spacing={2} sx={authIntroRootSx}>
-    <Box sx={authIntroIconSx}>
+  <AppStack alignItems="center" spacing={2} sx={authIntroRootSx}>
+    <AppBox sx={authIntroIconSx}>
       <ArchitectureRoundedIcon color="primary" />
-    </Box>
-    <Stack spacing={1}>
-      <Typography component="h1" variant="h3">
+    </AppBox>
+    <AppStack spacing={1}>
+      <AppTypography component="h1" variant="h3">
         {title}
-      </Typography>
-      <Typography color="text.secondary" variant="body2">
+      </AppTypography>
+      <AppTypography color="text.secondary" variant="body2">
         {description}
-      </Typography>
-    </Stack>
-  </Stack>
+      </AppTypography>
+    </AppStack>
+  </AppStack>
 );

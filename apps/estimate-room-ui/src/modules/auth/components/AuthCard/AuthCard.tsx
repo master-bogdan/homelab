@@ -1,20 +1,19 @@
-import { Paper } from '@mui/material';
-import type { PaperProps } from '@mui/material';
+import { AppSurface } from '@/shared/ui';
+import type { AppSurfaceProps } from '@/shared/ui';
 
 import { authCardRootSx } from './styles';
 
-export type AuthCardProps = PaperProps;
+export type AuthCardProps = AppSurfaceProps;
 
 export const AuthCard = ({ children, sx, ...paperProps }: AuthCardProps) => {
   const rootSx = Array.isArray(sx) ? [authCardRootSx, ...sx] : sx ? [authCardRootSx, sx] : [authCardRootSx];
 
   return (
-    <Paper
-      elevation={0}
+    <AppSurface
       sx={rootSx}
       {...paperProps}
     >
       {children}
-    </Paper>
+    </AppSurface>
   );
 };

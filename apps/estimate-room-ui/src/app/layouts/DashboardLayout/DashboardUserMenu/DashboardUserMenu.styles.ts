@@ -1,4 +1,4 @@
-import type { SxProps, Theme } from '@mui/material';
+import type { SxProps, Theme } from '@mui/material/styles';
 
 export const dashboardUserMenuPaperSx: SxProps<Theme> = {
   border: (theme) => `1px solid ${theme.app.borders.ghost}`,

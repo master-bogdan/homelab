@@ -1,7 +1,8 @@
 import type { PaperProps } from '@mui/material';
-import { Stack, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 
+import { AppStack } from '../AppStack';
+import { AppTypography } from '../AppTypography';
 import { SectionCardBody, SectionCardHeader, SectionCardRoot } from './styles';
 
 export interface SectionCardProps extends Omit<PaperProps, 'title'> {
@@ -19,24 +20,24 @@ export const SectionCard = ({
   ...paperProps
 }: SectionCardProps) => (
   <SectionCardRoot elevation={0} {...paperProps}>
-    <Stack
+    <AppStack
       alignItems={{ sm: 'center' }}
       direction={{ sm: 'row' }}
       justifyContent="space-between"
       spacing={2}
     >
       <SectionCardHeader>
-        <Typography component="h2" variant="h5">
+        <AppTypography component="h2" variant="h5">
           {title}
-        </Typography>
+        </AppTypography>
         {description ? (
-          <Typography color="text.secondary" variant="body2">
+          <AppTypography color="text.secondary" variant="body2">
             {description}
-          </Typography>
+          </AppTypography>
         ) : null}
       </SectionCardHeader>
       {action}
-    </Stack>
+    </AppStack>
     {children ? <SectionCardBody>{children}</SectionCardBody> : null}
   </SectionCardRoot>
 );

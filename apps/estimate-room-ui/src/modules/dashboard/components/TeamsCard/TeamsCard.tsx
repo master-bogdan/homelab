@@ -1,9 +1,15 @@
 import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
-import { Box, Paper, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { AppButton, AppPageState } from '@/shared/ui';
+import {
+  AppBox,
+  AppButton,
+  AppPageState,
+  AppStack,
+  AppSurface,
+  AppTypography
+} from '@/shared/ui';
 
 import type { DashboardTeamSummary } from '../../types';
 import { formatRelativeTime, getInitials } from '../../utils';
@@ -21,11 +27,11 @@ export interface TeamsCardProps {
 }
 
 export const TeamsCard = ({ errorMessage, onRetry, teams }: TeamsCardProps) => (
-  <Stack spacing={1.5}>
-    <Typography color="text.secondary" variant="overline">
+  <AppStack spacing={1.5}>
+    <AppTypography color="text.secondary" variant="overline">
       Your Teams
-    </Typography>
-    <Paper elevation={0} sx={teamsCardRootSx(teams.length === 0 || Boolean(errorMessage))}>
+    </AppTypography>
+    <AppSurface sx={teamsCardRootSx(teams.length === 0 || Boolean(errorMessage))}>
       {errorMessage ? (
         <AppPageState
           action={
@@ -44,32 +50,32 @@ export const TeamsCard = ({ errorMessage, onRetry, teams }: TeamsCardProps) => (
           visual={<GroupRoundedIcon color="disabled" fontSize="large" />}
         />
       ) : (
-        <Stack spacing={0.5}>
+        <AppStack spacing={0.5}>
           {teams.slice(0, 4).map((team, index) => (
-            <Box
+            <AppBox
               component={RouterLink}
               key={team.id}
               sx={teamsCardItemLinkSx}
               to={appRoutes.teamDetailsPath(team.id)}
             >
-              <Stack alignItems="center" direction="row" spacing={1.5}>
-                <Paper elevation={0} sx={teamsCardAvatarSx(index)}>
+              <AppStack alignItems="center" direction="row" spacing={1.5}>
+                <AppSurface sx={teamsCardAvatarSx(index)}>
                   {getInitials(team.name)}
-                </Paper>
-                <Stack spacing={0.25}>
-                  <Typography variant="subtitle2">{team.name}</Typography>
-                  <Typography color="text.secondary" variant="caption">
+                </AppSurface>
+                <AppStack spacing={0.25}>
+                  <AppTypography variant="subtitle2">{team.name}</AppTypography>
+                  <AppTypography color="text.secondary" variant="caption">
                     Created {formatRelativeTime(team.createdAt)}
-                  </Typography>
-                </Stack>
-              </Stack>
-              <Typography color="primary.main" variant="caption">
+                  </AppTypography>
+                </AppStack>
+              </AppStack>
+              <AppTypography color="primary.main" variant="caption">
                 Open
-              </Typography>
-            </Box>
+              </AppTypography>
+            </AppBox>
           ))}
-        </Stack>
+        </AppStack>
       )}
-    </Paper>
-  </Stack>
+    </AppSurface>
+  </AppStack>
 );

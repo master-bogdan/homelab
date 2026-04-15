@@ -1,8 +1,7 @@
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { Alert, Box, Stack, Typography } from '@mui/material';
 import type { UseFormReturn } from 'react-hook-form';
 
-import { AppDialog, AppTextField } from '@/shared/ui';
+import { AppAlert, AppBox, AppDialog, AppStack, AppTextField, AppTypography } from '@/shared/ui';
 
 import type { DashboardJoinRoomFormValues } from '../../types';
 
@@ -41,9 +40,9 @@ export const JoinRoomDialog = ({
       open={open}
       title="Join Room"
     >
-      <Box component="form" noValidate onSubmit={onSubmit}>
-        <Stack spacing={2.5}>
-          {errorMessage ? <Alert severity="error">{errorMessage}</Alert> : null}
+      <AppBox component="form" noValidate onSubmit={onSubmit}>
+        <AppStack spacing={2.5}>
+          {errorMessage ? <AppAlert severity="error">{errorMessage}</AppAlert> : null}
           <AppTextField
             autoFocus
             error={Boolean(errors.code)}
@@ -54,15 +53,15 @@ export const JoinRoomDialog = ({
               required: 'Enter a room code or invite link.'
             })}
           />
-          <Box sx={joinRoomDialogHintSx}>
+          <AppBox sx={joinRoomDialogHintSx}>
             <InfoOutlinedIcon color="primary" fontSize="small" sx={joinRoomDialogHintIconSx} />
-            <Typography color="text.secondary" variant="caption">
+            <AppTypography color="text.secondary" variant="caption">
               Team invitations are intentionally skipped in this dashboard flow. Only room
               session codes are accepted here.
-            </Typography>
-          </Box>
-        </Stack>
-      </Box>
+            </AppTypography>
+          </AppBox>
+        </AppStack>
+      </AppBox>
     </AppDialog>
   );
 };

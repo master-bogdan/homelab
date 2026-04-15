@@ -1,9 +1,17 @@
 import GitHubIcon from '@mui/icons-material/GitHub';
-import { Alert, Box, Link, Stack, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { appRoutes } from '@/shared/constants/routes';
-import { AppButton, AppTextField, OverlineText } from '@/shared/ui';
+import {
+  AppAlert,
+  AppBox,
+  AppButton,
+  AppLink,
+  AppStack,
+  AppTextField,
+  AppTypography,
+  OverlineText
+} from '@/shared/ui';
 
 import { createEmailValidationRules } from './utils';
 import { AuthActionDivider, AuthCard, AuthIntro, AuthShell, PasswordField } from './components';
@@ -27,10 +35,10 @@ export const LoginPage = () => {
         title="Welcome Back"
       />
       <AuthCard>
-        <Box component="form" noValidate onSubmit={onSubmit}>
-          <Stack spacing={2.5}>
-            {errors.root?.message ? <Alert severity="error">{errors.root.message}</Alert> : null}
-            <Stack spacing={1}>
+        <AppBox component="form" noValidate onSubmit={onSubmit}>
+          <AppStack spacing={2.5}>
+            {errors.root?.message ? <AppAlert severity="error">{errors.root.message}</AppAlert> : null}
+            <AppStack spacing={1}>
               <OverlineText>Email Address</OverlineText>
               <AppTextField
                 autoComplete="email"
@@ -40,12 +48,12 @@ export const LoginPage = () => {
                 type="email"
                 {...register('email', createEmailValidationRules())}
               />
-            </Stack>
+            </AppStack>
 
-            <Stack spacing={1}>
-              <Stack alignItems="center" direction="row" justifyContent="space-between">
+            <AppStack spacing={1}>
+              <AppStack alignItems="center" direction="row" justifyContent="space-between">
                 <OverlineText>Password</OverlineText>
-                <Link
+                <AppLink
                   color="primary"
                   component={RouterLink}
                   to={appRoutes.forgotPassword}
@@ -53,8 +61,8 @@ export const LoginPage = () => {
                   variant="overline"
                 >
                   Forgot?
-                </Link>
-              </Stack>
+                </AppLink>
+              </AppStack>
               <PasswordField
                 autoComplete="current-password"
                 error={Boolean(errors.password)}
@@ -69,7 +77,7 @@ export const LoginPage = () => {
                   required: 'Password is required.'
                 })}
               />
-            </Stack>
+            </AppStack>
 
             <AppButton
               disabled={!isValid || isGithubLoading}
@@ -99,15 +107,15 @@ export const LoginPage = () => {
             >
               Continue with GitHub
             </AppButton>
-          </Stack>
-        </Box>
+          </AppStack>
+        </AppBox>
       </AuthCard>
-      <Typography sx={{ mt: 3, textAlign: 'center' }} variant="body2">
+      <AppTypography sx={{ mt: 3, textAlign: 'center' }} variant="body2">
         Don&apos;t have an account?{' '}
-        <Link color="primary" component={RouterLink} to={appRoutes.register} underline="none">
+        <AppLink color="primary" component={RouterLink} to={appRoutes.register} underline="none">
           Register now
-        </Link>
-      </Typography>
+        </AppLink>
+      </AppTypography>
     </AuthShell>
   );
 };

@@ -1,6 +1,9 @@
-import { CircularProgress, Stack, Typography } from '@mui/material';
 import type { StackProps, TypographyProps } from '@mui/material';
 import type { ReactNode } from 'react';
+
+import { AppProgress } from '../AppProgress';
+import { AppStack } from '../AppStack';
+import { AppTypography } from '../AppTypography';
 
 export interface AppPageStateProps extends Omit<StackProps, 'title'> {
   readonly action?: ReactNode;
@@ -26,23 +29,23 @@ export const AppPageState = ({
   visual,
   ...stackProps
 }: AppPageStateProps) => (
-  <Stack
+  <AppStack
     alignItems={alignItems}
     spacing={spacing}
     sx={{ textAlign, width: '100%', ...sx }}
     {...stackProps}
   >
-    {isLoading ? (visual ?? <CircularProgress size={28} />) : visual}
-    <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
-      <Typography component={titleComponent} variant={titleVariant}>
+    {isLoading ? (visual ?? <AppProgress size={28} />) : visual}
+    <AppStack spacing={1.5} sx={{ maxWidth: 560 }}>
+      <AppTypography component={titleComponent} variant={titleVariant}>
         {title}
-      </Typography>
+      </AppTypography>
       {description ? (
-        <Typography color="text.secondary" variant="body2">
+        <AppTypography color="text.secondary" variant="body2">
           {description}
-        </Typography>
+        </AppTypography>
       ) : null}
-    </Stack>
+    </AppStack>
     {action}
-  </Stack>
+  </AppStack>
 );

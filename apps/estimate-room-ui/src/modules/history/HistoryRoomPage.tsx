@@ -1,6 +1,4 @@
-import { Chip, Stack, Typography } from '@mui/material';
-
-import { AppPageState, SectionCard } from '@/shared/ui';
+import { AppChip, AppPageState, AppStack, AppTypography, SectionCard } from '@/shared/ui';
 import { formatDateTime } from '@/shared/utils';
 
 import { useHistoryRoomPage } from './hooks/useHistoryRoomPage';
@@ -14,18 +12,18 @@ export const HistoryRoomPage = () => {
       description="Backend event history for a single room will expand here with job progress, retries, and operator notes."
       title={`Room History ${roomId}`}
     >
-      <Stack spacing={2}>
+      <AppStack spacing={2}>
         {entries.length ? (
           entries.map((entry) => (
-            <Stack key={entry.id} spacing={1}>
-              <Stack alignItems="center" direction="row" spacing={1}>
-                <Chip color={mapHistoryStatusColor(entry.status)} label={entry.status} />
-                <Typography variant="body2">{formatDateTime(entry.capturedAt)}</Typography>
-              </Stack>
-              <Typography color="text.secondary" variant="body2">
+            <AppStack key={entry.id} spacing={1}>
+              <AppStack alignItems="center" direction="row" spacing={1}>
+                <AppChip color={mapHistoryStatusColor(entry.status)} label={entry.status} />
+                <AppTypography variant="body2">{formatDateTime(entry.capturedAt)}</AppTypography>
+              </AppStack>
+              <AppTypography color="text.secondary" variant="body2">
                 Submitted by {entry.submittedBy}
-              </Typography>
-            </Stack>
+              </AppTypography>
+            </AppStack>
           ))
         ) : (
           <AppPageState
@@ -34,7 +32,7 @@ export const HistoryRoomPage = () => {
             titleVariant="body1"
           />
         )}
-      </Stack>
+      </AppStack>
     </SectionCard>
   );
 };
