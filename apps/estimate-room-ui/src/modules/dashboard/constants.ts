@@ -1,0 +1,4 @@
+export const DASHBOARD_ROOM_TASK_STATUSES = {
+  ESTIMATED: 'ESTIMATED',
+  VOTING: 'VOTING'
+} as const;

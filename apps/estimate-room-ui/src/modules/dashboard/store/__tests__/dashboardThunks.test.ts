@@ -1,5 +1,6 @@
 import { createTestStore } from '@/test/test-utils';
 
+import { DASHBOARD_ROOM_TASK_STATUSES } from '../../constants';
 import { fetchDashboardPage, submitCreateRoom, submitJoinRoom } from '../dashboardThunks';
 
 const createRoomDto = {
@@ -38,10 +39,9 @@ const createRoomDto = {
       createdAt: '2026-04-07T10:00:00.000Z',
       description: null,
       externalKey: null,
-      finalEstimateValue: null,
       isActive: true,
       roomId: 'room-1',
-      status: 'VOTING',
+      status: DASHBOARD_ROOM_TASK_STATUSES.VOTING,
       taskId: 'task-1',
       title: 'Kafka Event Bus Implementation',
       updatedAt: '2026-04-07T10:05:00.000Z'
@@ -53,7 +53,7 @@ const createRoomDto = {
       finalEstimateValue: '5',
       isActive: false,
       roomId: 'room-1',
-      status: 'ESTIMATED',
+      status: DASHBOARD_ROOM_TASK_STATUSES.ESTIMATED,
       taskId: 'task-2',
       title: 'Retry Strategy',
       updatedAt: '2026-04-07T10:05:00.000Z'
@@ -154,6 +154,7 @@ describe('dashboardThunks', () => {
 
     expect(result.view).toBe('active');
     expect(result.activeRoom?.id).toBe('room-1');
+    expect(result.activeRoom?.estimatedTasksCount).toBe(1);
     expect(result.activeRoom?.participants[0]?.displayName).toBe('Alex Architect');
     expect(result.teams[0]?.name).toBe('Platform Engineering');
     expect(result.ledger?.xpProgressPercentage).toBe(24);
