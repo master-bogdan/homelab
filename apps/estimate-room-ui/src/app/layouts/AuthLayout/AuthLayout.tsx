@@ -5,8 +5,8 @@ import { AUTH_STATUSES, selectAuthStatus, selectIsAuthenticated } from '@/module
 import { appRoutes } from '@/shared/constants/routes';
 import { AppPageState } from '@/shared/ui';
 
-import { AuthLayoutContent } from './AuthLayoutContent';
-import { resolveAuthRedirectTarget, type RedirectStateLike } from './authLayout.utils';
+import { AuthLayoutContent } from './components';
+import { resolveAuthRedirectTarget, type RedirectStateLike } from './utils';
 
 export const AuthLayout = () => {
   const location = useLocation();

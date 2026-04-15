@@ -12,7 +12,7 @@ import {
   AppTypography
 } from '@/shared/ui';
 
-import type { DashboardLayoutMeta } from '../dashboardLayout.meta';
+import type { DashboardLayoutMeta } from '../../constants';
 import {
   dashboardHeaderActionsSx,
   dashboardHeaderAvatarButtonSx,

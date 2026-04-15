@@ -1,9 +1,16 @@
+import type { SvgIconComponent } from '@mui/icons-material';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import HistoryRoundedIcon from '@mui/icons-material/HistoryRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 
 import { appRoutes } from '@/shared/constants/routes';
+
+export interface DashboardLayoutNavigationItem {
+  readonly icon: SvgIconComponent;
+  readonly label: string;
+  readonly to: string;
+}
 
 export const primaryNavigationItems = [
   {
@@ -16,7 +23,7 @@ export const primaryNavigationItems = [
     label: 'History',
     to: appRoutes.history
   }
-] as const;
+] as const satisfies readonly DashboardLayoutNavigationItem[];
 
 export const secondaryNavigationItems = [
   {
@@ -29,4 +36,4 @@ export const secondaryNavigationItems = [
     label: 'Settings',
     to: appRoutes.settings
   }
-] as const;
+] as const satisfies readonly DashboardLayoutNavigationItem[];

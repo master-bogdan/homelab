@@ -5,7 +5,7 @@ import { AUTH_STATUSES, selectAuthStatus, selectIsAuthenticated } from '@/module
 import { appRoutes } from '@/shared/constants/routes';
 import { AppPageState } from '@/shared/ui';
 
-import { DashboardLayoutContent } from './DashboardLayoutContent';
+import { DashboardLayoutContent } from './components/DashboardLayoutContent';
 
 export const DashboardLayout = () => {
   const location = useLocation();

@@ -1,4 +1,4 @@
-import type { DASHBOARD_ROOM_TASK_STATUSES } from '../constants';
+import type { DASHBOARD_ROOM_TASK_STATUSES } from '../constants/taskStatuses';
 
 export type DashboardSessionStatus = 'ACTIVE' | 'EXPIRED' | 'FINISHED';
 export type DashboardRoomTaskStatus =

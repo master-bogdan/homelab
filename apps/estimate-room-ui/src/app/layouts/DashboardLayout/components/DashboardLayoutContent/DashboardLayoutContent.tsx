@@ -9,7 +9,7 @@ import { selectIsSidebarOpen } from '@/modules/system';
 import { selectAuthUser, useLogout } from '@/modules/auth';
 import { DashboardDialogs, getInitials, useDashboardActions } from '@/modules/dashboard';
 
-import { resolveDashboardLayoutMeta } from '../dashboardLayout.meta';
+import { resolveDashboardLayoutMeta } from '../../constants';
 import { DashboardHeader } from '../DashboardHeader';
 import { DashboardSidebar } from '../DashboardSidebar';
 import { DashboardUserMenu } from '../DashboardUserMenu';
