@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 
-import { appConfig } from '@/shared/config/env';
+import { appConfig } from '@/config';
 
 import { usePageTitle } from '../usePageTitle';
 

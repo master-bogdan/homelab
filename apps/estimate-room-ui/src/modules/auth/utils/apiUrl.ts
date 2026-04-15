@@ -1,4 +1,4 @@
-import { appConfig } from '@/shared/config/env';
+import { appConfig } from '@/config';
 
 type QueryValue = boolean | number | string | null | undefined;
 

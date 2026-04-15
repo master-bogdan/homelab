@@ -1,4 +1,4 @@
-import { appConfig } from '@/shared/config/env';
+import { appConfig } from '@/config';
 
 export type WebSocketMessageHandler = (payload: unknown) => void;
 export type WebSocketStatus =

@@ -5,7 +5,7 @@ import {
   type FetchBaseQueryError
 } from '@reduxjs/toolkit/query/react';
 
-import { appConfig } from '@/shared/config/env';
+import { appConfig } from '@/config';
 
 import { accessTokenStorage } from './accessTokenStorage';
 import { apiSessionExpired } from './sessionLifecycle';

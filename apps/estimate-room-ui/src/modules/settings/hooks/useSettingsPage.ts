@@ -1,7 +1,7 @@
 import { useAppDispatch, useAppSelector } from '@/shared/store';
 import { toggleThemeMode } from '@/modules/system';
 import { selectThemeMode } from '@/modules/system';
-import { appConfig } from '@/shared/config/env';
+import { appConfig } from '@/config';
 import { usePageTitle } from '@/shared/hooks';
 
 export const useSettingsPage = () => {

@@ -1,4 +1,4 @@
-import { appConfig } from '@/shared/config/env';
+import { appConfig } from '@/config';
 import { api, accessTokenStorage } from '@/shared/api';
 import type { AuthUser } from '@/shared/types';
 

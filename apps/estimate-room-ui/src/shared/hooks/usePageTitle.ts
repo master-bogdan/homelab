@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { appConfig } from '@/shared/config/env';
+import { appConfig } from '@/config';
 
 export const usePageTitle = (pageTitle: string) => {
   useEffect(() => {
