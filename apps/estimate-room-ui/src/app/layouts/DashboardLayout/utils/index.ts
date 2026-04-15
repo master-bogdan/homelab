@@ -1,0 +1,1 @@
+export { isPathSelected } from './routeMatching';

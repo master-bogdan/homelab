@@ -52,3 +52,7 @@ export const dashboardSidebarItemIconSx: SxProps<Theme> = {
   color: 'inherit',
   minWidth: 40
 };
+
+export const getDashboardSidebarItemLabelSx = (isSelected: boolean): SxProps<Theme> => ({
+  fontWeight: isSelected ? 700 : 600
+});
