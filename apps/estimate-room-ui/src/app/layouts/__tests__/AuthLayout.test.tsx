@@ -1,6 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 
-import { AUTH_STATUSES } from '@/modules/auth/types';
+import { AUTH_STATUSES } from '@/modules/auth';
 import { appRoutes } from '@/shared/constants/routes';
 import { renderWithProviders, screen } from '@/test/test-utils';
 

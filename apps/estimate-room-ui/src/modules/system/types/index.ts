@@ -1,4 +1,5 @@
 import type { DashboardCreateRoomResult } from '@/modules/dashboard/types';
+import type { ThemeMode } from '@/shared/theme';
 
 export type SystemDialogKey =
   | 'dashboardCreateRoom'
@@ -30,6 +31,12 @@ export interface SystemState {
     dashboardJoinRoom: SystemDialogEntry<null>;
   };
   notifications: SystemNotification[];
+  ui: SystemUiState;
+}
+
+export interface SystemUiState {
+  readonly sidebarOpen: boolean;
+  readonly themeMode: ThemeMode;
 }
 
 export type OpenSystemDialogPayload =

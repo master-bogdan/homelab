@@ -1,28 +1,12 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
-import { useAppSelector } from '@/app/store/hooks';
-import { selectAuthStatus, selectIsAuthenticated } from '@/modules/auth/store';
-import { AUTH_STATUSES } from '@/modules/auth/types';
+import { useAppSelector } from '@/shared/store';
+import { AUTH_STATUSES, selectAuthStatus, selectIsAuthenticated } from '@/modules/auth';
 import { appRoutes } from '@/shared/constants/routes';
 import { AppPageState } from '@/shared/ui';
 
-interface RedirectStateLike {
-  readonly from?: {
-    readonly hash: string;
-    readonly pathname: string;
-    readonly search: string;
-  };
-}
-
-const resolveRedirectTarget = (state: RedirectStateLike | null) => {
-  const from = state?.from;
-
-  if (!from) {
-    return appRoutes.dashboard;
-  }
-
-  return `${from.pathname}${from.search}${from.hash}`;
-};
+import { AuthLayoutContent } from './AuthLayoutContent';
+import { resolveAuthRedirectTarget, type RedirectStateLike } from './authLayout.utils';
 
 export const AuthLayout = () => {
   const location = useLocation();
@@ -30,7 +14,7 @@ export const AuthLayout = () => {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
   if (location.pathname === appRoutes.authCallback) {
-    return <Outlet />;
+    return <AuthLayoutContent />;
   }
 
   if (authStatus === AUTH_STATUSES.UNKNOWN) {
@@ -49,10 +33,10 @@ export const AuthLayout = () => {
     return (
       <Navigate
         replace
-        to={resolveRedirectTarget(location.state as RedirectStateLike | null)}
+        to={resolveAuthRedirectTarget(location.state as RedirectStateLike | null)}
       />
     );
   }
 
-  return <Outlet />;
+  return <AuthLayoutContent />;
 };

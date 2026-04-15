@@ -7,6 +7,7 @@ export {
   submitCreateRoom,
   submitJoinRoom
 } from './dashboardSlice';
+export { dashboardStateKey, dashboardStore } from './dashboard.store';
 export {
   selectActiveSession,
   selectCreateRoomDialogState,

@@ -1,4 +1,4 @@
-import type { AppDispatch } from '@/app/store/store';
+import type { AppDispatch } from '@/shared/store';
 import { accessTokenStorage } from '@/shared/api';
 
 import { createApiUrl } from '../utils';

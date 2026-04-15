@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
-import { useAppDispatch } from '@/app/store/hooks';
+import { useAppDispatch } from '@/shared/store';
 
 import { authService } from '../services';
 import { setSession } from '../store';

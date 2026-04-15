@@ -1,9 +1,13 @@
-import type { RootState } from '@/app/store/store';
-
 import { AUTH_STATUSES } from '../types';
+import type { AuthState } from '../types';
+import { authStateKey } from './auth.store';
 
-export const selectAuthState = (state: RootState) => state.auth;
-export const selectAuthStatus = (state: RootState) => state.auth.status;
-export const selectAuthUser = (state: RootState) => state.auth.user;
-export const selectIsAuthenticated = (state: RootState) =>
-  state.auth.status === AUTH_STATUSES.AUTHENTICATED && state.auth.user !== null;
+type AuthStateRoot = {
+  readonly [authStateKey]: AuthState;
+};
+
+export const selectAuthState = (state: AuthStateRoot) => state[authStateKey];
+export const selectAuthStatus = (state: AuthStateRoot) => selectAuthState(state).status;
+export const selectAuthUser = (state: AuthStateRoot) => selectAuthState(state).user;
+export const selectIsAuthenticated = (state: AuthStateRoot) =>
+  selectAuthStatus(state) === AUTH_STATUSES.AUTHENTICATED && selectAuthUser(state) !== null;

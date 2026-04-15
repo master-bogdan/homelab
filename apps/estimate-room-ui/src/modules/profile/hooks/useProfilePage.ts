@@ -1,5 +1,5 @@
-import { useAppSelector } from '@/app/store/hooks';
-import { selectAuthUser } from '@/modules/auth/store';
+import { useAppSelector } from '@/shared/store';
+import { selectAuthUser } from '@/modules/auth';
 import { usePageTitle } from '@/shared/hooks';
 
 import { profileService } from '../services/profileService';

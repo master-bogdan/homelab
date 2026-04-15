@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-import { createAppAsyncThunk } from '@/app/store/createAppAsyncThunk';
+import { createAppAsyncThunk } from '@/shared/store';
 
 import { dashboardService } from '../services/dashboardService';
 import type {

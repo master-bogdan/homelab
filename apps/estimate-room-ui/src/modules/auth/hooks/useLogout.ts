@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useAppDispatch } from '@/app/store/hooks';
+import { useAppDispatch } from '@/shared/store';
 import { appRoutes } from '@/shared/constants/routes';
 import { api } from '@/shared/api';
 

@@ -1,20 +1,17 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import type { ThemeMode } from '@/theme';
+import type { ThemeMode } from '@/shared/theme';
 
-export interface UiState {
-  readonly sidebarOpen: boolean;
-  readonly themeMode: ThemeMode;
-}
+import type { SystemUiState } from '../types';
 
-const initialState: UiState = {
+export const initialSystemUiState: SystemUiState = {
   sidebarOpen: true,
   themeMode: 'light'
 };
 
 const uiSlice = createSlice({
   name: 'ui',
-  initialState,
+  initialState: initialSystemUiState,
   reducers: {
     closeSidebar: (state) => {
       state.sidebarOpen = false;

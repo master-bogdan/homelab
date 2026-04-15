@@ -1,5 +1,3 @@
-import type { RootState } from '@/app/store/store';
-
 import type {
   DashboardActiveRoom,
   DashboardCreateRoomState,
@@ -7,8 +5,14 @@ import type {
   DashboardPageState,
   DashboardSession,
   DashboardTeamSummary,
+  DashboardState,
   DashboardView
 } from '../types';
+import { dashboardStateKey } from './dashboard.store';
+
+type DashboardStateRoot = {
+  readonly [dashboardStateKey]: DashboardState;
+};
 
 export const selectActiveSession = (sessions: DashboardSession[]) =>
   sessions.find((session) => session.status === 'ACTIVE') ?? null;
@@ -45,13 +49,18 @@ export const selectDashboardView = ({
   return 'noActive';
 };
 
-export const selectDashboardState = (state: RootState) => state.dashboard;
+export const selectDashboardState = (state: DashboardStateRoot) =>
+  state[dashboardStateKey];
 
-export const selectDashboardPageState = (state: RootState): DashboardPageState =>
+export const selectDashboardPageState = (state: DashboardStateRoot): DashboardPageState =>
   selectDashboardState(state).page;
 
-export const selectCreateRoomDialogState = (state: RootState): DashboardCreateRoomState =>
+export const selectCreateRoomDialogState = (
+  state: DashboardStateRoot
+): DashboardCreateRoomState =>
   selectDashboardState(state).createRoom;
 
-export const selectJoinRoomDialogState = (state: RootState): DashboardJoinRoomState =>
+export const selectJoinRoomDialogState = (
+  state: DashboardStateRoot
+): DashboardJoinRoomState =>
   selectDashboardState(state).joinRoom;

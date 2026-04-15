@@ -1,14 +1,21 @@
 export {
   clearNotifications,
+  closeSidebar,
   closeDialog,
   dismissNotification,
   enqueueNotification,
   openDialog,
   selectDashboardCreateRoomSuccessPayload,
   selectIsDialogOpen,
+  selectIsSidebarOpen,
   selectSystemNotifications,
   selectSystemState,
-  systemReducer
+  selectSystemUiState,
+  selectThemeMode,
+  setSidebarOpen,
+  systemReducer,
+  systemStore,
+  toggleThemeMode
 } from './store';
 export type {
   DashboardCreateRoomSuccessDialogPayload,
@@ -18,5 +25,6 @@ export type {
   SystemDialogKey,
   SystemNotification,
   SystemNotificationSeverity,
-  SystemState
+  SystemState,
+  SystemUiState
 } from './types';

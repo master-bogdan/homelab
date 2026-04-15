@@ -1,6 +1,6 @@
-import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
-import { toggleThemeMode } from '@/app/store/uiSlice';
-import { selectThemeMode } from '@/app/store/uiSelectors';
+import { useAppDispatch, useAppSelector } from '@/shared/store';
+import { toggleThemeMode } from '@/modules/system';
+import { selectThemeMode } from '@/modules/system';
 import { appConfig } from '@/shared/config/env';
 import { usePageTitle } from '@/shared/hooks';
 

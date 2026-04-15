@@ -1,12 +1,23 @@
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 
-import { AUTH_STATUSES } from '@/modules/auth/types';
+import { AUTH_STATUSES } from '@/modules/auth';
 import { dashboardService } from '@/modules/dashboard/services/dashboardService';
 import { appRoutes } from '@/shared/constants/routes';
 import { renderWithProviders, screen, waitFor } from '@/test/test-utils';
 
 import { DashboardLayout } from '../DashboardLayout';
+
+const LoginStateProbe = () => {
+  const location = useLocation();
+  const from = (
+    location.state as { from?: { hash: string; pathname: string; search: string } } | null
+  )?.from;
+
+  return (
+    <div>{from ? `${from.pathname}${from.search}${from.hash}` : 'missing redirect state'}</div>
+  );
+};
 
 describe('DashboardLayout', () => {
   beforeEach(() => {
@@ -49,6 +60,30 @@ describe('DashboardLayout', () => {
       screen.getByText('Review completed sessions and archived room outcomes.')
     ).toBeInTheDocument();
     expect(screen.getByText('EstimateRoom Member')).toBeInTheDocument();
+  });
+
+  it('redirects unauthenticated users to login with the full requested URL in state', () => {
+    renderWithProviders(
+      <Routes>
+        <Route element={<DashboardLayout />}>
+          <Route element={<div>Private content</div>} path="rooms/:roomId" />
+        </Route>
+        <Route element={<LoginStateProbe />} path={appRoutes.login} />
+      </Routes>,
+      {
+        preloadedState: {
+          auth: {
+            status: AUTH_STATUSES.UNAUTHENTICATED,
+            user: null
+          }
+        },
+        routerProps: {
+          initialEntries: ['/rooms/room-123?tab=activity#voting']
+        }
+      }
+    );
+
+    expect(screen.getByText('/rooms/room-123?tab=activity#voting')).toBeInTheDocument();
   });
 
   it('renders the current user occupation when it exists', () => {

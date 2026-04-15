@@ -6,9 +6,9 @@ import { Provider } from 'react-redux';
 import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
 
 import { rootReducer } from '@/app/store/rootReducer';
-import type { RootState } from '@/app/store/store';
+import type { RootState } from '@/shared/store';
 import { api } from '@/shared/api';
-import { createAppTheme } from '@/theme';
+import { createAppTheme } from '@/shared/theme';
 
 export const createTestStore = (preloadedState?: Partial<RootState>) =>
   configureStore({

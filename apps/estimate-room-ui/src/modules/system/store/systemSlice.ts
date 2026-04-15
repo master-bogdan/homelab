@@ -1,4 +1,4 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction, type UnknownAction } from '@reduxjs/toolkit';
 
 import type {
   EnqueueSystemNotificationPayload,
@@ -8,6 +8,7 @@ import type {
   SystemNotification,
   SystemState
 } from '../types';
+import { initialSystemUiState, uiReducer } from './uiSlice';
 
 const createDialogEntry = <TPayload>(): SystemDialogEntry<TPayload> => ({
   isOpen: false,
@@ -20,7 +21,8 @@ const initialState: SystemState = {
     dashboardCreateRoomSuccess: createDialogEntry(),
     dashboardJoinRoom: createDialogEntry()
   },
-  notifications: []
+  notifications: [],
+  ui: initialSystemUiState
 };
 
 const closeAllDialogs = (state: SystemState) => {
@@ -82,4 +84,16 @@ export const {
   enqueueNotification,
   openDialog
 } = systemSlice.actions;
-export const systemReducer = systemSlice.reducer;
+export const systemReducer = (state: SystemState | undefined, action: UnknownAction) => {
+  const nextState = systemSlice.reducer(state, action);
+  const nextUiState = uiReducer(nextState.ui, action);
+
+  if (nextUiState === nextState.ui) {
+    return nextState;
+  }
+
+  return {
+    ...nextState,
+    ui: nextUiState
+  };
+};

@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
+import { apiSessionExpired } from '@/shared/api/sessionLifecycle';
 import type { AuthUser } from '@/shared/types';
 
 import { AUTH_STATUSES, type AuthState } from '../types';
@@ -22,6 +23,12 @@ const authSlice = createSlice({
       state.status = AUTH_STATUSES.AUTHENTICATED;
       state.user = action.payload;
     }
+  },
+  extraReducers: (builder) => {
+    builder.addCase(apiSessionExpired, (state) => {
+      state.status = AUTH_STATUSES.UNAUTHENTICATED;
+      state.user = null;
+    });
   }
 });
 

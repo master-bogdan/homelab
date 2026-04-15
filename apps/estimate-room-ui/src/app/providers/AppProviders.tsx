@@ -1,8 +1,8 @@
 import type { PropsWithChildren } from 'react';
 
 import { AuthSessionBootstrap } from '@/modules/auth';
-import { AppThemeProvider } from '@/theme';
 
+import { AppThemeProvider } from './AppThemeProvider';
 import { StoreProvider } from './StoreProvider';
 
 export const AppProviders = ({ children }: PropsWithChildren) => (

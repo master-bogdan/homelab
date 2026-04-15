@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 
-import { useAppDispatch, useAppSelector } from '@/app/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/shared/store';
 import { closeDialog, selectIsDialogOpen } from '@/modules/system/store';
 import { appRoutes } from '@/shared/constants/routes';
 

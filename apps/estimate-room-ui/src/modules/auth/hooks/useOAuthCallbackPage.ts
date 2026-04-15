@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { useAppDispatch } from '@/app/store/hooks';
-import type { AppDispatch } from '@/app/store/store';
+import { useAppDispatch } from '@/shared/store';
+import type { AppDispatch } from '@/shared/store';
 import type { AuthUser } from '@/shared/types';
 
 import { authService } from '../services';
