@@ -2,7 +2,7 @@ import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import MailOutlineRoundedIcon from '@mui/icons-material/MailOutlineRounded';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import {
   AppAlert,
   AppBox,
@@ -16,7 +16,7 @@ import {
 } from '@/shared/ui';
 
 import { createEmailValidationRules } from './utils';
-import { AuthCard, AuthIntro, AuthShell } from './components';
+import { AuthCard, AuthIntro, AuthPageLayout } from './components';
 import { useForgotPasswordPage } from './hooks';
 
 export const ForgotPasswordPage = () => {
@@ -32,7 +32,7 @@ export const ForgotPasswordPage = () => {
   } = useForgotPasswordPage();
 
   return (
-    <AuthShell>
+    <AuthPageLayout>
       <AuthIntro
         description={
           isSubmitted
@@ -68,7 +68,7 @@ export const ForgotPasswordPage = () => {
                   color="primary"
                   component={RouterLink}
                   sx={{ alignItems: 'center', display: 'inline-flex', gap: 1 }}
-                  to={appRoutes.login}
+                  to={AppRoutes.LOGIN}
                   underline="none"
                   variant="overline"
                 >
@@ -107,7 +107,7 @@ export const ForgotPasswordPage = () => {
                 color="primary"
                 component={RouterLink}
                 sx={{ alignItems: 'center', display: 'inline-flex', gap: 1, mx: 'auto' }}
-                to={appRoutes.login}
+                to={AppRoutes.LOGIN}
                 underline="none"
                 variant="overline"
               >
@@ -145,6 +145,6 @@ export const ForgotPasswordPage = () => {
           </AppLink>
         </AppTypography>
       ) : null}
-    </AuthShell>
+    </AuthPageLayout>
   );
 };

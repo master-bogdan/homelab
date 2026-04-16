@@ -1,4 +1,4 @@
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 export interface RedirectStateLike {
   readonly from?: {
@@ -12,7 +12,7 @@ export const resolveAuthRedirectTarget = (state: RedirectStateLike | null) => {
   const from = state?.from;
 
   if (!from) {
-    return appRoutes.dashboard;
+    return AppRoutes.DASHBOARD;
   }
 
   return `${from.pathname}${from.search}${from.hash}`;

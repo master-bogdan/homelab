@@ -3,7 +3,7 @@ import MeetingRoomRoundedIcon from '@mui/icons-material/MeetingRoomRounded';
 import NoteAltRoundedIcon from '@mui/icons-material/NoteAltRounded';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import {
   AppBox,
   AppButton,
@@ -27,8 +27,8 @@ import {
 
 const getRoomRoute = (room: DashboardSession) =>
   room.status === 'ACTIVE'
-    ? appRoutes.roomDetailsPath(room.id)
-    : appRoutes.historyRoomPath(room.id);
+    ? AppRoutes.ROOM_DETAILS_PATH(room.id)
+    : AppRoutes.HISTORY_ROOM_PATH(room.id);
 
 export interface RecentRoomsCardProps {
   readonly onCreateRoom: () => void;
@@ -45,7 +45,7 @@ export const RecentRoomsCard = ({ onCreateRoom, rooms }: RecentRoomsCardProps) =
         color="primary.main"
         component={RouterLink}
         sx={recentRoomsCardActionLinkSx}
-        to={appRoutes.history}
+        to={AppRoutes.HISTORY}
         variant="caption"
       >
         View all

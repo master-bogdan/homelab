@@ -1,4 +1,4 @@
-export { authRoutes } from './auth.routes';
+export { authRoutes } from './routes';
 export { ForgotPasswordPage } from './ForgotPasswordPage';
 export { LoginPage } from './LoginPage';
 export { OAuthCallbackPage } from './OAuthCallbackPage';
@@ -8,7 +8,7 @@ export { ResetPasswordSuccessPage } from './ResetPasswordSuccessPage';
 export { AuthSessionBootstrap } from './components';
 export { useLogout } from './hooks';
 export {
-  AUTH_STATUSES,
+  AuthStates,
   authStore,
   bootstrapAuthSession,
   clearSession,

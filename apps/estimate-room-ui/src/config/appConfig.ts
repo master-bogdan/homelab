@@ -16,13 +16,13 @@ const resolveDefaultOauthRedirectUri = () => {
   return `${window.location.origin}/auth/callback`;
 };
 
-export const appConfig = {
-  appName: import.meta.env.VITE_APP_NAME ?? 'Estimate Room UI',
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
-  environment: import.meta.env.MODE,
-  oauthClientId: import.meta.env.VITE_OAUTH_CLIENT_ID ?? '',
-  oauthRedirectUri:
+export const AppConfig = {
+  APP_NAME: import.meta.env.VITE_APP_NAME ?? 'Estimate Room UI',
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
+  ENVIRONMENT: import.meta.env.MODE,
+  OAUTH_CLIENT_ID: import.meta.env.VITE_OAUTH_CLIENT_ID ?? '',
+  OAUTH_REDIRECT_URI:
     import.meta.env.VITE_OAUTH_REDIRECT_URI ?? resolveDefaultOauthRedirectUri(),
-  oauthScopes: import.meta.env.VITE_OAUTH_SCOPES ?? 'openid user',
-  wsBaseUrl: import.meta.env.VITE_WS_BASE_URL ?? resolveDefaultWsBaseUrl()
+  OAUTH_SCOPES: import.meta.env.VITE_OAUTH_SCOPES ?? 'openid user',
+  WS_BASE_URL: import.meta.env.VITE_WS_BASE_URL ?? resolveDefaultWsBaseUrl()
 } as const;

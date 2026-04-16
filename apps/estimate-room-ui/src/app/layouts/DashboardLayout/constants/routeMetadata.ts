@@ -1,6 +1,6 @@
 import { matchPath } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 export interface DashboardLayoutMeta {
   readonly description: string;
@@ -19,56 +19,56 @@ const routeMetadata: Array<{
 }> = [
   {
     meta: defaultMeta,
-    path: appRoutes.dashboard
+    path: AppRoutes.DASHBOARD
   },
   {
     meta: {
       description: 'Create a new estimation workspace and invite collaborators.',
       title: 'New Room'
     },
-    path: appRoutes.roomsNew
+    path: AppRoutes.ROOMS_NEW
   },
   {
     meta: {
       description: 'Continue the active estimation session and track room progress.',
       title: 'Room'
     },
-    path: appRoutes.roomDetails
+    path: AppRoutes.ROOM_DETAILS
   },
   {
     meta: {
       description: 'Review completed sessions and archived room outcomes.',
       title: 'History'
     },
-    path: appRoutes.history
+    path: AppRoutes.HISTORY
   },
   {
     meta: {
       description: 'Inspect a completed room session and its estimation output.',
       title: 'Session History'
     },
-    path: appRoutes.historyRoom
+    path: AppRoutes.HISTORY_ROOM
   },
   {
     meta: {
       description: 'Review members, ownership, and team-linked work.',
       title: 'Team'
     },
-    path: appRoutes.teamDetails
+    path: AppRoutes.TEAM_DETAILS
   },
   {
     meta: {
       description: 'Manage your profile details and account identity.',
       title: 'Profile'
     },
-    path: appRoutes.profile
+    path: AppRoutes.PROFILE
   },
   {
     meta: {
       description: 'Configure dashboard preferences and account defaults.',
       title: 'Settings'
     },
-    path: appRoutes.settings
+    path: AppRoutes.SETTINGS
   }
 ];
 

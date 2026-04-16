@@ -1,7 +1,7 @@
 import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import {
   AppBox,
   AppButton,
@@ -56,7 +56,7 @@ export const TeamsCard = ({ errorMessage, onRetry, teams }: TeamsCardProps) => (
               component={RouterLink}
               key={team.id}
               sx={teamsCardItemLinkSx}
-              to={appRoutes.teamDetailsPath(team.id)}
+              to={AppRoutes.TEAM_DETAILS_PATH(team.id)}
             >
               <AppStack alignItems="center" direction="row" spacing={1.5}>
                 <AppSurface sx={teamsCardAvatarSx(index)}>

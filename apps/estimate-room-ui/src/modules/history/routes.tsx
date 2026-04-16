@@ -1,17 +1,17 @@
 import type { RouteObject } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 import { HistoryPage } from './HistoryPage';
 import { HistoryRoomPage } from './HistoryRoomPage';
 
 export const historyRoutes: RouteObject[] = [
   {
-    path: appRoutes.history,
+    path: AppRoutes.HISTORY,
     element: <HistoryPage />
   },
   {
-    path: appRoutes.historyRoom,
+    path: AppRoutes.HISTORY_ROOM,
     element: <HistoryRoomPage />
   }
 ];

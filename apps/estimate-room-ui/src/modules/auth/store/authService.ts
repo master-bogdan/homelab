@@ -1,4 +1,4 @@
-import { appConfig } from '@/config';
+import { AppConfig } from '@/config';
 import { api, accessTokenStorage } from '@/shared/api';
 import type { AuthUser } from '@/shared/types';
 
@@ -130,7 +130,7 @@ export const authApi = api.injectEndpoints({
       },
       query: () => ({
         body: new URLSearchParams({
-          client_id: appConfig.oauthClientId.trim(),
+          client_id: AppConfig.OAUTH_CLIENT_ID.trim(),
           grant_type: 'refresh_token'
         }).toString(),
         headers: {

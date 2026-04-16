@@ -1,6 +1,6 @@
 import type { RouteObject } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 import { ForgotPasswordPage } from './ForgotPasswordPage';
 import { LoginPage } from './LoginPage';
@@ -11,27 +11,27 @@ import { ResetPasswordSuccessPage } from './ResetPasswordSuccessPage';
 
 export const authRoutes: RouteObject[] = [
   {
-    path: appRoutes.login,
+    path: AppRoutes.LOGIN,
     element: <LoginPage />
   },
   {
-    path: appRoutes.register,
+    path: AppRoutes.REGISTER,
     element: <RegisterPage />
   },
   {
-    path: appRoutes.forgotPassword,
+    path: AppRoutes.FORGOT_PASSWORD,
     element: <ForgotPasswordPage />
   },
   {
-    path: appRoutes.resetPassword,
+    path: AppRoutes.RESET_PASSWORD,
     element: <ResetPasswordPage />
   },
   {
-    path: appRoutes.resetPasswordSuccess,
+    path: AppRoutes.RESET_PASSWORD_SUCCESS,
     element: <ResetPasswordSuccessPage />
   },
   {
-    path: appRoutes.authCallback,
+    path: AppRoutes.AUTH_CALLBACK,
     element: <OAuthCallbackPage />
   }
 ];

@@ -2,45 +2,45 @@ import ArchitectureRoundedIcon from '@mui/icons-material/ArchitectureRounded';
 import type { PropsWithChildren } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import { AppBox, AppLink, AppStack, AppTypography, OverlineText } from '@/shared/ui';
 
 import {
-  type AuthShellPattern,
-  authShellFooterRootSx,
-  authShellFooterStackSx,
-  authShellGlowBottomSx,
-  authShellGlowTopSx,
-  authShellHeaderRootSx,
-  authShellHomeLinkSx,
-  authShellInnerSx,
-  authShellMainRootSx,
-  authShellRootSx,
-  authShellUtilityLinkSx,
-  getAuthShellBackdropSx
+  type AuthPageLayoutPattern,
+  authPageLayoutFooterRootSx,
+  authPageLayoutFooterStackSx,
+  authPageLayoutGlowBottomSx,
+  authPageLayoutGlowTopSx,
+  authPageLayoutHeaderRootSx,
+  authPageLayoutHomeLinkSx,
+  authPageLayoutInnerSx,
+  authPageLayoutMainRootSx,
+  authPageLayoutRootSx,
+  authPageLayoutUtilityLinkSx,
+  getAuthPageLayoutBackdropSx
 } from './styles';
 
-export interface AuthShellProps extends PropsWithChildren {
-  readonly pattern?: AuthShellPattern;
+export interface AuthPageLayoutProps extends PropsWithChildren {
+  readonly pattern?: AuthPageLayoutPattern;
 }
 
 const footerLinks = ['Privacy', 'Terms', 'Security'] as const;
 
-export const AuthShell = ({
+export const AuthPageLayout = ({
   children,
   pattern = 'ambient'
-}: AuthShellProps) => (
-  <AppBox sx={authShellRootSx}>
-    <AppBox aria-hidden sx={getAuthShellBackdropSx(pattern)} />
-    <AppBox aria-hidden sx={authShellGlowTopSx} />
-    <AppBox aria-hidden sx={authShellGlowBottomSx} />
+}: AuthPageLayoutProps) => (
+  <AppBox sx={authPageLayoutRootSx}>
+    <AppBox aria-hidden sx={getAuthPageLayoutBackdropSx(pattern)} />
+    <AppBox aria-hidden sx={authPageLayoutGlowTopSx} />
+    <AppBox aria-hidden sx={authPageLayoutGlowBottomSx} />
 
-    <AppBox component="header" sx={authShellHeaderRootSx}>
+    <AppBox component="header" sx={authPageLayoutHeaderRootSx}>
       <AppLink
         color="inherit"
         component={RouterLink}
-        sx={authShellHomeLinkSx}
-        to={appRoutes.login}
+        sx={authPageLayoutHomeLinkSx}
+        to={AppRoutes.LOGIN}
         underline="none"
       >
         <ArchitectureRoundedIcon color="primary" />
@@ -50,17 +50,17 @@ export const AuthShell = ({
       </AppLink>
     </AppBox>
 
-    <AppBox component="main" sx={authShellMainRootSx}>
-      <AppBox sx={authShellInnerSx}>{children}</AppBox>
+    <AppBox component="main" sx={authPageLayoutMainRootSx}>
+      <AppBox sx={authPageLayoutInnerSx}>{children}</AppBox>
     </AppBox>
 
-    <AppBox component="footer" sx={authShellFooterRootSx}>
+    <AppBox component="footer" sx={authPageLayoutFooterRootSx}>
       <AppStack
         alignItems={{ xs: 'flex-start', md: 'center' }}
         direction={{ xs: 'column', md: 'row' }}
         justifyContent="space-between"
         spacing={2}
-        sx={authShellFooterStackSx}
+        sx={authPageLayoutFooterStackSx}
       >
         <OverlineText>© 2026 EstimateRoom. All rights reserved.</OverlineText>
         <AppStack direction="row" spacing={3}>
@@ -70,7 +70,7 @@ export const AuthShell = ({
               color="text.secondary"
               href="#"
               onClick={(event) => event.preventDefault()}
-              sx={authShellUtilityLinkSx}
+              sx={authPageLayoutUtilityLinkSx}
               underline="always"
               variant="overline"
             >

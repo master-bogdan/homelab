@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import { useAppDispatch } from '@/shared/store';
 import { AppButton, AppPageState } from '@/shared/ui';
 
@@ -29,7 +29,7 @@ export const JoinRoomPage = () => {
     void dispatch(submitJoinRoom(token))
       .unwrap()
       .then((result) => {
-        navigate(appRoutes.roomDetailsPath(result.roomId), { replace: true });
+        navigate(AppRoutes.ROOM_DETAILS_PATH(result.roomId), { replace: true });
       })
       .catch((error: unknown) => {
         setError({
@@ -46,7 +46,7 @@ export const JoinRoomPage = () => {
     return (
       <AppPageState
         action={
-          <AppButton component={RouterLink} to={appRoutes.dashboard} variant="contained">
+          <AppButton component={RouterLink} to={AppRoutes.DASHBOARD} variant="contained">
             Back to Dashboard
           </AppButton>
         }
@@ -60,7 +60,7 @@ export const JoinRoomPage = () => {
     return (
       <AppPageState
         action={
-          <AppButton component={RouterLink} to={appRoutes.dashboard} variant="contained">
+          <AppButton component={RouterLink} to={AppRoutes.DASHBOARD} variant="contained">
             Back to Dashboard
           </AppButton>
         }

@@ -1,7 +1,7 @@
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import {
   AppAlert,
   AppBox,
@@ -17,7 +17,7 @@ import { createPasswordValidationRules } from './utils';
 import {
   AuthCard,
   AuthIntro,
-  AuthShell,
+  AuthPageLayout,
   PasswordField,
   PasswordRecommendations
 } from './components';
@@ -38,7 +38,7 @@ export const ResetPasswordPage = () => {
 
   if (pageState === 'invalid') {
     return (
-      <AuthShell pattern="dots">
+      <AuthPageLayout pattern="dots">
         <AuthCard sx={{ mx: 'auto', maxWidth: 440 }}>
           <AppStack spacing={3} textAlign="center">
             <AppStack spacing={1.5}>
@@ -49,14 +49,14 @@ export const ResetPasswordPage = () => {
                 {pageError ?? invalidLinkCopy.description}
               </AppTypography>
             </AppStack>
-            <AppButton component={RouterLink} fullWidth to={appRoutes.forgotPassword} variant="contained">
+            <AppButton component={RouterLink} fullWidth to={AppRoutes.FORGOT_PASSWORD} variant="contained">
               Request New Link
             </AppButton>
             <AppLink
               color="text.secondary"
               component={RouterLink}
               sx={{ alignItems: 'center', display: 'inline-flex', gap: 1, justifyContent: 'center' }}
-              to={appRoutes.login}
+              to={AppRoutes.LOGIN}
               underline="none"
               variant="body2"
             >
@@ -65,12 +65,12 @@ export const ResetPasswordPage = () => {
             </AppLink>
           </AppStack>
         </AuthCard>
-      </AuthShell>
+      </AuthPageLayout>
     );
   }
 
   return (
-    <AuthShell>
+    <AuthPageLayout>
       <AuthIntro
         description="Create a strong new password for your EstimateRoom account."
         title={pageState === 'validating' ? 'Validating Link' : 'Set New Password'}
@@ -129,10 +129,10 @@ export const ResetPasswordPage = () => {
       </AuthCard>
       <AppTypography sx={{ mt: 3, textAlign: 'center' }} variant="body2">
         Remember your password?{' '}
-        <AppLink color="primary" component={RouterLink} to={appRoutes.login} underline="none">
+        <AppLink color="primary" component={RouterLink} to={AppRoutes.LOGIN} underline="none">
           Back to Login
         </AppLink>
       </AppTypography>
-    </AuthShell>
+    </AuthPageLayout>
   );
 };

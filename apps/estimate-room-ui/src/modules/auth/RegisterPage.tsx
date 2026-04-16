@@ -2,7 +2,7 @@ import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import {
   AppAlert,
   AppBox,
@@ -19,7 +19,7 @@ import {
   AuthActionDivider,
   AuthCard,
   AuthIntro,
-  AuthShell,
+  AuthPageLayout,
   PasswordField,
   PasswordRecommendations
 } from './components';
@@ -38,7 +38,7 @@ export const RegisterPage = () => {
   } = useRegisterPage();
 
   return (
-    <AuthShell>
+    <AuthPageLayout>
       <AuthIntro
         description="Define your professional profile to start estimating."
         title="Create Workspace"
@@ -176,10 +176,10 @@ export const RegisterPage = () => {
       </AuthCard>
       <AppTypography sx={{ mt: 3, textAlign: 'center' }} variant="body2">
         Already have an account?{' '}
-        <AppLink color="primary" component={RouterLink} to={appRoutes.login} underline="none">
+        <AppLink color="primary" component={RouterLink} to={AppRoutes.LOGIN} underline="none">
           Sign In
         </AppLink>
       </AppTypography>
-    </AuthShell>
+    </AuthPageLayout>
   );
 };

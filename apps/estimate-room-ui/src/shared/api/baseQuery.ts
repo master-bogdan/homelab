@@ -5,7 +5,7 @@ import {
   type FetchBaseQueryError
 } from '@reduxjs/toolkit/query/react';
 
-import { appConfig } from '@/config';
+import { AppConfig } from '@/config';
 
 import { accessTokenStorage } from './accessTokenStorage';
 import { apiSessionExpired } from './sessionLifecycle';
@@ -17,7 +17,7 @@ interface RefreshTokenResponseDto {
 let refreshPromise: Promise<string | null> | null = null;
 
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl: appConfig.apiBaseUrl,
+  baseUrl: AppConfig.API_BASE_URL,
   credentials: 'include',
   prepareHeaders: (headers) => {
     const accessToken = accessTokenStorage.get();
@@ -50,7 +50,7 @@ async function refreshAccessToken(
 ): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
-      const clientId = appConfig.oauthClientId.trim();
+      const clientId = AppConfig.OAUTH_CLIENT_ID.trim();
 
       if (!clientId) {
         accessTokenStorage.clear();

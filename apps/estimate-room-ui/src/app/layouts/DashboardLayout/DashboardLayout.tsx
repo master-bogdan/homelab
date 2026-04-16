@@ -1,8 +1,8 @@
 import { Navigate, useLocation } from 'react-router-dom';
 
 import { useAppSelector } from '@/shared/store';
-import { AUTH_STATUSES, selectAuthStatus, selectIsAuthenticated } from '@/modules/auth';
-import { appRoutes } from '@/shared/constants/routes';
+import { AuthStates, selectAuthStatus, selectIsAuthenticated } from '@/modules/auth';
+import { AppRoutes } from '@/shared/constants/routes';
 import { AppPageState } from '@/shared/ui';
 
 import { DashboardLayoutContent } from './components/DashboardLayoutContent';
@@ -12,7 +12,7 @@ export const DashboardLayout = () => {
   const authStatus = useAppSelector(selectAuthStatus);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
-  if (authStatus === AUTH_STATUSES.UNKNOWN) {
+  if (authStatus === AuthStates.UNKNOWN) {
     return (
       <AppPageState
         description="Checking your current session before opening the dashboard."
@@ -25,7 +25,7 @@ export const DashboardLayout = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate replace state={{ from: location }} to={appRoutes.login} />;
+    return <Navigate replace state={{ from: location }} to={AppRoutes.LOGIN} />;
   }
 
   return <DashboardLayoutContent />;

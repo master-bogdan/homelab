@@ -1,7 +1,7 @@
 import GitHubIcon from '@mui/icons-material/GitHub';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import {
   AppAlert,
   AppBox,
@@ -14,7 +14,7 @@ import {
 } from '@/shared/ui';
 
 import { createEmailValidationRules } from './utils';
-import { AuthActionDivider, AuthCard, AuthIntro, AuthShell, PasswordField } from './components';
+import { AuthActionDivider, AuthCard, AuthIntro, AuthPageLayout, PasswordField } from './components';
 import { useLoginPage } from './hooks';
 
 export const LoginPage = () => {
@@ -29,7 +29,7 @@ export const LoginPage = () => {
   } = useLoginPage();
 
   return (
-    <AuthShell>
+    <AuthPageLayout>
       <AuthIntro
         description="Access your precision estimation workspace."
         title="Welcome Back"
@@ -56,7 +56,7 @@ export const LoginPage = () => {
                 <AppLink
                   color="primary"
                   component={RouterLink}
-                  to={appRoutes.forgotPassword}
+                  to={AppRoutes.FORGOT_PASSWORD}
                   underline="none"
                   variant="overline"
                 >
@@ -112,10 +112,10 @@ export const LoginPage = () => {
       </AuthCard>
       <AppTypography sx={{ mt: 3, textAlign: 'center' }} variant="body2">
         Don&apos;t have an account?{' '}
-        <AppLink color="primary" component={RouterLink} to={appRoutes.register} underline="none">
+        <AppLink color="primary" component={RouterLink} to={AppRoutes.REGISTER} underline="none">
           Register now
         </AppLink>
       </AppTypography>
-    </AuthShell>
+    </AuthPageLayout>
   );
 };

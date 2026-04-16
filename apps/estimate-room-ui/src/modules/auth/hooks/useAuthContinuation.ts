@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 import { ensurePendingAuthorizationRequest } from '../utils';
 
@@ -16,7 +16,7 @@ const resolveRedirectTarget = (state: RedirectStateLike | null) => {
   const from = state?.from;
 
   if (!from) {
-    return appRoutes.dashboard;
+    return AppRoutes.DASHBOARD;
   }
 
   return `${from.pathname}${from.search}${from.hash}`;

@@ -1,4 +1,4 @@
-import { appConfig } from '@/config';
+import { AppConfig } from '@/config';
 
 export type WebSocketMessageHandler = (payload: unknown) => void;
 export type WebSocketStatus =
@@ -34,7 +34,7 @@ export class WebSocketClient {
   private socket: WebSocket | null = null;
   private statusListeners = new Set<WebSocketStatusHandler>();
 
-  public connect(url = appConfig.wsBaseUrl) {
+  public connect(url = AppConfig.WS_BASE_URL) {
     if (
       this.socket &&
       (this.socket.readyState === WebSocket.CONNECTING ||

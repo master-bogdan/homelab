@@ -1,4 +1,4 @@
-import { appConfig } from '@/config';
+import { AppConfig } from '@/config';
 
 import type { PendingAuthorizationRequest } from '../types';
 
@@ -32,9 +32,9 @@ const createCodeChallenge = async (codeVerifier: string) => {
 };
 
 const getOauthConfig = () => {
-  const clientId = appConfig.oauthClientId.trim();
-  const redirectUri = appConfig.oauthRedirectUri.trim();
-  const scopes = appConfig.oauthScopes.trim() || 'openid user';
+  const clientId = AppConfig.OAUTH_CLIENT_ID.trim();
+  const redirectUri = AppConfig.OAUTH_REDIRECT_URI.trim();
+  const scopes = AppConfig.OAUTH_SCOPES.trim() || 'openid user';
 
   if (!clientId) {
     throw new Error('OAuth client is not configured for EstimateRoom UI.');

@@ -8,10 +8,10 @@ import type {
   DashboardState,
   DashboardView
 } from '../types';
-import { dashboardStateKey } from './dashboardStore';
+import { DASHBOARD_STATE_KEY } from './dashboardStore';
 
 type DashboardStateRoot = {
-  readonly [dashboardStateKey]: DashboardState;
+  readonly [DASHBOARD_STATE_KEY]: DashboardState;
 };
 
 export const selectActiveSession = (sessions: DashboardSession[]) =>
@@ -50,7 +50,7 @@ export const selectDashboardView = ({
 };
 
 export const selectDashboardState = (state: DashboardStateRoot) =>
-  state[dashboardStateKey];
+  state[DASHBOARD_STATE_KEY];
 
 export const selectDashboardPageState = (state: DashboardStateRoot): DashboardPageState =>
   selectDashboardState(state).page;

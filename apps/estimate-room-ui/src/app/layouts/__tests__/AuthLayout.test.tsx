@@ -1,7 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 
-import { AUTH_STATUSES } from '@/modules/auth';
-import { appRoutes } from '@/shared/constants/routes';
+import { AuthStates } from '@/modules/auth';
+import { AppRoutes } from '@/shared/constants/routes';
 import { renderWithProviders, screen } from '@/test/test-utils';
 
 import { AuthLayout } from '../AuthLayout';
@@ -11,14 +11,14 @@ describe('AuthLayout', () => {
     renderWithProviders(
       <Routes>
         <Route element={<AuthLayout />}>
-          <Route element={<div>Login page</div>} path={appRoutes.login} />
+          <Route element={<div>Login page</div>} path={AppRoutes.LOGIN} />
         </Route>
-        <Route element={<div>Dashboard page</div>} path={appRoutes.dashboard} />
+        <Route element={<div>Dashboard page</div>} path={AppRoutes.DASHBOARD} />
       </Routes>,
       {
         preloadedState: {
           auth: {
-            status: AUTH_STATUSES.AUTHENTICATED,
+            status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,
               displayName: 'Alex Architect',
@@ -30,7 +30,7 @@ describe('AuthLayout', () => {
           }
         },
         routerProps: {
-          initialEntries: [appRoutes.login]
+          initialEntries: [AppRoutes.LOGIN]
         }
       }
     );
@@ -42,14 +42,14 @@ describe('AuthLayout', () => {
     renderWithProviders(
       <Routes>
         <Route element={<AuthLayout />}>
-          <Route element={<div>Login page</div>} path={appRoutes.login} />
+          <Route element={<div>Login page</div>} path={AppRoutes.LOGIN} />
         </Route>
-        <Route element={<div>Room page</div>} path={appRoutes.roomDetails} />
+        <Route element={<div>Room page</div>} path={AppRoutes.ROOM_DETAILS} />
       </Routes>,
       {
         preloadedState: {
           auth: {
-            status: AUTH_STATUSES.AUTHENTICATED,
+            status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,
               displayName: 'Alex Architect',
@@ -63,7 +63,7 @@ describe('AuthLayout', () => {
         routerProps: {
           initialEntries: [
             {
-              pathname: appRoutes.login,
+              pathname: AppRoutes.LOGIN,
               state: {
                 from: {
                   hash: '#voting',
@@ -84,18 +84,18 @@ describe('AuthLayout', () => {
     renderWithProviders(
       <Routes>
         <Route element={<AuthLayout />}>
-          <Route element={<div>Login page</div>} path={appRoutes.login} />
+          <Route element={<div>Login page</div>} path={AppRoutes.LOGIN} />
         </Route>
       </Routes>,
       {
         preloadedState: {
           auth: {
-            status: AUTH_STATUSES.UNAUTHENTICATED,
+            status: AuthStates.UNAUTHENTICATED,
             user: null
           }
         },
         routerProps: {
-          initialEntries: [appRoutes.login]
+          initialEntries: [AppRoutes.LOGIN]
         }
       }
     );

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAppDispatch, useAppSelector } from '@/shared/store';
 import { closeDialog, selectIsDialogOpen } from '@/modules/system/store';
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 import {
   fetchDashboardPage,
@@ -53,7 +53,7 @@ export const useJoinRoomDialog = () => {
       dispatch(resetJoinRoomDialogState());
       dispatch(closeDialog('dashboardJoinRoom'));
       void dispatch(fetchDashboardPage());
-      navigate(appRoutes.roomDetailsPath(result.roomId));
+      navigate(AppRoutes.ROOM_DETAILS_PATH(result.roomId));
     } catch (error) {
       const nextErrorMessage = getDashboardErrorMessage(
         error,

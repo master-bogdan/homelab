@@ -33,6 +33,15 @@ export const DashboardLayoutContent = () => {
   const occupationLabel = user?.occupation?.trim() || 'EstimateRoom Member';
   const userInitials = getInitials(displayName);
 
+  const handleCloseUserMenu = () => {
+    setUserMenuAnchor(null);
+  };
+
+  const handleLogout = () => {
+    handleCloseUserMenu();
+    void logout();
+  };
+
   useEffect(() => {
     dispatch(setSidebarOpen(isDesktop));
   }, [dispatch, isDesktop]);
@@ -66,8 +75,8 @@ export const DashboardLayoutContent = () => {
         displayName={displayName}
         email={user?.email ?? null}
         isLoggingOut={isLoggingOut}
-        onClose={() => setUserMenuAnchor(null)}
-        onLogout={logout}
+        onClose={handleCloseUserMenu}
+        onLogout={handleLogout}
       />
       <DashboardDialogs />
     </AppBox>

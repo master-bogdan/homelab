@@ -1,8 +1,8 @@
 import { Route, Routes, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 
-import { AUTH_STATUSES } from '@/modules/auth';
-import { appRoutes } from '@/shared/constants/routes';
+import { AuthStates } from '@/modules/auth';
+import { AppRoutes } from '@/shared/constants/routes';
 import { renderWithProviders, screen, waitFor } from '@/test/test-utils';
 
 import { DashboardLayout } from '../DashboardLayout';
@@ -40,13 +40,13 @@ describe('DashboardLayout', () => {
     renderWithProviders(
       <Routes>
         <Route element={<DashboardLayout />}>
-          <Route element={<div>History page</div>} path={appRoutes.history} />
+          <Route element={<div>History page</div>} path={AppRoutes.HISTORY} />
         </Route>
       </Routes>,
       {
         preloadedState: {
           auth: {
-            status: AUTH_STATUSES.AUTHENTICATED,
+            status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,
               displayName: 'Alex Architect',
@@ -58,7 +58,7 @@ describe('DashboardLayout', () => {
           }
         },
         routerProps: {
-          initialEntries: [appRoutes.history]
+          initialEntries: [AppRoutes.HISTORY]
         }
       }
     );
@@ -76,12 +76,12 @@ describe('DashboardLayout', () => {
         <Route element={<DashboardLayout />}>
           <Route element={<div>Private content</div>} path="rooms/:roomId" />
         </Route>
-        <Route element={<LoginStateProbe />} path={appRoutes.login} />
+        <Route element={<LoginStateProbe />} path={AppRoutes.LOGIN} />
       </Routes>,
       {
         preloadedState: {
           auth: {
-            status: AUTH_STATUSES.UNAUTHENTICATED,
+            status: AuthStates.UNAUTHENTICATED,
             user: null
           }
         },
@@ -98,13 +98,13 @@ describe('DashboardLayout', () => {
     renderWithProviders(
       <Routes>
         <Route element={<DashboardLayout />}>
-          <Route element={<div>Dashboard page</div>} path={appRoutes.dashboard} />
+          <Route element={<div>Dashboard page</div>} path={AppRoutes.DASHBOARD} />
         </Route>
       </Routes>,
       {
         preloadedState: {
           auth: {
-            status: AUTH_STATUSES.AUTHENTICATED,
+            status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,
               displayName: 'Alex Architect',
@@ -116,7 +116,7 @@ describe('DashboardLayout', () => {
           }
         },
         routerProps: {
-          initialEntries: [appRoutes.dashboard]
+          initialEntries: [AppRoutes.DASHBOARD]
         }
       }
     );
@@ -130,13 +130,13 @@ describe('DashboardLayout', () => {
     renderWithProviders(
       <Routes>
         <Route element={<DashboardLayout />}>
-          <Route element={<div>Dashboard page</div>} path={appRoutes.dashboard} />
+          <Route element={<div>Dashboard page</div>} path={AppRoutes.DASHBOARD} />
         </Route>
       </Routes>,
       {
         preloadedState: {
           auth: {
-            status: AUTH_STATUSES.AUTHENTICATED,
+            status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,
               displayName: 'Alex Architect',
@@ -148,7 +148,7 @@ describe('DashboardLayout', () => {
           }
         },
         routerProps: {
-          initialEntries: [appRoutes.dashboard]
+          initialEntries: [AppRoutes.DASHBOARD]
         }
       }
     );
@@ -167,13 +167,13 @@ describe('DashboardLayout', () => {
     renderWithProviders(
       <Routes>
         <Route element={<DashboardLayout />}>
-          <Route element={<div>Dashboard page</div>} path={appRoutes.dashboard} />
+          <Route element={<div>Dashboard page</div>} path={AppRoutes.DASHBOARD} />
         </Route>
       </Routes>,
       {
         preloadedState: {
           auth: {
-            status: AUTH_STATUSES.AUTHENTICATED,
+            status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,
               displayName: 'Alex Architect',
@@ -185,7 +185,7 @@ describe('DashboardLayout', () => {
           }
         },
         routerProps: {
-          initialEntries: [appRoutes.dashboard]
+          initialEntries: [AppRoutes.DASHBOARD]
         }
       }
     );

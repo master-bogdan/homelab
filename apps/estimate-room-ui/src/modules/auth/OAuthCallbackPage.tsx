@@ -1,23 +1,23 @@
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import { AppButton, AppLink, AppPageState } from '@/shared/ui';
 
-import { AuthCard, AuthShell } from './components';
+import { AuthCard, AuthPageLayout } from './components';
 import { useOAuthCallbackPage } from './hooks';
 
 export const OAuthCallbackPage = () => {
   const { errorMessage, isLoading } = useOAuthCallbackPage();
 
   return (
-    <AuthShell>
+    <AuthPageLayout>
       <AuthCard sx={{ mx: 'auto', maxWidth: 440 }}>
         <AppPageState
           action={
             !isLoading ? (
               <>
-                <AppButton component={RouterLink} fullWidth to={appRoutes.login} variant="contained">
+                <AppButton component={RouterLink} fullWidth to={AppRoutes.LOGIN} variant="contained">
                   Return to Sign In
                 </AppButton>
                 <AppLink
@@ -29,7 +29,7 @@ export const OAuthCallbackPage = () => {
                     gap: 1,
                     justifyContent: 'center'
                   }}
-                  to={appRoutes.login}
+                  to={AppRoutes.LOGIN}
                   underline="none"
                   variant="body2"
                 >
@@ -50,6 +50,6 @@ export const OAuthCallbackPage = () => {
           titleVariant="h4"
         />
       </AuthCard>
-    </AuthShell>
+    </AuthPageLayout>
   );
 };

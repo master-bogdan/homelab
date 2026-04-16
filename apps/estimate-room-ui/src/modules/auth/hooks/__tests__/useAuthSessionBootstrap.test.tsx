@@ -6,7 +6,7 @@ import { Provider } from 'react-redux';
 import { accessTokenStorage } from '@/shared/api';
 import { createTestStore } from '@/test/test-utils';
 
-import { AUTH_STATUSES } from '../../types';
+import { AuthStates } from '../../types';
 import { useAuthSessionBootstrap } from '../useAuthSessionBootstrap';
 
 const createJsonResponse = (payload: unknown, status = 200) =>
@@ -52,7 +52,7 @@ describe('useAuthSessionBootstrap', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
     await waitFor(() => {
-      expect(store.getState().auth.status).toBe(AUTH_STATUSES.UNAUTHENTICATED);
+      expect(store.getState().auth.status).toBe(AuthStates.UNAUTHENTICATED);
     });
   });
 
@@ -73,7 +73,7 @@ describe('useAuthSessionBootstrap', () => {
     });
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(store.getState().auth.status).toBe(AUTH_STATUSES.UNKNOWN);
+    expect(store.getState().auth.status).toBe(AuthStates.UNKNOWN);
   });
 
   it('refreshes the access token before fetching the session when local storage is empty', async () => {
@@ -109,7 +109,7 @@ describe('useAuthSessionBootstrap', () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
     await waitFor(() => {
-      expect(store.getState().auth.status).toBe(AUTH_STATUSES.AUTHENTICATED);
+      expect(store.getState().auth.status).toBe(AuthStates.AUTHENTICATED);
     });
   });
 });

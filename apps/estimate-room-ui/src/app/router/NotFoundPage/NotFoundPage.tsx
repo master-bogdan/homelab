@@ -1,30 +1,24 @@
 import { Link as RouterLink } from 'react-router-dom';
 
 import { AppButton, AppPageState, AppStack, SectionCard } from '@/shared/ui';
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import { usePageTitle } from '@/shared/hooks';
+
+import { notFoundPageCardSx, notFoundPageRootSx } from './NotFoundPage.styles';
 
 export const NotFoundPage = () => {
   usePageTitle('Not Found');
 
   return (
-    <AppStack
-      sx={{
-        display: 'grid',
-        placeItems: 'center',
-        minHeight: '100vh',
-        px: 3,
-        py: 6
-      }}
-    >
+    <AppStack sx={notFoundPageRootSx}>
       <SectionCard
         description="The route does not exist in the current application scaffold."
-        sx={{ maxWidth: 560, width: '100%' }}
+        sx={notFoundPageCardSx}
         title="Page not found"
       >
         <AppPageState
           action={
-            <AppButton component={RouterLink} to={appRoutes.dashboard} variant="contained">
+            <AppButton component={RouterLink} to={AppRoutes.DASHBOARD} variant="contained">
               Go to dashboard
             </AppButton>
           }

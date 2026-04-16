@@ -3,10 +3,10 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { apiSessionExpired } from '@/shared/api/sessionLifecycle';
 import type { AuthUser } from '@/shared/types';
 
-import { AUTH_STATUSES, type AuthState } from '../types';
+import { AuthStates, type AuthState } from '../types';
 
 const initialState: AuthState = {
-  status: AUTH_STATUSES.UNKNOWN,
+  status: AuthStates.UNKNOWN,
   user: null
 };
 
@@ -15,18 +15,18 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     clearSession: (state) => {
-      state.status = AUTH_STATUSES.UNAUTHENTICATED;
+      state.status = AuthStates.UNAUTHENTICATED;
       state.user = null;
     },
     hydrateSession: (_state, action: PayloadAction<AuthState>) => action.payload,
     setSession: (state, action: PayloadAction<AuthUser>) => {
-      state.status = AUTH_STATUSES.AUTHENTICATED;
+      state.status = AuthStates.AUTHENTICATED;
       state.user = action.payload;
     }
   },
   extraReducers: (builder) => {
     builder.addCase(apiSessionExpired, (state) => {
-      state.status = AUTH_STATUSES.UNAUTHENTICATED;
+      state.status = AuthStates.UNAUTHENTICATED;
       state.user = null;
     });
   }

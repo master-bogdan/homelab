@@ -1,17 +1,17 @@
 import type { RouteObject } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 import { DashboardPage } from './DashboardPage';
 import { JoinRoomPage } from './JoinRoomPage';
 
 export const dashboardRoutes: RouteObject[] = [
   {
-    path: appRoutes.dashboard,
+    path: AppRoutes.DASHBOARD,
     element: <DashboardPage />
   },
   {
-    path: appRoutes.joinRoom,
+    path: AppRoutes.JOIN_ROOM,
     element: <JoinRoomPage />
   }
 ];

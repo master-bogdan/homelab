@@ -3,7 +3,7 @@ export {
   resetCreateRoomDialogState,
   resetJoinRoomDialogState,
 } from './dashboardSlice';
-export { dashboardStateKey, dashboardStore } from './dashboardStore';
+export { DASHBOARD_STATE_KEY, dashboardStore } from './dashboardStore';
 export {
   selectActiveSession,
   selectCreateRoomDialogState,

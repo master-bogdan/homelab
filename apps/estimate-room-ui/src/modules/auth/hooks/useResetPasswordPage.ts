@@ -3,7 +3,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAppDispatch } from '@/shared/store';
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 import type { ResetPasswordValidationReason } from '../types';
 import { submitResetPassword, useLazyValidateResetPasswordTokenQuery } from '../store';
@@ -110,7 +110,7 @@ export const useResetPasswordPage = () => {
         token
       })).unwrap();
 
-      navigate(appRoutes.resetPasswordSuccess, { replace: true });
+      navigate(AppRoutes.RESET_PASSWORD_SUCCESS, { replace: true });
     } catch (error) {
       const message = resolveApiErrorMessage(error, 'Unable to reset your password right now.');
 

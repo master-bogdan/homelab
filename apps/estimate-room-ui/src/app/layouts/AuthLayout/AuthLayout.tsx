@@ -1,8 +1,8 @@
 import { Navigate, useLocation } from 'react-router-dom';
 
 import { useAppSelector } from '@/shared/store';
-import { AUTH_STATUSES, selectAuthStatus, selectIsAuthenticated } from '@/modules/auth';
-import { appRoutes } from '@/shared/constants/routes';
+import { AuthStates, selectAuthStatus, selectIsAuthenticated } from '@/modules/auth';
+import { AppRoutes } from '@/shared/constants/routes';
 import { AppPageState } from '@/shared/ui';
 
 import { AuthLayoutContent } from './components';
@@ -13,11 +13,11 @@ export const AuthLayout = () => {
   const authStatus = useAppSelector(selectAuthStatus);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
-  if (location.pathname === appRoutes.authCallback) {
+  if (location.pathname === AppRoutes.AUTH_CALLBACK) {
     return <AuthLayoutContent />;
   }
 
-  if (authStatus === AUTH_STATUSES.UNKNOWN) {
+  if (authStatus === AuthStates.UNKNOWN) {
     return (
       <AppPageState
         description="Checking your current session before opening authentication pages."

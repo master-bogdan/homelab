@@ -1,17 +1,17 @@
 import type { RouteObject } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 import { NewRoomPage } from './NewRoomPage';
 import { RoomDetailsPage } from './RoomDetailsPage';
 
 export const roomsRoutes: RouteObject[] = [
   {
-    path: appRoutes.roomsNew,
+    path: AppRoutes.ROOMS_NEW,
     element: <NewRoomPage />
   },
   {
-    path: appRoutes.roomDetails,
+    path: AppRoutes.ROOM_DETAILS,
     element: <RoomDetailsPage />
   }
 ];

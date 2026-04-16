@@ -1,7 +1,7 @@
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import { useNavigate } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import { AppAlert, AppBox, AppButton, AppPageState, AppStack, AppSurface } from '@/shared/ui';
 
 import {
@@ -62,7 +62,7 @@ export const DashboardPage = () => {
         <AppBox sx={dashboardPageActiveGridSx}>
           <DashboardHeroCard
             onCreateRoom={openCreateRoom}
-            onOpenRoom={(roomId) => navigate(appRoutes.roomDetailsPath(roomId))}
+            onOpenRoom={(roomId) => navigate(AppRoutes.ROOM_DETAILS_PATH(roomId))}
             room={data.activeRoom}
           />
           <RecentRoomsCard
@@ -77,7 +77,7 @@ export const DashboardPage = () => {
           ) : (
             <DashboardHeroCard
               onCreateRoom={openCreateRoom}
-              onOpenRoom={(roomId) => navigate(appRoutes.roomDetailsPath(roomId))}
+              onOpenRoom={(roomId) => navigate(AppRoutes.ROOM_DETAILS_PATH(roomId))}
               room={null}
             />
           )}

@@ -1,2 +1,2 @@
-export { profileRoutes } from './profile.routes';
+export { profileRoutes } from './routes';
 export { ProfilePage } from './ProfilePage';

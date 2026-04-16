@@ -1,7 +1,7 @@
 import { useAppDispatch, useAppSelector } from '@/shared/store';
 import { toggleThemeMode } from '@/modules/system';
 import { selectThemeMode } from '@/modules/system';
-import { appConfig } from '@/config';
+import { AppConfig } from '@/config';
 import { usePageTitle } from '@/shared/hooks';
 
 export const useSettingsPage = () => {
@@ -11,10 +11,10 @@ export const useSettingsPage = () => {
   usePageTitle('Settings');
 
   return {
-    apiBaseUrl: appConfig.apiBaseUrl,
-    environment: appConfig.environment,
+    apiBaseUrl: AppConfig.API_BASE_URL,
+    environment: AppConfig.ENVIRONMENT,
     themeMode,
     toggleTheme: () => dispatch(toggleThemeMode()),
-    wsBaseUrl: appConfig.wsBaseUrl
+    wsBaseUrl: AppConfig.WS_BASE_URL
   };
 };

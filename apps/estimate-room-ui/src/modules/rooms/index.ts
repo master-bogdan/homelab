@@ -1,3 +1,3 @@
-export { roomsRoutes } from './rooms.routes';
+export { roomsRoutes } from './routes';
 export { NewRoomPage } from './NewRoomPage';
 export { RoomDetailsPage } from './RoomDetailsPage';

@@ -3,7 +3,7 @@ import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import {
   AppListItemIcon,
   AppMenu,
@@ -51,25 +51,19 @@ export const DashboardUserMenu = ({
         {email ?? 'No active session'}
       </AppTypography>
     </AppStack>
-    <AppMenuItem component={RouterLink} onClick={onClose} to={appRoutes.profile}>
+    <AppMenuItem component={RouterLink} onClick={onClose} to={AppRoutes.PROFILE}>
       <AppListItemIcon>
         <PersonRoundedIcon fontSize="small" />
       </AppListItemIcon>
       Profile
     </AppMenuItem>
-    <AppMenuItem component={RouterLink} onClick={onClose} to={appRoutes.settings}>
+    <AppMenuItem component={RouterLink} onClick={onClose} to={AppRoutes.SETTINGS}>
       <AppListItemIcon>
         <SettingsRoundedIcon fontSize="small" />
       </AppListItemIcon>
       Settings
     </AppMenuItem>
-    <AppMenuItem
-      disabled={isLoggingOut}
-      onClick={() => {
-        onClose();
-        onLogout();
-      }}
-    >
+    <AppMenuItem disabled={isLoggingOut} onClick={onLogout}>
       <AppListItemIcon>
         <LogoutRoundedIcon fontSize="small" />
       </AppListItemIcon>

@@ -1,23 +1,23 @@
 import { useEffect } from 'react';
 
 import { useAppDispatch, useAppSelector } from '@/shared/store';
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 import { bootstrapAuthSession, clearSession, selectAuthStatus } from '../store';
-import { AUTH_STATUSES } from '../types';
+import { AuthStates } from '../types';
 
 export const useAuthSessionBootstrap = () => {
   const dispatch = useAppDispatch();
   const authStatus = useAppSelector(selectAuthStatus);
 
   useEffect(() => {
-    if (authStatus !== AUTH_STATUSES.UNKNOWN) {
+    if (authStatus !== AuthStates.UNKNOWN) {
       return;
     }
 
     if (
       typeof window !== 'undefined' &&
-      window.location.pathname === appRoutes.authCallback
+      window.location.pathname === AppRoutes.AUTH_CALLBACK
     ) {
       return;
     }

@@ -1,2 +1,2 @@
-export { teamsRoutes } from './teams.routes';
+export { teamsRoutes } from './routes';
 export { TeamDetailsPage } from './TeamDetailsPage';

@@ -21,4 +21,4 @@ export {
   useResetPasswordMutation,
   useValidateResetPasswordTokenQuery
 } from './authService';
-export { AUTH_STATUSES } from '../types';
+export { AuthStates } from '../types';

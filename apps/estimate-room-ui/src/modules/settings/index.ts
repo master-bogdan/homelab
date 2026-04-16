@@ -1,2 +1,2 @@
-export { settingsRoutes } from './settings.routes';
+export { settingsRoutes } from './routes';
 export { SettingsPage } from './SettingsPage';

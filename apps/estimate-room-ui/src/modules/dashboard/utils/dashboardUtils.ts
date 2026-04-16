@@ -1,5 +1,5 @@
 import type { ApiError } from '@/shared/types';
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 import type {
   DashboardDeckPreset,
@@ -113,7 +113,7 @@ export const formatDashboardDateTime = (value: string) => dateTimeFormatter.form
 export const buildDashboardInviteLink = (roomCode: string) => {
   const origin = typeof window === 'undefined' ? 'http://localhost:5173' : window.location.origin;
 
-  return `${origin}${appRoutes.joinRoomPath(roomCode)}`;
+  return `${origin}${AppRoutes.JOIN_ROOM_PATH(roomCode)}`;
 };
 
 export const formatRelativeTime = (value: string, now = new Date()) => {

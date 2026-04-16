@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { createTestStore } from '@/test/test-utils';
 
-import { AUTH_STATUSES } from '../../types';
+import { AuthStates } from '../../types';
 import { useOAuthCallbackPage } from '../useOAuthCallbackPage';
 
 const createJsonResponse = (payload: unknown, status = 200) =>
@@ -87,7 +87,7 @@ describe('useOAuthCallbackPage', () => {
     });
     await screen.findByText('Dashboard');
     await waitFor(() => {
-      expect(store.getState().auth.status).toBe(AUTH_STATUSES.AUTHENTICATED);
+      expect(store.getState().auth.status).toBe(AuthStates.AUTHENTICATED);
     });
 
     expect(sessionStorage.getItem('estimate-room.auth.pending-authorization')).toBeNull();

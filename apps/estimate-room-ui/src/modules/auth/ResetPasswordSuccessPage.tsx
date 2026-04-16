@@ -1,12 +1,12 @@
 import { Link as RouterLink } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import { AppButton, AppLink, AppStack, AppTypography, OverlineText } from '@/shared/ui';
 
-import { AuthCard, AuthShell } from './components';
+import { AuthCard, AuthPageLayout } from './components';
 
 export const ResetPasswordSuccessPage = () => (
-  <AuthShell>
+  <AuthPageLayout>
     <AuthCard sx={{ mx: 'auto', maxWidth: 440 }}>
       <AppStack spacing={3} textAlign="center">
         <AppStack spacing={1.5}>
@@ -18,7 +18,7 @@ export const ResetPasswordSuccessPage = () => (
             new credentials.
           </AppTypography>
         </AppStack>
-        <AppButton component={RouterLink} fullWidth to={appRoutes.login} variant="contained">
+        <AppButton component={RouterLink} fullWidth to={AppRoutes.LOGIN} variant="contained">
           Sign In
         </AppButton>
         <AppStack spacing={1}>
@@ -29,5 +29,5 @@ export const ResetPasswordSuccessPage = () => (
         </AppStack>
       </AppStack>
     </AuthCard>
-  </AuthShell>
+  </AuthPageLayout>
 );

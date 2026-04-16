@@ -9,7 +9,7 @@ import {
   selectDashboardCreateRoomSuccessPayload,
   selectIsDialogOpen
 } from '@/modules/system/store';
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 import {
   fetchDashboardPage,
@@ -69,7 +69,7 @@ export const useCreateRoomDialog = () => {
       return;
     }
 
-    navigate(appRoutes.roomDetailsPath(result.roomId));
+    navigate(AppRoutes.ROOM_DETAILS_PATH(result.roomId));
     dispatch(closeDialog('dashboardCreateRoomSuccess'));
   };
 

@@ -1,6 +1,6 @@
 import { Link as RouterLink } from 'react-router-dom';
 
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 import { AppChip, AppStack, AppTypography, SectionCard } from '@/shared/ui';
 import { formatDateTime } from '@/shared/utils';
 
@@ -23,7 +23,7 @@ export const HistoryPage = () => {
               <AppTypography
                 color="primary"
                 component={RouterLink}
-                to={appRoutes.historyRoomPath(entry.roomId)}
+                to={AppRoutes.HISTORY_ROOM_PATH(entry.roomId)}
                 variant="body2"
               >
                 View room history

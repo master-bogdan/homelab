@@ -8,14 +8,14 @@ import { profileRoutes } from '@/modules/profile';
 import { roomsRoutes } from '@/modules/rooms';
 import { settingsRoutes } from '@/modules/settings';
 import { teamsRoutes } from '@/modules/teams';
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/shared/constants/routes';
 
 import { NotFoundPage } from './NotFoundPage';
 
 export const router = createBrowserRouter([
   {
-    path: appRoutes.root,
-    element: <Navigate replace to={appRoutes.dashboard} />
+    path: AppRoutes.ROOT,
+    element: <Navigate replace to={AppRoutes.DASHBOARD} />
   },
   {
     element: <AuthLayout />,
