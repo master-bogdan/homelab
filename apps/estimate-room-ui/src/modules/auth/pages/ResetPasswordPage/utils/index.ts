@@ -1,0 +1,1 @@
+export { getResetLinkCopy } from './getResetLinkCopy';

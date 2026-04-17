@@ -6,7 +6,7 @@ import { AppBox } from '@/shared/ui';
 import { useAppDispatch, useAppSelector } from '@/shared/store';
 import { closeSidebar, setSidebarOpen } from '@/modules/system';
 import { selectIsSidebarOpen } from '@/modules/system';
-import { selectAuthUser, useLogout } from '@/modules/auth';
+import { selectAuthUser, useLogoutMutation } from '@/modules/auth';
 import { DashboardDialogs, getInitials, useDashboardActions } from '@/modules/dashboard';
 
 import { resolveDashboardLayoutMeta } from '../../constants';
@@ -25,7 +25,7 @@ export const DashboardLayoutContent = () => {
   const isDesktop = useAppMediaQuery((theme) => theme.breakpoints.up('lg'));
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
   const user = useAppSelector(selectAuthUser);
-  const { isLoggingOut, logout } = useLogout();
+  const [logout, logoutState] = useLogoutMutation();
   const { openCreateRoom, openJoinRoom } = useDashboardActions();
   const [userMenuAnchor, setUserMenuAnchor] = useState<HTMLElement | null>(null);
   const routeMeta = resolveDashboardLayoutMeta(location.pathname);
@@ -38,8 +38,12 @@ export const DashboardLayoutContent = () => {
   };
 
   const handleLogout = () => {
+    if (logoutState.isLoading) {
+      return;
+    }
+
     handleCloseUserMenu();
-    void logout();
+    logout();
   };
 
   useEffect(() => {
@@ -74,7 +78,7 @@ export const DashboardLayoutContent = () => {
         anchorEl={userMenuAnchor}
         displayName={displayName}
         email={user?.email ?? null}
-        isLoggingOut={isLoggingOut}
+        isLoggingOut={logoutState.isLoading}
         onClose={handleCloseUserMenu}
         onLogout={handleLogout}
       />

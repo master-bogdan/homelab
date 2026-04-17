@@ -1,0 +1,1 @@
+export { AuthInlinePrompt } from './AuthInlinePrompt';

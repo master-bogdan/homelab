@@ -4,7 +4,7 @@ import { AppRoutes } from '@/shared/constants/routes';
 
 import { TeamDetailsPage } from './TeamDetailsPage';
 
-export const teamsRoutes: RouteObject[] = [
+export const TeamsRoutes: RouteObject[] = [
   {
     path: AppRoutes.TEAM_DETAILS,
     element: <TeamDetailsPage />

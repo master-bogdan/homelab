@@ -5,7 +5,7 @@ import { AppRoutes } from '@/shared/constants/routes';
 import { NewRoomPage } from './NewRoomPage';
 import { RoomDetailsPage } from './RoomDetailsPage';
 
-export const roomsRoutes: RouteObject[] = [
+export const RoomsRoutes: RouteObject[] = [
   {
     path: AppRoutes.ROOMS_NEW,
     element: <NewRoomPage />

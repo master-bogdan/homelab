@@ -18,6 +18,12 @@ describe('AuthLayout', () => {
       {
         preloadedState: {
           auth: {
+            oauthCallback: {
+              errorMessage: null,
+              redirectTo: null,
+              requestKey: null,
+              status: 'idle'
+            },
             status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,
@@ -49,6 +55,12 @@ describe('AuthLayout', () => {
       {
         preloadedState: {
           auth: {
+            oauthCallback: {
+              errorMessage: null,
+              redirectTo: null,
+              requestKey: null,
+              status: 'idle'
+            },
             status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,
@@ -90,6 +102,12 @@ describe('AuthLayout', () => {
       {
         preloadedState: {
           auth: {
+            oauthCallback: {
+              errorMessage: null,
+              redirectTo: null,
+              requestKey: null,
+              status: 'idle'
+            },
             status: AuthStates.UNAUTHENTICATED,
             user: null
           }

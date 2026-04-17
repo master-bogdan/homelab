@@ -4,7 +4,7 @@ import type {
   DashboardSessionStatus
 } from './status';
 
-export interface DashboardSessionDto {
+export interface DashboardSessionApiResponse {
   readonly approxDurationSeconds: number;
   readonly createdAt: string;
   readonly estimatedTasksCount: number;
@@ -19,32 +19,32 @@ export interface DashboardSessionDto {
   readonly teamId?: string | null;
 }
 
-export interface DashboardSessionListResponseDto {
-  readonly items: DashboardSessionDto[];
+export interface DashboardSessionListApiResponse {
+  readonly items: DashboardSessionApiResponse[];
   readonly page: number;
   readonly pageSize: number;
   readonly total: number;
 }
 
-export interface DashboardTeamSummaryDto {
+export interface DashboardTeamSummaryApiResponse {
   readonly createdAt: string;
   readonly name: string;
   readonly ownerUserId: string;
   readonly teamId: string;
 }
 
-export interface DashboardGamificationDto {
-  readonly achievements: DashboardAchievementDto[];
-  readonly stats: DashboardGamificationStatsDto;
+export interface DashboardGamificationApiResponse {
+  readonly achievements: DashboardAchievementApiResponse[];
+  readonly stats: DashboardGamificationStatsApiResponse;
 }
 
-export interface DashboardAchievementDto {
+export interface DashboardAchievementApiResponse {
   readonly key: string;
   readonly level: number;
   readonly unlockedAt: string;
 }
 
-export interface DashboardGamificationStatsDto {
+export interface DashboardGamificationStatsApiResponse {
   readonly level: number;
   readonly nextLevelXp: number;
   readonly sessionsAdmined: number;
@@ -53,46 +53,46 @@ export interface DashboardGamificationStatsDto {
   readonly xp: number;
 }
 
-export interface DashboardRoomDto {
+export interface DashboardRoomApiResponse {
   readonly adminUserId: string;
   readonly code: string;
   readonly createdAt: string;
-  readonly deck: DashboardDeckDto;
+  readonly deck: DashboardDeckApiResponse;
   readonly finishedAt?: string | null;
   readonly lastActivityAt: string;
   readonly name: string;
-  readonly participants?: DashboardRoomParticipantDto[];
+  readonly participants?: DashboardRoomParticipantApiResponse[];
   readonly roomId: string;
   readonly status: string;
-  readonly tasks?: DashboardRoomTaskDto[];
+  readonly tasks?: DashboardRoomTaskApiResponse[];
   readonly teamId?: string | null;
 }
 
-export interface DashboardDeckDto {
+export interface DashboardDeckApiResponse {
   readonly kind: string;
   readonly name: string;
   readonly values: string[];
 }
 
-export interface DashboardRoomParticipantDto {
+export interface DashboardRoomParticipantApiResponse {
   readonly guestName?: string | null;
   readonly joinedAt: string;
   readonly leftAt?: string | null;
   readonly role: string;
   readonly roomId: string;
   readonly roomParticipantId: string;
-  readonly user?: DashboardRoomUserDto | null;
+  readonly user?: DashboardRoomUserApiResponse | null;
   readonly userId?: string | null;
 }
 
-export interface DashboardRoomUserDto {
+export interface DashboardRoomUserApiResponse {
   readonly avatarUrl?: string | null;
   readonly displayName: string;
   readonly email?: string | null;
   readonly userId: string;
 }
 
-export interface DashboardRoomTaskDto {
+export interface DashboardRoomTaskApiResponse {
   readonly createdAt: string;
   readonly description?: string | null;
   readonly externalKey?: string | null;
@@ -105,7 +105,7 @@ export interface DashboardRoomTaskDto {
   readonly updatedAt: string;
 }
 
-export interface DashboardInvitationPreviewDto {
+export interface DashboardInvitationPreviewApiResponse {
   readonly acceptedAt?: string | null;
   readonly createdAt: string;
   readonly createdByUserId: string;
@@ -121,25 +121,26 @@ export interface DashboardInvitationPreviewDto {
   readonly updatedAt: string;
 }
 
-export interface DashboardInvitationWithTokenDto extends DashboardInvitationPreviewDto {
+export interface DashboardInvitationWithTokenApiResponse
+  extends DashboardInvitationPreviewApiResponse {
   readonly token: string;
 }
 
-export interface DashboardCreateRoomSkippedRecipientDto {
+export interface DashboardCreateRoomSkippedRecipientApiResponse {
   readonly email?: string | null;
   readonly reason: string;
   readonly userId?: string | null;
 }
 
-export interface DashboardCreateRoomResponseDto {
-  readonly emailInvites?: DashboardInvitationWithTokenDto[];
+export interface DashboardCreateRoomApiResponse {
+  readonly emailInvites?: DashboardInvitationWithTokenApiResponse[];
   readonly inviteToken?: string;
-  readonly room: DashboardRoomDto;
-  readonly shareLink?: DashboardInvitationWithTokenDto;
-  readonly skippedRecipients?: DashboardCreateRoomSkippedRecipientDto[];
+  readonly room: DashboardRoomApiResponse;
+  readonly shareLink?: DashboardInvitationWithTokenApiResponse;
+  readonly skippedRecipients?: DashboardCreateRoomSkippedRecipientApiResponse[];
 }
 
-export interface DashboardJoinRoomResponseDto {
-  readonly participant?: DashboardRoomParticipantDto;
-  readonly room?: DashboardRoomDto;
+export interface DashboardJoinRoomApiResponse {
+  readonly participant?: DashboardRoomParticipantApiResponse;
+  readonly room?: DashboardRoomApiResponse;
 }

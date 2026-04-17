@@ -1,4 +1,3 @@
-import type { DashboardCreateRoomSkippedRecipientDto } from './api';
 import type { DashboardDeckPresetKey } from './status';
 
 export interface DashboardCreateRoomFormValues {
@@ -9,12 +8,18 @@ export interface DashboardCreateRoomFormValues {
   readonly name: string;
 }
 
+export interface DashboardSkippedRecipient {
+  readonly email: string | null;
+  readonly reason: string;
+  readonly userId: string | null;
+}
+
 export interface DashboardCreateRoomResult {
   readonly inviteLink: string;
   readonly roomCode: string;
   readonly roomId: string;
   readonly roomName: string;
-  readonly skippedRecipients: DashboardCreateRoomSkippedRecipientDto[];
+  readonly skippedRecipients: DashboardSkippedRecipient[];
 }
 
 export interface DashboardJoinRoomFormValues {

@@ -12,7 +12,6 @@ import {
 import { AppRoutes } from '@/shared/constants/routes';
 
 import {
-  fetchDashboardPage,
   resetCreateRoomDialogState,
   selectCreateRoomDialogState,
   submitCreateRoom
@@ -74,20 +73,20 @@ export const useCreateRoomDialog = () => {
   };
 
   const onSubmit = form.handleSubmit(async (values) => {
-    try {
-      const nextResult = await dispatch(submitCreateRoom(values)).unwrap();
-      dispatch(
-        openDialog({
-          key: 'dashboardCreateRoomSuccess',
-          payload: {
-            result: nextResult
-          }
-        })
-      );
-      void dispatch(fetchDashboardPage());
-    } catch {
+    const submitResult = await dispatch(submitCreateRoom(values));
+
+    if (submitCreateRoom.rejected.match(submitResult)) {
       return;
     }
+
+    dispatch(
+      openDialog({
+        key: 'dashboardCreateRoomSuccess',
+        payload: {
+          result: submitResult.payload
+        }
+      })
+    );
   });
 
   return {

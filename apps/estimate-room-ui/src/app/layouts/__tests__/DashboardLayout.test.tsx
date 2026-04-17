@@ -46,6 +46,12 @@ describe('DashboardLayout', () => {
       {
         preloadedState: {
           auth: {
+            oauthCallback: {
+              errorMessage: null,
+              redirectTo: null,
+              requestKey: null,
+              status: 'idle'
+            },
             status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,
@@ -81,6 +87,12 @@ describe('DashboardLayout', () => {
       {
         preloadedState: {
           auth: {
+            oauthCallback: {
+              errorMessage: null,
+              redirectTo: null,
+              requestKey: null,
+              status: 'idle'
+            },
             status: AuthStates.UNAUTHENTICATED,
             user: null
           }
@@ -104,6 +116,12 @@ describe('DashboardLayout', () => {
       {
         preloadedState: {
           auth: {
+            oauthCallback: {
+              errorMessage: null,
+              redirectTo: null,
+              requestKey: null,
+              status: 'idle'
+            },
             status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,
@@ -136,6 +154,12 @@ describe('DashboardLayout', () => {
       {
         preloadedState: {
           auth: {
+            oauthCallback: {
+              errorMessage: null,
+              redirectTo: null,
+              requestKey: null,
+              status: 'idle'
+            },
             status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,
@@ -173,6 +197,12 @@ describe('DashboardLayout', () => {
       {
         preloadedState: {
           auth: {
+            oauthCallback: {
+              errorMessage: null,
+              redirectTo: null,
+              requestKey: null,
+              status: 'idle'
+            },
             status: AuthStates.AUTHENTICATED,
             user: {
               avatarUrl: null,

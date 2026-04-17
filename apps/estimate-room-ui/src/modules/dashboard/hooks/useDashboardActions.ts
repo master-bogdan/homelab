@@ -14,7 +14,7 @@ export const useDashboardActions = () => {
     openCreateRoom: () => {
       dispatch(resetCreateRoomDialogState());
       dispatch(openDialog({ key: 'dashboardCreateRoom' }));
-      void dispatch(fetchCreateRoomTeams());
+      dispatch(fetchCreateRoomTeams());
     },
     openJoinRoom: () => {
       dispatch(resetJoinRoomDialogState());

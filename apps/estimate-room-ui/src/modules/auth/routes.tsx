@@ -2,14 +2,16 @@ import type { RouteObject } from 'react-router-dom';
 
 import { AppRoutes } from '@/shared/constants/routes';
 
-import { ForgotPasswordPage } from './ForgotPasswordPage';
-import { LoginPage } from './LoginPage';
-import { OAuthCallbackPage } from './OAuthCallbackPage';
-import { RegisterPage } from './RegisterPage';
-import { ResetPasswordPage } from './ResetPasswordPage';
-import { ResetPasswordSuccessPage } from './ResetPasswordSuccessPage';
+import {
+  ForgotPasswordPage,
+  LoginPage,
+  OAuthCallbackPage,
+  RegisterPage,
+  ResetPasswordPage,
+  ResetPasswordSuccessPage
+} from './pages';
 
-export const authRoutes: RouteObject[] = [
+export const AuthRoutes: RouteObject[] = [
   {
     path: AppRoutes.LOGIN,
     element: <LoginPage />

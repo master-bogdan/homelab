@@ -3,28 +3,29 @@ import { api } from '@/shared/api';
 import { DASHBOARD_ROOM_TASK_STATUSES } from '../constants';
 import type {
   DashboardActiveRoom,
+  DashboardCreateRoomApiResponse,
   DashboardCreateRoomFormValues,
-  DashboardCreateRoomResponseDto,
   DashboardCreateRoomResult,
-  DashboardGamificationDto,
-  DashboardInvitationPreviewDto,
-  DashboardJoinRoomResponseDto,
+  DashboardCreateRoomSkippedRecipientApiResponse,
+  DashboardGamificationApiResponse,
+  DashboardInvitationPreviewApiResponse,
+  DashboardJoinRoomApiResponse,
   DashboardJoinRoomResult,
   DashboardLedger,
-  DashboardRoomDto,
+  DashboardRoomApiResponse,
   DashboardRoomParticipant,
-  DashboardRoomParticipantDto,
+  DashboardRoomParticipantApiResponse,
   DashboardSession,
-  DashboardSessionDto,
-  DashboardSessionListResponseDto,
+  DashboardSessionApiResponse,
+  DashboardSessionListApiResponse,
   DashboardTeamSummary,
-  DashboardTeamSummaryDto
+  DashboardTeamSummaryApiResponse
 } from '../types';
 import { buildDashboardInviteLink, getDashboardDeckPreset, parseInviteEmails } from '../utils';
 
 const DASHBOARD_PAGE_SIZE = 20;
 
-const mapSession = (session: DashboardSessionDto): DashboardSession => ({
+const mapSession = (session: DashboardSessionApiResponse): DashboardSession => ({
   approxDurationSeconds: session.approxDurationSeconds,
   createdAt: session.createdAt,
   estimatedTasksCount: session.estimatedTasksCount,
@@ -39,14 +40,14 @@ const mapSession = (session: DashboardSessionDto): DashboardSession => ({
   teamId: session.teamId ?? null
 });
 
-const mapTeam = (team: DashboardTeamSummaryDto): DashboardTeamSummary => ({
+const mapTeam = (team: DashboardTeamSummaryApiResponse): DashboardTeamSummary => ({
   createdAt: team.createdAt,
   id: team.teamId,
   name: team.name,
   ownerUserId: team.ownerUserId
 });
 
-const mapLedger = (response: DashboardGamificationDto): DashboardLedger => ({
+const mapLedger = (response: DashboardGamificationApiResponse): DashboardLedger => ({
   achievements: response.achievements.map((achievement) => ({
     key: achievement.key,
     level: achievement.level,
@@ -64,14 +65,16 @@ const mapLedger = (response: DashboardGamificationDto): DashboardLedger => ({
       : Math.min(100, Math.round((response.stats.xp / response.stats.nextLevelXp) * 100))
 });
 
-const mapParticipant = (participant: DashboardRoomParticipantDto): DashboardRoomParticipant => ({
+const mapParticipant = (
+  participant: DashboardRoomParticipantApiResponse
+): DashboardRoomParticipant => ({
   avatarUrl: participant.user?.avatarUrl ?? null,
   displayName: participant.user?.displayName ?? participant.guestName ?? 'Guest participant',
   id: participant.roomParticipantId,
   role: participant.role
 });
 
-const mapActiveRoom = (room: DashboardRoomDto): DashboardActiveRoom => {
+const mapActiveRoom = (room: DashboardRoomApiResponse): DashboardActiveRoom => {
   const tasks = room.tasks ?? [];
   const currentTask = tasks.find((task) => task.isActive) ?? null;
   const activeParticipants = (room.participants ?? []).filter((participant) => !participant.leftAt);
@@ -96,7 +99,7 @@ const mapActiveRoom = (room: DashboardRoomDto): DashboardActiveRoom => {
 };
 
 const mapCreateRoomResult = (
-  response: DashboardCreateRoomResponseDto
+  response: DashboardCreateRoomApiResponse
 ): DashboardCreateRoomResult => {
   const shareToken = response.shareLink?.token ?? response.inviteToken;
 
@@ -109,9 +112,17 @@ const mapCreateRoomResult = (
     roomCode: shareToken,
     roomId: response.room.roomId,
     roomName: response.room.name,
-    skippedRecipients: response.skippedRecipients ?? []
+    skippedRecipients: (response.skippedRecipients ?? []).map(mapSkippedRecipient)
   };
 };
+
+const mapSkippedRecipient = (
+  recipient: DashboardCreateRoomSkippedRecipientApiResponse
+) => ({
+  email: recipient.email ?? null,
+  reason: recipient.reason,
+  userId: recipient.userId ?? null
+});
 
 export const dashboardApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -121,7 +132,7 @@ export const dashboardApi = api.injectEndpoints({
         method: 'POST',
         url: `invites/${encodeURIComponent(token)}/accept`
       }),
-      transformResponse: (response: DashboardJoinRoomResponseDto) => {
+      transformResponse: (response: DashboardJoinRoomApiResponse) => {
         if (!response.room) {
           throw new Error('The room accepted successfully, but no room details were returned.');
         }
@@ -170,16 +181,16 @@ export const dashboardApi = api.injectEndpoints({
         },
         url: 'history/me/sessions'
       }),
-      transformResponse: (response: DashboardSessionListResponseDto) =>
+      transformResponse: (response: DashboardSessionListApiResponse) =>
         response.items.map(mapSession)
     }),
     fetchDashboardTeams: builder.query<DashboardTeamSummary[], void>({
       query: () => ({
         url: 'teams'
       }),
-      transformResponse: (response: DashboardTeamSummaryDto[]) => response.map(mapTeam)
+      transformResponse: (response: DashboardTeamSummaryApiResponse[]) => response.map(mapTeam)
     }),
-    previewInvitation: builder.query<DashboardInvitationPreviewDto, string>({
+    previewInvitation: builder.query<DashboardInvitationPreviewApiResponse, string>({
       query: (token) => ({
         url: `invites/${encodeURIComponent(token)}`
       })

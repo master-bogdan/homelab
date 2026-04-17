@@ -70,6 +70,12 @@ src/
 - Form state stays in React Hook Form instead of Redux.
 - Path aliases are available through `@`, including `@/app`, `@/modules`, `@/shared`, and `@/theme`.
 
+Detailed engineering rules live in [`docs/`](./docs/):
+
+- [`docs/STATE_AND_REQUEST_MANAGEMENT.md`](./docs/STATE_AND_REQUEST_MANAGEMENT.md)
+- [`docs/REQUEST_FLOW_DECISIONS.md`](./docs/REQUEST_FLOW_DECISIONS.md)
+- [`docs/FRONTEND_CONVENTIONS.md`](./docs/FRONTEND_CONVENTIONS.md)
+
 ## Notes
 
 - Authentication is scaffolded, but there is no fake login implementation.

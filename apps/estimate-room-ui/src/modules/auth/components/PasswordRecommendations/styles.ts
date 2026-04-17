@@ -7,6 +7,10 @@ export const passwordRecommendationsRootSx: SxProps<Theme> = {
   py: 1.75
 };
 
+export const passwordRecommendationsTitleSx: SxProps<Theme> = {
+  mb: 1.5
+};
+
 export const passwordRecommendationsGridSx: SxProps<Theme> = {
   columnGap: 3,
   display: 'grid',

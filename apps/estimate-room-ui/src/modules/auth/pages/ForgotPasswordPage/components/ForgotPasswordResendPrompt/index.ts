@@ -1,0 +1,1 @@
+export { ForgotPasswordResendPrompt } from './ForgotPasswordResendPrompt';

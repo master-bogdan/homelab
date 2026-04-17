@@ -7,7 +7,6 @@ import { closeDialog, selectIsDialogOpen } from '@/modules/system/store';
 import { AppRoutes } from '@/shared/constants/routes';
 
 import {
-  fetchDashboardPage,
   resetJoinRoomDialogState,
   selectJoinRoomDialogState,
   submitJoinRoom
@@ -48,15 +47,11 @@ export const useJoinRoomDialog = () => {
   const onSubmit = form.handleSubmit(async (values) => {
     form.clearErrors();
 
-    try {
-      const result = await dispatch(submitJoinRoom(values.code)).unwrap();
-      dispatch(resetJoinRoomDialogState());
-      dispatch(closeDialog('dashboardJoinRoom'));
-      void dispatch(fetchDashboardPage());
-      navigate(AppRoutes.ROOM_DETAILS_PATH(result.roomId));
-    } catch (error) {
+    const result = await dispatch(submitJoinRoom(values.code));
+
+    if (submitJoinRoom.rejected.match(result)) {
       const nextErrorMessage = getDashboardErrorMessage(
-        error,
+        result.payload,
         'Invalid or expired room code. Please check and try again.'
       );
 
@@ -64,7 +59,12 @@ export const useJoinRoomDialog = () => {
         message: nextErrorMessage,
         type: 'server'
       });
+      return;
     }
+
+    dispatch(resetJoinRoomDialogState());
+    dispatch(closeDialog('dashboardJoinRoom'));
+    navigate(AppRoutes.ROOM_DETAILS_PATH(result.payload.roomId));
   });
 
   return {

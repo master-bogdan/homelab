@@ -1,9 +1,15 @@
-import type { SxProps, Theme } from '@mui/material/styles';
+import { styled } from '@mui/material';
 
-export const authCardRootSx: SxProps<Theme> = {
-  backgroundColor: 'background.paper',
-  border: (theme) => `1px solid ${theme.app.borders.ghost}`,
-  borderRadius: (theme) => theme.app.radii.lg,
-  px: { xs: 3, sm: 4 },
-  py: { xs: 3, sm: 4 }
-};
+import { AppSurface } from '@/shared/ui';
+
+export const AuthCardRoot = styled(AppSurface)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${theme.app.borders.ghost}`,
+  borderRadius: theme.app.radii.lg,
+  paddingBlock: theme.spacing(3),
+  paddingInline: theme.spacing(3),
+  [theme.breakpoints.up('sm')]: {
+    paddingBlock: theme.spacing(4),
+    paddingInline: theme.spacing(4)
+  }
+}));

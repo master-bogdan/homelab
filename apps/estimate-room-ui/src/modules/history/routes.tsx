@@ -5,7 +5,7 @@ import { AppRoutes } from '@/shared/constants/routes';
 import { HistoryPage } from './HistoryPage';
 import { HistoryRoomPage } from './HistoryRoomPage';
 
-export const historyRoutes: RouteObject[] = [
+export const HistoryRoutes: RouteObject[] = [
   {
     path: AppRoutes.HISTORY,
     element: <HistoryPage />

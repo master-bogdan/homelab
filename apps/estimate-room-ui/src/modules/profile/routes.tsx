@@ -4,7 +4,7 @@ import { AppRoutes } from '@/shared/constants/routes';
 
 import { ProfilePage } from './ProfilePage';
 
-export const profileRoutes: RouteObject[] = [
+export const ProfileRoutes: RouteObject[] = [
   {
     path: AppRoutes.PROFILE,
     element: <ProfilePage />

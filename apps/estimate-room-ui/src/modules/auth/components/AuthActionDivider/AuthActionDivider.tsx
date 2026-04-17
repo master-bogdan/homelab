@@ -2,7 +2,7 @@ import { AppBox, AppStack, OverlineText } from '@/shared/ui';
 
 import { authActionDividerLineSx } from './styles';
 
-export interface AuthActionDividerProps {
+interface AuthActionDividerProps {
   readonly label?: string;
 }
 

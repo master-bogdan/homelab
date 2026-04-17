@@ -26,20 +26,24 @@ export const JoinRoomPage = () => {
 
     submittedTokenRef.current = token;
 
-    void dispatch(submitJoinRoom(token))
-      .unwrap()
-      .then((result) => {
-        navigate(AppRoutes.ROOM_DETAILS_PATH(result.roomId), { replace: true });
-      })
-      .catch((error: unknown) => {
+    const joinRoomRequest = dispatch(submitJoinRoom(token));
+
+    joinRoomRequest.then((result) => {
+      if (submitJoinRoom.fulfilled.match(result)) {
+        navigate(AppRoutes.ROOM_DETAILS_PATH(result.payload.roomId), { replace: true });
+        return;
+      }
+
+      if (submitJoinRoom.rejected.match(result)) {
         setError({
           message:
-            typeof error === 'string'
-              ? error
+            typeof result.payload === 'string'
+              ? result.payload
               : 'Invalid or expired room code. Please check and try again.',
           token
         });
-      });
+      }
+    });
   }, [dispatch, navigate, token]);
 
   if (!token) {

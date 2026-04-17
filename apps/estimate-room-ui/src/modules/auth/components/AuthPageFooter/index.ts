@@ -1,0 +1,1 @@
+export { AuthPageFooter } from './AuthPageFooter';

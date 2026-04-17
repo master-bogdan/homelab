@@ -119,7 +119,11 @@ export const submitCreateRoom = createAppAsyncThunk(
   'dashboard/submitCreateRoom',
   async (values: DashboardCreateRoomFormValues, { dispatch, rejectWithValue }) => {
     try {
-      return await dispatch(dashboardApi.endpoints.createRoom.initiate(values)).unwrap();
+      const result = await dispatch(dashboardApi.endpoints.createRoom.initiate(values)).unwrap();
+
+      dispatch(fetchDashboardPage());
+
+      return result;
     } catch (error) {
       return rejectWithValue(
         getDashboardErrorMessage(error, 'The room could not be created right now.')
@@ -153,9 +157,13 @@ export const submitJoinRoom = createAppAsyncThunk(
         throw new Error('This room code does not point to a valid room.');
       }
 
-      return await dispatch(
+      const result = await dispatch(
         dashboardApi.endpoints.acceptInvitation.initiate(inviteToken)
       ).unwrap();
+
+      dispatch(fetchDashboardPage());
+
+      return result;
     } catch (error) {
       return rejectWithValue(
         getDashboardErrorMessage(

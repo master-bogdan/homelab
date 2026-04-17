@@ -30,13 +30,13 @@ export const useDashboardPage = () => {
   const state = useAppSelector(selectDashboardPageState);
 
   useEffect(() => {
-    void getOrCreateDashboardPageRequest(dispatch);
+    getOrCreateDashboardPageRequest(dispatch);
   }, [dispatch]);
 
   return {
     ...state,
     retry: () => {
-      void dispatch(fetchDashboardPage());
+      dispatch(fetchDashboardPage());
     }
   };
 };

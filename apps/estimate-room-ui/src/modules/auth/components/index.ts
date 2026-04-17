@@ -1,12 +1,11 @@
 export { AuthActionDivider } from './AuthActionDivider';
-export type { AuthActionDividerProps } from './AuthActionDivider';
+export { AuthBackToSignInLink } from './AuthBackToSignInLink';
 export { AuthCard } from './AuthCard';
-export type { AuthCardProps } from './AuthCard';
-export { AuthIntro } from './AuthIntro';
-export type { AuthIntroProps } from './AuthIntro';
-export { AuthSessionBootstrap } from './AuthSessionBootstrap';
+export { AuthGithubButton } from './AuthGithubButton';
+export { AuthInlinePrompt } from './AuthInlinePrompt';
+export { AuthNarrowCard } from './AuthNarrowCard';
+export { AuthPageHeader } from './AuthPageHeader';
+export { AuthPageFooter } from './AuthPageFooter';
 export { AuthPageLayout } from './AuthPageLayout';
-export type { AuthPageLayoutProps } from './AuthPageLayout';
 export { PasswordField } from './PasswordField';
-export type { PasswordFieldProps } from './PasswordField';
 export { PasswordRecommendations } from './PasswordRecommendations';

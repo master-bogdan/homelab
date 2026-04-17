@@ -10,7 +10,7 @@ import { AppConfig } from '@/config';
 import { accessTokenStorage } from './accessTokenStorage';
 import { apiSessionExpired } from './sessionLifecycle';
 
-interface RefreshTokenResponseDto {
+interface RefreshTokenApiResponse {
   readonly access_token?: string;
 }
 
@@ -41,7 +41,7 @@ const normalizePath = (args: string | FetchArgs) => {
 const shouldRefresh = (args: string | FetchArgs) => {
   const path = normalizePath(args);
 
-  return !path.startsWith('auth/') && path !== 'oauth2/token';
+  return path === 'auth/session' || (!path.startsWith('auth/') && path !== 'oauth2/token');
 };
 
 async function refreshAccessToken(
@@ -76,7 +76,7 @@ async function refreshAccessToken(
       );
 
       if (refreshResult.data) {
-        const data = refreshResult.data as RefreshTokenResponseDto;
+        const data = refreshResult.data as RefreshTokenApiResponse;
 
         if (data.access_token) {
           accessTokenStorage.set(data.access_token);

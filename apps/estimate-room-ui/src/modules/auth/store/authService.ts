@@ -1,20 +1,20 @@
-import { AppConfig } from '@/config';
 import { api, accessTokenStorage } from '@/shared/api';
 import type { AuthUser } from '@/shared/types';
 
 import type {
   ForgotPasswordPayload,
   LoginPayload,
+  OAuthTokenApiResponse,
   OAuthTokenResponse,
-  OAuthTokenResponseDto,
   RegisterPayload,
+  ResetPasswordValidationApiResponse,
   ResetPasswordPayload,
-  ResetPasswordValidationResponseDto,
-  SessionResponseDto,
-  SessionUserResponseDto
+  SessionApiResponse,
+  SessionUserApiResponse
 } from '../types';
+import { clearSession, setSession } from './authSlice';
 
-const mapSessionUser = (user: SessionUserResponseDto | null): AuthUser | null => {
+const mapSessionUser = (user: SessionUserApiResponse | null): AuthUser | null => {
   if (!user) {
     return null;
   }
@@ -29,7 +29,7 @@ const mapSessionUser = (user: SessionUserResponseDto | null): AuthUser | null =>
   };
 };
 
-const mapRequiredUser = (response: SessionResponseDto) => {
+const mapRequiredUser = (response: SessionApiResponse) => {
   const user = response.authenticated ? mapSessionUser(response.user) : null;
 
   if (!user) {
@@ -39,7 +39,7 @@ const mapRequiredUser = (response: SessionResponseDto) => {
   return user;
 };
 
-const mapTokenResponse = (response: OAuthTokenResponseDto): OAuthTokenResponse => ({
+const mapTokenResponse = (response: OAuthTokenApiResponse): OAuthTokenResponse => ({
   accessToken: response.access_token,
   expiresIn: response.expires_in,
   idToken: response.id_token,
@@ -84,10 +84,23 @@ export const authApi = api.injectEndpoints({
       transformResponse: mapTokenResponse
     }),
     fetchSession: builder.query<AuthUser | null, void>({
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+
+          if (data) {
+            dispatch(setSession(data));
+          } else {
+            dispatch(clearSession());
+          }
+        } catch {
+          dispatch(clearSession());
+        }
+      },
       query: () => ({
         url: 'auth/session'
       }),
-      transformResponse: (response: SessionResponseDto) =>
+      transformResponse: (response: SessionApiResponse) =>
         response.authenticated ? mapSessionUser(response.user) : null
     }),
     forgotPassword: builder.mutation<{ submitted: boolean }, ForgotPasswordPayload>({
@@ -98,6 +111,15 @@ export const authApi = api.injectEndpoints({
       })
     }),
     login: builder.mutation<AuthUser, LoginPayload>({
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+
+          dispatch(setSession(data));
+        } catch {
+          return;
+        }
+      },
       query: (payload) => ({
         body: payload,
         method: 'POST',
@@ -106,11 +128,15 @@ export const authApi = api.injectEndpoints({
       transformResponse: mapRequiredUser
     }),
     logout: builder.mutation<{ loggedOut: boolean }, void>({
-      async onQueryStarted(_arg, { queryFulfilled }) {
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
         try {
           await queryFulfilled;
+        } catch {
+          // Local cleanup still runs when the server logout request fails.
         } finally {
           accessTokenStorage.clear();
+          dispatch(api.util.resetApiState());
+          dispatch(clearSession());
         }
       },
       query: () => ({
@@ -118,30 +144,16 @@ export const authApi = api.injectEndpoints({
         url: 'auth/logout'
       })
     }),
-    refreshAccessToken: builder.mutation<OAuthTokenResponse, void>({
-      async onQueryStarted(_arg, { queryFulfilled }) {
+    register: builder.mutation<AuthUser, RegisterPayload>({
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
 
-          accessTokenStorage.set(data.accessToken);
+          dispatch(setSession(data));
         } catch {
           return;
         }
       },
-      query: () => ({
-        body: new URLSearchParams({
-          client_id: AppConfig.OAUTH_CLIENT_ID.trim(),
-          grant_type: 'refresh_token'
-        }).toString(),
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        method: 'POST',
-        url: 'oauth2/token'
-      }),
-      transformResponse: mapTokenResponse
-    }),
-    register: builder.mutation<AuthUser, RegisterPayload>({
       query: (payload) => ({
         body: payload,
         method: 'POST',
@@ -150,13 +162,22 @@ export const authApi = api.injectEndpoints({
       transformResponse: mapRequiredUser
     }),
     resetPassword: builder.mutation<{ reset: boolean }, ResetPasswordPayload>({
+      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+
+          dispatch(clearSession());
+        } catch {
+          return;
+        }
+      },
       query: (payload) => ({
         body: payload,
         method: 'POST',
         url: 'auth/reset-password'
       })
     }),
-    validateResetPasswordToken: builder.query<ResetPasswordValidationResponseDto, string>({
+    validateResetPasswordToken: builder.query<ResetPasswordValidationApiResponse, string>({
       query: (token) => ({
         params: {
           token
@@ -169,8 +190,12 @@ export const authApi = api.injectEndpoints({
 });
 
 export const {
+  useFetchSessionQuery,
   useForgotPasswordMutation,
   useLazyValidateResetPasswordTokenQuery,
+  useLoginMutation,
+  useLogoutMutation,
+  useRegisterMutation,
   useResetPasswordMutation,
   useValidateResetPasswordTokenQuery
 } = authApi;

@@ -7,7 +7,7 @@ import type { AppTextFieldProps } from '@/shared/ui';
 
 import { passwordFieldToggleButtonSx } from './styles';
 
-export interface PasswordFieldProps extends Omit<AppTextFieldProps, 'type'> {
+interface PasswordFieldProps extends Omit<AppTextFieldProps, 'type'> {
   readonly hideLabel?: string;
   readonly showLabel?: string;
 }

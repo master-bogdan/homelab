@@ -6,7 +6,6 @@ export {
   readPendingAuthorizationRequest
 } from './oauthFlow';
 export {
-  getResetLinkCopy,
   isEmailAlreadyInUseError,
   isInvalidCredentialsError,
   resolveApiErrorMessage

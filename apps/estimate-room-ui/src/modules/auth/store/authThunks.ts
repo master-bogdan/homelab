@@ -1,120 +1,26 @@
-import { api, accessTokenStorage } from '@/shared/api';
+import { AppRoutes } from '@/shared/constants/routes';
 import { createAppAsyncThunk } from '@/shared/store';
 import type { AppDispatch } from '@/shared/store';
-import type { AuthUser } from '@/shared/types';
 
 import type {
-  LoginPayload,
-  PendingAuthorizationRequest,
-  RegisterPayload,
-  ResetPasswordPayload
+  CompleteOAuthCallbackPayload,
+  CompleteOAuthCallbackResult,
+  OAuthCallbackRequestResult
 } from '../types';
 import {
   clearPendingAuthorizationRequest,
-  isEmailAlreadyInUseError,
-  isInvalidCredentialsError,
   readPendingAuthorizationRequest,
   resolveApiErrorMessage
 } from '../utils';
-import { clearSession, setSession } from './authSlice';
+import {
+  clearSession,
+  setOAuthCallbackFailed,
+  setOAuthCallbackPending,
+  setOAuthCallbackSucceeded,
+  setSession
+} from './authSlice';
 import { authApi } from './authService';
-
-type CompleteOAuthCallbackPayload = {
-  readonly code: string;
-  readonly state: string;
-};
-
-type CompleteOAuthCallbackResult = {
-  readonly redirectTo: string;
-};
-
-type OAuthCallbackRequestResult = {
-  readonly pendingRequest: PendingAuthorizationRequest;
-  readonly user: AuthUser;
-};
-
-let sessionBootstrapRequest: Promise<AuthUser | null> | null = null;
-const callbackRequests = new Map<string, Promise<OAuthCallbackRequestResult>>();
-
-const createCallbackRequestKey = (code: string, state: string) => `${state}:${code}`;
-
-export const submitLogin = createAppAsyncThunk(
-  'auth/submitLogin',
-  async (payload: LoginPayload, { dispatch, rejectWithValue }) => {
-    try {
-      const user = await dispatch(authApi.endpoints.login.initiate(payload)).unwrap();
-
-      dispatch(setSession(user));
-
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        isInvalidCredentialsError(error)
-          ? 'Email or password is incorrect.'
-          : resolveApiErrorMessage(error, 'Unable to sign in right now.')
-      );
-    }
-  }
-);
-
-export const submitRegister = createAppAsyncThunk(
-  'auth/submitRegister',
-  async (payload: RegisterPayload, { dispatch, rejectWithValue }) => {
-    try {
-      const user = await dispatch(authApi.endpoints.register.initiate(payload)).unwrap();
-
-      dispatch(setSession(user));
-
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        isEmailAlreadyInUseError(error)
-          ? 'This email is already registered.'
-          : resolveApiErrorMessage(error, 'Unable to create your account right now.')
-      );
-    }
-  }
-);
-
-export const bootstrapAuthSession = createAppAsyncThunk(
-  'auth/bootstrapAuthSession',
-  async (_, { dispatch }) => {
-    if (!sessionBootstrapRequest) {
-      const request = (async () => {
-        if (!accessTokenStorage.get()) {
-          try {
-            await dispatch(authApi.endpoints.refreshAccessToken.initiate()).unwrap();
-          } catch {
-            await dispatch(authApi.endpoints.logout.initiate()).unwrap().catch(() => undefined);
-
-            return null;
-          }
-        }
-
-        return dispatch(authApi.endpoints.fetchSession.initiate(undefined, {
-          forceRefetch: true,
-          subscribe: false
-        })).unwrap();
-      })().finally(() => {
-        if (sessionBootstrapRequest === request) {
-          sessionBootstrapRequest = null;
-        }
-      });
-
-      sessionBootstrapRequest = request;
-    }
-
-    const user = await sessionBootstrapRequest;
-
-    if (user) {
-      dispatch(setSession(user));
-    } else {
-      dispatch(clearSession());
-    }
-
-    return user;
-  }
-);
+import { selectOAuthCallbackState } from './authSelectors';
 
 const finalizeOAuthCallbackRequest = async (
   dispatch: AppDispatch,
@@ -127,49 +33,70 @@ const finalizeOAuthCallbackRequest = async (
     throw new Error('Your sign-in session expired. Please try signing in again.');
   }
 
-  await dispatch(authApi.endpoints.exchangeAuthorizationCode.initiate({
+  const tokenExchangeResult = await dispatch(authApi.endpoints.exchangeAuthorizationCode.initiate({
     clientId: pendingRequest.clientId,
     code,
     codeVerifier: pendingRequest.codeVerifier,
     redirectUri: pendingRequest.redirectUri
-  })).unwrap();
+  }));
 
-  const user = await dispatch(authApi.endpoints.fetchSession.initiate(undefined, {
+  if (tokenExchangeResult.error) {
+    throw tokenExchangeResult.error;
+  }
+
+  const sessionResult = await dispatch(authApi.endpoints.fetchSession.initiate(undefined, {
     forceRefetch: true,
     subscribe: false
-  })).unwrap();
+  }));
 
-  if (!user) {
+  if (sessionResult.error) {
+    throw sessionResult.error;
+  }
+
+  if (!sessionResult.data) {
     throw new Error('Sign-in completed, but the session could not be restored.');
   }
 
-  return { pendingRequest, user };
+  return {
+    pendingRequest,
+    user: sessionResult.data
+  };
 };
 
 export const completeOAuthCallback = createAppAsyncThunk(
   'auth/completeOAuthCallback',
   async (
     { code, state }: CompleteOAuthCallbackPayload,
-    { dispatch, rejectWithValue }
+    { dispatch, getState, rejectWithValue }
   ): Promise<CompleteOAuthCallbackResult | ReturnType<typeof rejectWithValue>> => {
+    const requestKey = `${state}:${code}`;
+    const callbackState = selectOAuthCallbackState(getState());
+
+    if (callbackState.status === 'succeeded' && callbackState.requestKey === requestKey) {
+      return {
+        redirectTo: callbackState.redirectTo ?? AppRoutes.DASHBOARD
+      };
+    }
+
+    if (callbackState.status === 'pending' && callbackState.requestKey === requestKey) {
+      return rejectWithValue('Sign-in is already being completed.');
+    }
+
+    dispatch(setOAuthCallbackPending(requestKey));
+
     try {
-      const requestKey = createCallbackRequestKey(code, state);
-      const inFlightRequest = callbackRequests.get(requestKey);
-
-      if (!inFlightRequest) {
-        const request = finalizeOAuthCallbackRequest(dispatch, code, state).finally(() => {
-          if (callbackRequests.get(requestKey) === request) {
-            callbackRequests.delete(requestKey);
-          }
-        });
-
-        callbackRequests.set(requestKey, request);
-      }
-
-      const { pendingRequest, user } = await callbackRequests.get(requestKey)!;
+      const { pendingRequest, user } = await finalizeOAuthCallbackRequest(
+        dispatch,
+        code,
+        state
+      );
 
       dispatch(setSession(user));
       clearPendingAuthorizationRequest();
+      dispatch(setOAuthCallbackSucceeded({
+        redirectTo: pendingRequest.redirectTo,
+        requestKey
+      }));
 
       return {
         redirectTo: pendingRequest.redirectTo
@@ -178,40 +105,14 @@ export const completeOAuthCallback = createAppAsyncThunk(
       clearPendingAuthorizationRequest();
       dispatch(clearSession());
 
-      return rejectWithValue(
-        resolveApiErrorMessage(error, 'Unable to complete sign-in right now.')
+      const message = resolveApiErrorMessage(
+        error,
+        'Unable to complete sign-in right now.'
       );
-    }
-  }
-);
 
-export const submitLogout = createAppAsyncThunk(
-  'auth/submitLogout',
-  async (_, { dispatch }) => {
-    try {
-      await dispatch(authApi.endpoints.logout.initiate()).unwrap();
-    } finally {
-      dispatch(api.util.resetApiState());
-      dispatch(clearSession());
-    }
+      dispatch(setOAuthCallbackFailed(message));
 
-    return { loggedOut: true };
-  }
-);
-
-export const submitResetPassword = createAppAsyncThunk(
-  'auth/submitResetPassword',
-  async (payload: ResetPasswordPayload, { dispatch, rejectWithValue }) => {
-    try {
-      const result = await dispatch(authApi.endpoints.resetPassword.initiate(payload)).unwrap();
-
-      dispatch(clearSession());
-
-      return result;
-    } catch (error) {
-      return rejectWithValue(
-        resolveApiErrorMessage(error, 'Unable to reset your password right now.')
-      );
+      return rejectWithValue(message);
     }
   }
 );

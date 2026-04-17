@@ -5,7 +5,7 @@ import { AppRoutes } from '@/shared/constants/routes';
 import { DashboardPage } from './DashboardPage';
 import { JoinRoomPage } from './JoinRoomPage';
 
-export const dashboardRoutes: RouteObject[] = [
+export const DashboardRoutes: RouteObject[] = [
   {
     path: AppRoutes.DASHBOARD,
     element: <DashboardPage />

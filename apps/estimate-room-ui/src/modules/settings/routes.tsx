@@ -4,7 +4,7 @@ import { AppRoutes } from '@/shared/constants/routes';
 
 import { SettingsPage } from './SettingsPage';
 
-export const settingsRoutes: RouteObject[] = [
+export const SettingsRoutes: RouteObject[] = [
   {
     path: AppRoutes.SETTINGS,
     element: <SettingsPage />

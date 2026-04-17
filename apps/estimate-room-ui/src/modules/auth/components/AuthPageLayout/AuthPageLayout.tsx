@@ -20,7 +20,7 @@ import {
   getAuthPageLayoutBackdropSx
 } from './styles';
 
-export interface AuthPageLayoutProps extends PropsWithChildren {
+interface AuthPageLayoutProps extends PropsWithChildren {
   readonly pattern?: AuthPageLayoutPattern;
 }
 

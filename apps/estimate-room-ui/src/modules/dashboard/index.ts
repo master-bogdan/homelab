@@ -1,4 +1,4 @@
-export { dashboardRoutes } from './routes';
+export { DashboardRoutes } from './routes';
 export { DashboardPage } from './DashboardPage';
 export { JoinRoomPage } from './JoinRoomPage';
 export { DashboardDialogs } from './components';

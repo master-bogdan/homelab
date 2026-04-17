@@ -5,7 +5,8 @@ import { AppBox, AppStack, AppTypography, OverlineText } from '@/shared/ui';
 
 import {
   passwordRecommendationsGridSx,
-  passwordRecommendationsRootSx
+  passwordRecommendationsRootSx,
+  passwordRecommendationsTitleSx
 } from './styles';
 
 const getRecommendations = (password: string) => [
@@ -27,7 +28,28 @@ const getRecommendations = (password: string) => [
   }
 ];
 
-export interface PasswordRecommendationsProps {
+interface PasswordRecommendationItemProps {
+  readonly isMet: boolean;
+  readonly label: string;
+}
+
+const PasswordRecommendationItem = ({
+  isMet,
+  label
+}: PasswordRecommendationItemProps) => {
+  const Icon = isMet ? CheckCircleRoundedIcon : RadioButtonUncheckedRoundedIcon;
+
+  return (
+    <AppStack alignItems="center" direction="row" spacing={1}>
+      <Icon color={isMet ? 'primary' : 'disabled'} fontSize="small" />
+      <AppTypography color="text.secondary" variant="caption">
+        {label}
+      </AppTypography>
+    </AppStack>
+  );
+};
+
+interface PasswordRecommendationsProps {
   readonly password: string;
 }
 
@@ -38,30 +60,15 @@ export const PasswordRecommendations = ({
 
   return (
     <AppBox sx={passwordRecommendationsRootSx}>
-      <OverlineText sx={{ mb: 1.5 }}>Recommendations</OverlineText>
+      <OverlineText sx={passwordRecommendationsTitleSx}>Recommendations</OverlineText>
       <AppBox sx={passwordRecommendationsGridSx}>
-        {recommendations.map((recommendation) => {
-          const Icon = recommendation.isMet
-            ? CheckCircleRoundedIcon
-            : RadioButtonUncheckedRoundedIcon;
-
-          return (
-            <AppStack
-              key={recommendation.label}
-              alignItems="center"
-              direction="row"
-              spacing={1}
-            >
-              <Icon
-                color={recommendation.isMet ? 'primary' : 'disabled'}
-                fontSize="small"
-              />
-              <AppTypography color="text.secondary" variant="caption">
-                {recommendation.label}
-              </AppTypography>
-            </AppStack>
-          );
-        })}
+        {recommendations.map((recommendation) => (
+          <PasswordRecommendationItem
+            key={recommendation.label}
+            isMet={recommendation.isMet}
+            label={recommendation.label}
+          />
+        ))}
       </AppBox>
     </AppBox>
   );

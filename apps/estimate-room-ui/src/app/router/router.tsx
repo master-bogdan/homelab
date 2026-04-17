@@ -1,13 +1,13 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 
 import { AuthLayout, DashboardLayout } from '@/app/layouts';
-import { authRoutes } from '@/modules/auth';
-import { dashboardRoutes } from '@/modules/dashboard';
-import { historyRoutes } from '@/modules/history';
-import { profileRoutes } from '@/modules/profile';
-import { roomsRoutes } from '@/modules/rooms';
-import { settingsRoutes } from '@/modules/settings';
-import { teamsRoutes } from '@/modules/teams';
+import { AuthRoutes } from '@/modules/auth';
+import { DashboardRoutes } from '@/modules/dashboard';
+import { HistoryRoutes } from '@/modules/history';
+import { ProfileRoutes } from '@/modules/profile';
+import { RoomsRoutes } from '@/modules/rooms';
+import { SettingsRoutes } from '@/modules/settings';
+import { TeamsRoutes } from '@/modules/teams';
 import { AppRoutes } from '@/shared/constants/routes';
 
 import { NotFoundPage } from './NotFoundPage';
@@ -19,17 +19,17 @@ export const router = createBrowserRouter([
   },
   {
     element: <AuthLayout />,
-    children: authRoutes
+    children: AuthRoutes
   },
   {
     element: <DashboardLayout />,
     children: [
-      ...dashboardRoutes,
-      ...roomsRoutes,
-      ...historyRoutes,
-      ...teamsRoutes,
-      ...profileRoutes,
-      ...settingsRoutes
+      ...DashboardRoutes,
+      ...RoomsRoutes,
+      ...HistoryRoutes,
+      ...TeamsRoutes,
+      ...ProfileRoutes,
+      ...SettingsRoutes
     ]
   },
   {

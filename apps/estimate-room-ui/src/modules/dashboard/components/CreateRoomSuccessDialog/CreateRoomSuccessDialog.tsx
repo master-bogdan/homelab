@@ -40,13 +40,21 @@ export const CreateRoomSuccessDialog = ({
     return null;
   }
 
-  const handleCopy = async (value: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopiedValue(value);
-    } catch {
-      setCopiedValue(null);
-    }
+  const handleCopy = (value: string) => {
+    navigator.clipboard
+      .writeText(value)
+      .then(() => {
+        setCopiedValue(value);
+      })
+      .catch(() => {
+        setCopiedValue(null);
+      });
+  };
+  const handleCopyRoomCode = () => {
+    handleCopy(result.roomCode);
+  };
+  const handleCopyInviteLink = () => {
+    handleCopy(result.inviteLink);
   };
 
   return (
@@ -96,9 +104,7 @@ export const CreateRoomSuccessDialog = ({
               </AppTypography>
               <AppIconButton
                 aria-label="Copy room code"
-                onClick={() => {
-                  void handleCopy(result.roomCode);
-                }}
+                onClick={handleCopyRoomCode}
                 size="small"
                 sx={createRoomSuccessCopyButtonSx}
               >
@@ -122,9 +128,7 @@ export const CreateRoomSuccessDialog = ({
             </AppTypography>
             <AppIconButton
               aria-label="Copy shareable link"
-              onClick={() => {
-                void handleCopy(result.inviteLink);
-              }}
+              onClick={handleCopyInviteLink}
               size="small"
               sx={createRoomSuccessCopyButtonSx}
             >

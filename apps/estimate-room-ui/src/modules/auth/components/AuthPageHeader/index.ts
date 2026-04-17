@@ -1,0 +1,1 @@
+export { AuthPageHeader } from './AuthPageHeader';

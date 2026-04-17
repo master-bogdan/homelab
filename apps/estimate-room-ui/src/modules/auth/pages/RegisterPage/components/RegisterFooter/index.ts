@@ -1,0 +1,1 @@
+export { RegisterFooter } from './RegisterFooter';

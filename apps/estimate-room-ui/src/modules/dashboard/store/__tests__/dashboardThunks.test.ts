@@ -3,7 +3,7 @@ import { createTestStore } from '@/test/test-utils';
 import { DASHBOARD_ROOM_TASK_STATUSES } from '../../constants';
 import { fetchDashboardPage, submitCreateRoom, submitJoinRoom } from '../dashboardThunks';
 
-const createRoomDto = {
+const createRoomApiResponse = {
   adminUserId: 'user-1',
   code: '01HRXGQW4QK8M3C1A4Q0R2D8TM',
   createdAt: '2026-04-07T10:00:00.000Z',
@@ -69,6 +69,28 @@ const createJsonResponse = (payload: unknown, status = 200) =>
     },
     status
   });
+
+const mockDashboardPageRefresh = (fetchMock: ReturnType<typeof vi.fn>) => {
+  fetchMock
+    .mockResolvedValueOnce(createJsonResponse({
+      items: [],
+      page: 1,
+      pageSize: 20,
+      total: 0
+    }))
+    .mockResolvedValueOnce(createJsonResponse([]))
+    .mockResolvedValueOnce(createJsonResponse({
+      achievements: [],
+      stats: {
+        level: 1,
+        nextLevelXp: 100,
+        sessionsAdmined: 0,
+        sessionsParticipated: 0,
+        tasksEstimated: 0,
+        xp: 0
+      }
+    }));
+};
 
 describe('dashboardThunks', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -146,7 +168,7 @@ describe('dashboardThunks', () => {
           xp: 24
         }
       }))
-      .mockResolvedValueOnce(createJsonResponse(createRoomDto));
+      .mockResolvedValueOnce(createJsonResponse(createRoomApiResponse));
 
     const store = createTestStore();
 
@@ -208,7 +230,7 @@ describe('dashboardThunks', () => {
   it('maps the create-room response into the success dialog result', async () => {
     fetchMock.mockResolvedValueOnce(createJsonResponse({
       inviteToken: 'fallback-token-1',
-      room: createRoomDto,
+      room: createRoomApiResponse,
       shareLink: {
         acceptedAt: null,
         createdAt: '2026-04-07T10:00:00.000Z',
@@ -233,6 +255,7 @@ describe('dashboardThunks', () => {
         }
       ]
     }));
+    mockDashboardPageRefresh(fetchMock);
 
     const store = createTestStore();
 
@@ -254,8 +277,9 @@ describe('dashboardThunks', () => {
   it('falls back to inviteToken when no share link object is returned', async () => {
     fetchMock.mockResolvedValueOnce(createJsonResponse({
       inviteToken: 'fallback-token-1',
-      room: createRoomDto
+      room: createRoomApiResponse
     }));
+    mockDashboardPageRefresh(fetchMock);
 
     const store = createTestStore();
 
@@ -290,9 +314,10 @@ describe('dashboardThunks', () => {
       updatedAt: '2026-04-07T10:00:00.000Z'
     }));
     fetchMock.mockResolvedValueOnce(createJsonResponse({
-      participant: createRoomDto.participants[0],
-      room: createRoomDto
+      participant: createRoomApiResponse.participants[0],
+      room: createRoomApiResponse
     }));
+    mockDashboardPageRefresh(fetchMock);
 
     const store = createTestStore();
 
