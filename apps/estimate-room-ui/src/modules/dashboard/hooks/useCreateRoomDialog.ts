@@ -11,20 +11,13 @@ import {
 } from '@/modules/system/store';
 import { AppRoutes } from '@/app/router/routePaths';
 
+import { DashboardCreateRoomDefaultValues } from '../constants';
 import {
   resetCreateRoomDialogState,
   selectCreateRoomDialogState,
   submitCreateRoom
 } from '../store';
 import type { DashboardCreateRoomFormValues } from '../types';
-
-const defaultValues: DashboardCreateRoomFormValues = {
-  createShareLink: true,
-  deckKey: 'fibonacci',
-  inviteEmails: '',
-  inviteTeamId: '',
-  name: ''
-};
 
 export const useCreateRoomDialog = () => {
   const dispatch = useAppDispatch();
@@ -38,7 +31,7 @@ export const useCreateRoomDialog = () => {
     teamOptions
   } = useAppSelector(selectCreateRoomDialogState);
   const form = useForm<DashboardCreateRoomFormValues>({
-    defaultValues,
+    defaultValues: DashboardCreateRoomDefaultValues,
     mode: 'onChange'
   });
   const result = successPayload?.result ?? null;
@@ -48,14 +41,14 @@ export const useCreateRoomDialog = () => {
       return;
     }
 
-    form.reset(defaultValues);
+    form.reset(DashboardCreateRoomDefaultValues);
     form.clearErrors();
   }, [form, isOpen]);
 
   const close = () => {
     dispatch(resetCreateRoomDialogState());
     dispatch(closeDialog('dashboardCreateRoom'));
-    form.reset(defaultValues);
+    form.reset(DashboardCreateRoomDefaultValues);
     form.clearErrors();
   };
 

@@ -15,7 +15,11 @@ import {
 } from '@/shared/components';
 
 import type { DashboardSession } from '../../types';
-import { formatRelativeTime, formatStatusLabel } from '../../utils';
+import {
+  formatRelativeTime,
+  formatStatusLabel,
+  isActiveDashboardRoomStatus
+} from '../../utils';
 
 import {
   recentRoomsCardActionLinkSx,
@@ -26,7 +30,7 @@ import {
 } from './styles';
 
 const getRoomRoute = (room: DashboardSession) =>
-  room.status === 'ACTIVE'
+  isActiveDashboardRoomStatus(room.status)
     ? AppRoutes.ROOM_DETAILS_PATH(room.id)
     : AppRoutes.HISTORY_ROOM_PATH(room.id);
 
@@ -65,45 +69,49 @@ export const RecentRoomsCard = ({ onCreateRoom, rooms }: RecentRoomsCardProps) =
         />
       ) : (
         <AppStack spacing={0.5}>
-          {rooms.map((room) => (
-            <AppBox
-              component={RouterLink}
-              key={`${room.id}-${room.lastActivityAt}`}
-              sx={recentRoomsCardItemLinkSx}
-              to={getRoomRoute(room)}
-            >
-              <AppStack alignItems="center" direction="row" spacing={1.5}>
-                <AppSurface sx={recentRoomsCardItemIconSx(room.status === 'ACTIVE')}>
-                  {room.status === 'ACTIVE' ? (
-                    <MeetingRoomRoundedIcon fontSize="small" />
-                  ) : (
-                    <NoteAltRoundedIcon fontSize="small" />
-                  )}
-                </AppSurface>
-                <AppStack spacing={0.25}>
-                  <AppTypography variant="subtitle2">{room.name}</AppTypography>
+          {rooms.map((room) => {
+            const isActive = isActiveDashboardRoomStatus(room.status);
+
+            return (
+              <AppBox
+                component={RouterLink}
+                key={`${room.id}-${room.lastActivityAt}`}
+                sx={recentRoomsCardItemLinkSx}
+                to={getRoomRoute(room)}
+              >
+                <AppStack alignItems="center" direction="row" spacing={1.5}>
+                  <AppSurface sx={recentRoomsCardItemIconSx(isActive)}>
+                    {isActive ? (
+                      <MeetingRoomRoundedIcon fontSize="small" />
+                    ) : (
+                      <NoteAltRoundedIcon fontSize="small" />
+                    )}
+                  </AppSurface>
+                  <AppStack spacing={0.25}>
+                    <AppTypography variant="subtitle2">{room.name}</AppTypography>
+                    <AppTypography color="text.secondary" variant="caption">
+                      Modified {formatRelativeTime(room.lastActivityAt)}
+                    </AppTypography>
+                  </AppStack>
+                </AppStack>
+                <AppStack alignItems="flex-end" spacing={0.75}>
+                  <AppChip
+                    color={isActive ? 'success' : 'default'}
+                    label={formatStatusLabel(room.status)}
+                    size="small"
+                    variant={isActive ? 'filled' : 'outlined'}
+                  />
                   <AppTypography color="text.secondary" variant="caption">
-                    Modified {formatRelativeTime(room.lastActivityAt)}
+                    {room.participantsCount} participants
+                  </AppTypography>
+                  <AppTypography color="primary.main" variant="caption">
+                    Open
+                    <ArrowForwardRoundedIcon fontSize="inherit" sx={recentRoomsCardArrowSx} />
                   </AppTypography>
                 </AppStack>
-              </AppStack>
-              <AppStack alignItems="flex-end" spacing={0.75}>
-                <AppChip
-                  color={room.status === 'ACTIVE' ? 'success' : 'default'}
-                  label={formatStatusLabel(room.status)}
-                  size="small"
-                  variant={room.status === 'ACTIVE' ? 'filled' : 'outlined'}
-                />
-                <AppTypography color="text.secondary" variant="caption">
-                  {room.participantsCount} participants
-                </AppTypography>
-                <AppTypography color="primary.main" variant="caption">
-                  Open
-                  <ArrowForwardRoundedIcon fontSize="inherit" sx={recentRoomsCardArrowSx} />
-                </AppTypography>
-              </AppStack>
-            </AppBox>
-          ))}
+              </AppBox>
+            );
+          })}
         </AppStack>
       )}
     </AppSurface>

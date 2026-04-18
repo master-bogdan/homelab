@@ -1,1 +1,4 @@
-export { AuthBackToSignInLink } from './AuthBackToSignInLink';
+export {
+  AuthBackToSignInLink,
+  AuthBackToSignInLinkPlacements
+} from './AuthBackToSignInLink';

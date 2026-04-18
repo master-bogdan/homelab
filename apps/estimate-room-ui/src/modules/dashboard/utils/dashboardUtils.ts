@@ -6,6 +6,7 @@ import type {
   DashboardDeckPresetKey,
   DashboardSessionStatus
 } from '../types';
+import { isActiveDashboardRoomStatus } from './roomStatus';
 
 type RtkQueryError = {
   readonly data?: unknown;
@@ -224,7 +225,7 @@ export const getInitials = (value: string) =>
     .toUpperCase();
 
 export const getSessionDestinationLabel = (status: DashboardSessionStatus) =>
-  status === 'ACTIVE' ? 'Open room' : 'Review summary';
+  isActiveDashboardRoomStatus(status) ? 'Open room' : 'Review summary';
 
 export const getArchitectLevelLabel = (level: number) => `Level ${level} Architect`;
 

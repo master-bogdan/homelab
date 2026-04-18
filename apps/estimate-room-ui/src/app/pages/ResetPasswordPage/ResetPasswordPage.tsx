@@ -7,6 +7,7 @@ import {
   ResetPasswordInvalidState,
   ResetPasswordValidatingState
 } from '@/modules/auth/components';
+import { ResetPasswordPageStates } from '@/modules/auth';
 import { useResetPasswordPage } from '@/modules/auth/hooks';
 
 export const ResetPasswordPage = () => {
@@ -19,7 +20,7 @@ export const ResetPasswordPage = () => {
     password
   } = useResetPasswordPage();
 
-  if (pageState === 'invalid') {
+  if (pageState === ResetPasswordPageStates.INVALID) {
     return (
       <ResetPasswordInvalidState
         description={invalidLinkCopy.description}
@@ -33,10 +34,14 @@ export const ResetPasswordPage = () => {
     <AuthPageLayout>
       <AuthPageHeader
         description="Create a strong new password for your EstimateRoom account."
-        title={pageState === 'validating' ? 'Validating Link' : 'Set New Password'}
+        title={
+          pageState === ResetPasswordPageStates.VALIDATING
+            ? 'Validating Link'
+            : 'Set New Password'
+        }
       />
       <AuthCard>
-        {pageState === 'validating' ? (
+        {pageState === ResetPasswordPageStates.VALIDATING ? (
           <ResetPasswordValidatingState />
         ) : (
           <ResetPasswordForm form={form} onSubmit={onSubmit} password={password} />

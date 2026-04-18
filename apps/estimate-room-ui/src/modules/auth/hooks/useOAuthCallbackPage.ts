@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 
+import { AuthRequestStatuses } from '../constants';
 import { clearSession, completeOAuthCallback, selectOAuthCallbackState } from '../store';
 import { resolveApiErrorMessage } from '../utils';
 
@@ -15,7 +16,7 @@ const getOAuthCallbackErrorMessage = (
     return 'Your sign-in session expired. Please try signing in again.';
   }
 
-  if (status !== 'failed') {
+  if (status !== AuthRequestStatuses.FAILED) {
     return null;
   }
 
@@ -45,7 +46,7 @@ export const useOAuthCallbackPage = () => {
       return;
     }
 
-    if (oauthCallback.status !== 'idle') {
+    if (oauthCallback.status !== AuthRequestStatuses.IDLE) {
       return;
     }
 
@@ -62,7 +63,10 @@ export const useOAuthCallbackPage = () => {
   ]);
 
   useEffect(() => {
-    if (oauthCallback.status !== 'succeeded' || !oauthCallback.redirectTo) {
+    if (
+      oauthCallback.status !== AuthRequestStatuses.SUCCEEDED ||
+      !oauthCallback.redirectTo
+    ) {
       return;
     }
 

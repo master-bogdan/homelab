@@ -10,6 +10,7 @@ import {
   RecentRoomsCard,
   TeamsCard
 } from '@/modules/dashboard/components';
+import { DashboardLoadStatuses } from '@/modules/dashboard';
 import { useDashboardActions, useDashboardPage } from '@/modules/dashboard/hooks';
 import {
   dashboardPageActiveGridSx,
@@ -23,7 +24,7 @@ export const DashboardPage = () => {
   const { openCreateRoom } = useDashboardActions();
   const { data, errorMessage, retry, status } = useDashboardPage();
 
-  if (status === 'loading') {
+  if (status === DashboardLoadStatuses.LOADING) {
     return (
       <AppSurface sx={dashboardPageStateCardSx}>
         <AppPageState
@@ -35,7 +36,7 @@ export const DashboardPage = () => {
     );
   }
 
-  if (status === 'error' || !data) {
+  if (status === DashboardLoadStatuses.ERROR || !data) {
     return (
       <AppSurface sx={dashboardPageStateCardSx}>
         <AppPageState

@@ -1,4 +1,9 @@
 import { renderWithProviders, screen } from '@/test/test-utils';
+import {
+  DashboardLoadStatuses,
+  DashboardRoomStatuses,
+  DashboardRoomTaskStatuses
+} from '@/modules/dashboard';
 import { useDashboardActions, useDashboardPage } from '@/modules/dashboard/hooks';
 import type { DashboardPageData } from '@/modules/dashboard/types';
 
@@ -44,7 +49,7 @@ describe('DashboardPage', () => {
       data: null,
       errorMessage: null,
       retry: vi.fn(),
-      status: 'loading'
+      status: DashboardLoadStatuses.LOADING
     });
 
     renderWithProviders(<DashboardPage />);
@@ -59,7 +64,7 @@ describe('DashboardPage', () => {
       data: null,
       errorMessage: 'Backend unavailable.',
       retry,
-      status: 'error'
+      status: DashboardLoadStatuses.ERROR
     });
 
     renderWithProviders(<DashboardPage />);
@@ -79,7 +84,7 @@ describe('DashboardPage', () => {
       data: createDashboardData(),
       errorMessage: null,
       retry: vi.fn(),
-      status: 'ready'
+      status: DashboardLoadStatuses.READY
     });
 
     renderWithProviders(<DashboardPage />);
@@ -102,7 +107,7 @@ describe('DashboardPage', () => {
             name: 'Core Auth Refactor',
             participantsCount: 5,
             role: 'ADMIN',
-            status: 'ACTIVE',
+            status: DashboardRoomStatuses.ACTIVE,
             tasksCount: 3,
             teamId: null
           }
@@ -118,7 +123,7 @@ describe('DashboardPage', () => {
             name: 'Core Auth Refactor',
             participantsCount: 5,
             role: 'ADMIN',
-            status: 'ACTIVE',
+            status: DashboardRoomStatuses.ACTIVE,
             tasksCount: 3,
             teamId: null
           }
@@ -135,7 +140,7 @@ describe('DashboardPage', () => {
       }),
       errorMessage: null,
       retry: vi.fn(),
-      status: 'ready'
+      status: DashboardLoadStatuses.READY
     });
 
     renderWithProviders(<DashboardPage />);
@@ -150,7 +155,7 @@ describe('DashboardPage', () => {
       data: createDashboardData({
         activeRoom: {
           code: '01HRXGQW4QK8M3C1A4Q0R2D8TM',
-          currentTaskStatus: 'VOTING',
+          currentTaskStatus: DashboardRoomTaskStatuses.VOTING,
           currentTaskTitle: 'Kafka Event Bus Implementation',
           estimatedTasksCount: 3,
           id: 'room-3',
@@ -164,7 +169,7 @@ describe('DashboardPage', () => {
               role: 'ADMIN'
             }
           ],
-          status: 'ACTIVE',
+          status: DashboardRoomStatuses.ACTIVE,
           tasksCount: 5,
           teamId: null
         },
@@ -179,7 +184,7 @@ describe('DashboardPage', () => {
             name: 'API Gateway Logic',
             participantsCount: 3,
             role: 'PARTICIPANT',
-            status: 'FINISHED',
+            status: DashboardRoomStatuses.FINISHED,
             tasksCount: 2,
             teamId: null
           }
@@ -188,7 +193,7 @@ describe('DashboardPage', () => {
       }),
       errorMessage: null,
       retry: vi.fn(),
-      status: 'ready'
+      status: DashboardLoadStatuses.READY
     });
 
     renderWithProviders(<DashboardPage />);

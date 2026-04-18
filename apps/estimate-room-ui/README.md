@@ -76,6 +76,7 @@ src/
 - `shared/*` owns generic reusable primitives only.
 - RTK Query endpoint injection lives in module `api` folders.
 - WebSocket client and transport types live in `shared/ws`.
+- Behavior-driving status/state/placement values should use named PascalCase constant objects with uppercase keys, not inline magic strings.
 - Redux selectors, slices, thunks, and store metadata live in module `store` folders.
 - App-typed Redux hooks live in `shared/hooks`.
 - App Redux types live in `shared/types/store.ts`.

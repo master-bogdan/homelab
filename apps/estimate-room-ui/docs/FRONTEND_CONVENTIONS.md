@@ -79,6 +79,18 @@ Use module folders for domain ownership:
 
 Do not export every internal utility by default. Export only what outside code intentionally consumes.
 
+## Constants
+
+Use named constants for repeated or behavior-driving string values. Do not compare page, hook, or component state against magic strings inline.
+
+- Constant objects use PascalCase plural names, such as `DashboardLoadStatuses`, `ResetPasswordPageStates`, or `AuthBackToSignInLinkPlacements`.
+- Constant object keys are uppercase, such as `LOADING`, `INVALID`, or `CENTERED`.
+- Constant object values may remain API/UI string values, such as `'loading'`, `'invalid'`, or `'centered'`.
+- Derive union types from the constant object instead of repeating literal unions.
+- Module-wide domain constants live in `modules/<module>/constants`.
+- Component-only constants may live beside the component when they are not meaningful outside that component.
+- Export constants through a module or component public API only when outside callers need them.
+
 ## Shared
 
 Use `shared` only for generic, cross-domain code. Do not move domain models or business rules to shared.

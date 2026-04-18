@@ -6,82 +6,71 @@ type RtkQueryError = {
   readonly status: number | string;
 };
 
+type ErrorPayload = {
+  readonly detail?: unknown;
+  readonly message?: unknown;
+  readonly title?: unknown;
+};
+
+const ErrorMessageKeys = ['detail', 'message', 'title'] as const;
+
+const isRecord = (value: unknown): value is Record<PropertyKey, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const hasStatus = (value: unknown): value is { readonly status: unknown } =>
+  isRecord(value) && 'status' in value;
+
 const isApiError = (error: unknown): error is ApiError =>
-  typeof error === 'object' &&
-  error !== null &&
-  'status' in error &&
-  typeof (error as { status?: unknown }).status === 'number';
+  hasStatus(error) && typeof error.status === 'number';
 
 const isRtkQueryError = (error: unknown): error is RtkQueryError =>
-  typeof error === 'object' &&
-  error !== null &&
-  'status' in error &&
-  (typeof (error as { status?: unknown }).status === 'number' ||
-    typeof (error as { status?: unknown }).status === 'string');
+  hasStatus(error) &&
+  (typeof error.status === 'string' || 'data' in error || 'error' in error);
 
 const normalizeErrorText = (value: string) => value.trim().toLowerCase();
 
-const extractRtkQueryMessage = (error: RtkQueryError) => {
-  if (
-    error.data &&
-    typeof error.data === 'object' &&
-    'detail' in error.data &&
-    typeof (error.data as { detail?: unknown }).detail === 'string'
-  ) {
-    return (error.data as { detail: string }).detail;
-  }
+const getPayloadMessage = (payload: ErrorPayload) => {
+  const messageKey = ErrorMessageKeys.find((key) => typeof payload[key] === 'string');
 
-  if (
-    error.data &&
-    typeof error.data === 'object' &&
-    'message' in error.data &&
-    typeof (error.data as { message?: unknown }).message === 'string'
-  ) {
-    return (error.data as { message: string }).message;
-  }
+  return messageKey ? String(payload[messageKey]) : '';
+};
 
-  if (
-    error.data &&
-    typeof error.data === 'object' &&
-    'title' in error.data &&
-    typeof (error.data as { title?: unknown }).title === 'string'
-  ) {
-    return (error.data as { title: string }).title;
+const getApiErrorMessage = (error: ApiError) => getPayloadMessage(error);
+
+const getRtkQueryErrorMessage = (error: RtkQueryError) => {
+  if (isRecord(error.data)) {
+    return getPayloadMessage(error.data);
   }
 
   return error.error ?? '';
 };
 
-const extractErrorText = (error: unknown) => {
-  if (isApiError(error)) {
-    return normalizeErrorText(error.detail ?? error.message ?? error.title ?? '');
+const getErrorMessage = (error: unknown) => {
+  if (isRtkQueryError(error)) {
+    return getRtkQueryErrorMessage(error);
   }
 
-  if (isRtkQueryError(error)) {
-    return normalizeErrorText(extractRtkQueryMessage(error));
+  if (isApiError(error)) {
+    return getApiErrorMessage(error);
   }
 
   if (error instanceof Error) {
-    return normalizeErrorText(error.message);
+    return error.message;
   }
 
   return '';
 };
 
+const extractErrorText = (error: unknown) => {
+  const message = getErrorMessage(error);
+
+  return message ? normalizeErrorText(message) : '';
+};
+
 export const resolveApiErrorMessage = (error: unknown, fallbackMessage: string) => {
-  if (isApiError(error)) {
-    return error.detail ?? error.message ?? error.title ?? fallbackMessage;
-  }
+  const message = getErrorMessage(error);
 
-  if (isRtkQueryError(error)) {
-    return extractRtkQueryMessage(error) || fallbackMessage;
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallbackMessage;
+  return message || fallbackMessage;
 };
 
 export const isInvalidCredentialsError = (error: unknown) =>

@@ -10,18 +10,27 @@ import {
   authBackToSignInLinkSx
 } from './styles';
 
+export const AuthBackToSignInLinkPlacements = {
+  CENTERED: 'centered',
+  DEFAULT: 'default',
+  FORM: 'form'
+} as const;
+
+type AuthBackToSignInLinkPlacement =
+  (typeof AuthBackToSignInLinkPlacements)[keyof typeof AuthBackToSignInLinkPlacements];
+
 interface AuthBackToSignInLinkProps {
   readonly color?: 'primary' | 'text.secondary';
-  readonly placement?: 'default' | 'centered' | 'form';
+  readonly placement?: AuthBackToSignInLinkPlacement;
   readonly variant?: 'body2' | 'overline';
 }
 
 const getBackLinkSx = (placement: AuthBackToSignInLinkProps['placement']) => {
-  if (placement === 'centered') {
+  if (placement === AuthBackToSignInLinkPlacements.CENTERED) {
     return authBackToSignInCenteredLinkSx;
   }
 
-  if (placement === 'form') {
+  if (placement === AuthBackToSignInLinkPlacements.FORM) {
     return authBackToSignInFormLinkSx;
   }
 
@@ -30,7 +39,7 @@ const getBackLinkSx = (placement: AuthBackToSignInLinkProps['placement']) => {
 
 export const AuthBackToSignInLink = ({
   color = 'primary',
-  placement = 'default',
+  placement = AuthBackToSignInLinkPlacements.DEFAULT,
   variant = 'overline'
 }: AuthBackToSignInLinkProps) => (
   <AppLink

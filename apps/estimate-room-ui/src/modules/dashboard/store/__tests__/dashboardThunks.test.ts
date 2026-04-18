@@ -1,6 +1,9 @@
 import { createTestStore } from '@/test/test-utils';
 
-import { DASHBOARD_ROOM_TASK_STATUSES } from '../../constants';
+import {
+  DashboardRoomStatuses,
+  DashboardRoomTaskStatuses
+} from '../../constants';
 import { fetchDashboardPage, submitCreateRoom, submitJoinRoom } from '../thunks';
 
 const createRoomApiResponse = {
@@ -33,7 +36,7 @@ const createRoomApiResponse = {
     }
   ],
   roomId: 'room-1',
-  status: 'ACTIVE',
+  status: DashboardRoomStatuses.ACTIVE,
   tasks: [
     {
       createdAt: '2026-04-07T10:00:00.000Z',
@@ -41,7 +44,7 @@ const createRoomApiResponse = {
       externalKey: null,
       isActive: true,
       roomId: 'room-1',
-      status: DASHBOARD_ROOM_TASK_STATUSES.VOTING,
+      status: DashboardRoomTaskStatuses.VOTING,
       taskId: 'task-1',
       title: 'Kafka Event Bus Implementation',
       updatedAt: '2026-04-07T10:05:00.000Z'
@@ -53,7 +56,7 @@ const createRoomApiResponse = {
       finalEstimateValue: '5',
       isActive: false,
       roomId: 'room-1',
-      status: DASHBOARD_ROOM_TASK_STATUSES.ESTIMATED,
+      status: DashboardRoomTaskStatuses.ESTIMATED,
       taskId: 'task-2',
       title: 'Retry Strategy',
       updatedAt: '2026-04-07T10:05:00.000Z'
@@ -120,7 +123,7 @@ describe('dashboardThunks', () => {
             participantsCount: 4,
             role: 'ADMIN',
             roomId: 'room-1',
-            status: 'ACTIVE',
+            status: DashboardRoomStatuses.ACTIVE,
             tasksCount: 2,
             teamId: null
           },
@@ -134,7 +137,7 @@ describe('dashboardThunks', () => {
             participantsCount: 3,
             role: 'PARTICIPANT',
             roomId: 'room-2',
-            status: 'FINISHED',
+            status: DashboardRoomStatuses.FINISHED,
             tasksCount: 8,
             teamId: 'team-1'
           }
@@ -197,7 +200,7 @@ describe('dashboardThunks', () => {
             participantsCount: 4,
             role: 'ADMIN',
             roomId: 'room-1',
-            status: 'ACTIVE',
+            status: DashboardRoomStatuses.ACTIVE,
             tasksCount: 2,
             teamId: null
           }
@@ -242,7 +245,7 @@ describe('dashboardThunks', () => {
         kind: 'ROOM_LINK',
         revokedAt: null,
         roomId: 'room-1',
-        status: 'ACTIVE',
+        status: DashboardRoomStatuses.ACTIVE,
         teamId: null,
         token: 'share-token-1',
         updatedAt: '2026-04-07T10:00:00.000Z'
@@ -309,7 +312,7 @@ describe('dashboardThunks', () => {
       kind: 'ROOM_LINK',
       revokedAt: null,
       roomId: 'room-1',
-      status: 'ACTIVE',
+      status: DashboardRoomStatuses.ACTIVE,
       teamId: null,
       updatedAt: '2026-04-07T10:00:00.000Z'
     }));
@@ -341,7 +344,7 @@ describe('dashboardThunks', () => {
       kind: 'TEAM_MEMBER',
       revokedAt: null,
       roomId: null,
-      status: 'ACTIVE',
+      status: DashboardRoomStatuses.ACTIVE,
       teamId: 'team-1',
       updatedAt: '2026-04-07T10:00:00.000Z'
     }));

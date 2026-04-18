@@ -1,5 +1,8 @@
 export { AuthActionDivider } from './AuthActionDivider';
-export { AuthBackToSignInLink } from './AuthBackToSignInLink';
+export {
+  AuthBackToSignInLink,
+  AuthBackToSignInLinkPlacements
+} from './AuthBackToSignInLink';
 export { AuthCard } from './AuthCard';
 export { AuthGithubButton } from './AuthGithubButton';
 export { AuthInlinePrompt } from './AuthInlinePrompt';

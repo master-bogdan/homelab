@@ -3,7 +3,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { apiSessionExpired } from '@/shared/api/sessionLifecycle';
 import type { AuthUser } from '@/modules/auth/types';
 
-import { AuthStates } from '../constants';
+import { AuthRequestStatuses, AuthStates } from '../constants';
 import type { AuthState } from '../types';
 
 const initialState: AuthState = {
@@ -11,7 +11,7 @@ const initialState: AuthState = {
     errorMessage: null,
     redirectTo: null,
     requestKey: null,
-    status: 'idle'
+    status: AuthRequestStatuses.IDLE
   },
   status: AuthStates.UNKNOWN,
   user: null
@@ -29,13 +29,13 @@ const authSlice = createSlice({
     setOAuthCallbackFailed: (state, action: PayloadAction<string>) => {
       state.oauthCallback.errorMessage = action.payload;
       state.oauthCallback.redirectTo = null;
-      state.oauthCallback.status = 'failed';
+      state.oauthCallback.status = AuthRequestStatuses.FAILED;
     },
     setOAuthCallbackPending: (state, action: PayloadAction<string>) => {
       state.oauthCallback.errorMessage = null;
       state.oauthCallback.redirectTo = null;
       state.oauthCallback.requestKey = action.payload;
-      state.oauthCallback.status = 'pending';
+      state.oauthCallback.status = AuthRequestStatuses.PENDING;
     },
     setOAuthCallbackSucceeded: (
       state,
@@ -44,7 +44,7 @@ const authSlice = createSlice({
       state.oauthCallback.errorMessage = null;
       state.oauthCallback.redirectTo = action.payload.redirectTo;
       state.oauthCallback.requestKey = action.payload.requestKey;
-      state.oauthCallback.status = 'succeeded';
+      state.oauthCallback.status = AuthRequestStatuses.SUCCEEDED;
     },
     setSession: (state, action: PayloadAction<AuthUser>) => {
       state.status = AuthStates.AUTHENTICATED;

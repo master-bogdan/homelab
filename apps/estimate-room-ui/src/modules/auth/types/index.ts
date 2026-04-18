@@ -23,6 +23,12 @@ export type {
   PendingAuthorizationRequest
 } from './oauth';
 export type {
+  PasswordRecommendation,
+  PasswordRecommendationRule,
+  PasswordRecommendationRuleId
+} from './password';
+export type {
+  ResetPasswordPageState,
   ResetPasswordPayload,
   ResetPasswordValidationReason
 } from './resetPassword';

@@ -1,3 +1,8 @@
+export {
+  DashboardLoadStatuses,
+  DashboardRoomStatuses,
+  DashboardRoomTaskStatuses
+} from './constants';
 export { DashboardDialogs } from './components';
 export {
   useCreateRoomDialog,

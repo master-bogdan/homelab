@@ -13,3 +13,4 @@ export {
   getXpHint,
   parseInviteEmails
 } from './dashboardUtils';
+export { isActiveDashboardRoomStatus } from './roomStatus';

@@ -8,6 +8,7 @@ import type {
   DashboardState,
   DashboardView
 } from '../types';
+import { isActiveDashboardRoomStatus } from '../utils/roomStatus';
 import { DASHBOARD_STATE_KEY } from './types';
 
 type DashboardStateRoot = {
@@ -15,7 +16,7 @@ type DashboardStateRoot = {
 };
 
 export const selectActiveSession = (sessions: DashboardSession[]) =>
-  sessions.find((session) => session.status === 'ACTIVE') ?? null;
+  sessions.find((session) => isActiveDashboardRoomStatus(session.status)) ?? null;
 
 export const selectRecentRooms = (sessions: DashboardSession[], limit = 4) => {
   const uniqueSessions = new Map<string, DashboardSession>();

@@ -157,3 +157,12 @@ Env-backed runtime config lives in root `config/appConfig.ts`.
 Outside code should import module behavior from the module public API or from a deliberate public subfolder API such as `modules/auth/components`.
 
 Do not broadly export internal constants, utility functions, or transport types by default. Export only code that is intentionally consumed outside the module.
+
+## Constant Rules
+
+- Use constants instead of magic strings for behavior-driving status, state, placement, mode, and variant values.
+- Name constant objects in PascalCase plural form, for example `DashboardLoadStatuses`.
+- Use uppercase keys inside constant objects, for example `DashboardLoadStatuses.LOADING`.
+- Derive related TypeScript union types from the constant object.
+- Keep module-domain constants in `modules/<module>/constants`; keep component-only constants beside their component.
+- Export constants only when a page, another module boundary, or a component caller needs them.

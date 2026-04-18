@@ -7,7 +7,10 @@ import {
   AppTypography
 } from '@/shared/components';
 
-import { AuthBackToSignInLink } from '../AuthBackToSignInLink';
+import {
+  AuthBackToSignInLink,
+  AuthBackToSignInLinkPlacements
+} from '../AuthBackToSignInLink';
 import { AuthNarrowCard } from '../AuthNarrowCard';
 import { AuthPageLayout } from '../AuthPageLayout';
 
@@ -36,7 +39,11 @@ export const ResetPasswordInvalidState = ({
         <AppButton component={RouterLink} fullWidth to={AppRoutes.FORGOT_PASSWORD} variant="contained">
           Request New Link
         </AppButton>
-        <AuthBackToSignInLink color="text.secondary" placement="centered" variant="body2" />
+        <AuthBackToSignInLink
+          color="text.secondary"
+          placement={AuthBackToSignInLinkPlacements.CENTERED}
+          variant="body2"
+        />
       </AppStack>
     </AuthNarrowCard>
   </AuthPageLayout>

@@ -21,7 +21,7 @@ export const useGithubAuthRedirect = ({
 }: UseGithubAuthRedirectOptions) => {
   const [isGithubLoading, setIsGithubLoading] = useState(false);
 
-  const startGithubRedirect = () => {
+  const startGithubRedirect = async () => {
     if (isGithubLoading) {
       return;
     }
@@ -29,14 +29,14 @@ export const useGithubAuthRedirect = ({
     clearErrors();
     setIsGithubLoading(true);
 
-    createPendingRequest()
-      .then((pendingRequest) => {
-        window.location.assign(createGithubLoginUrl(pendingRequest.continueUrl));
-      })
-      .catch((error) => {
-        setIsGithubLoading(false);
-        setRootError(resolveApiErrorMessage(error, fallbackMessage));
-      });
+    try {
+      const pendingRequest = await createPendingRequest();
+
+      window.location.assign(createGithubLoginUrl(pendingRequest.continueUrl));
+    } catch (error) {
+      setIsGithubLoading(false);
+      setRootError(resolveApiErrorMessage(error, fallbackMessage));
+    }
   };
 
   return {

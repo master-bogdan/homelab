@@ -6,6 +6,7 @@ import type {
   DashboardPageState,
   DashboardState
 } from '../types';
+import { DashboardLoadStatuses } from '../constants';
 import {
   fetchCreateRoomTeams,
   fetchDashboardPage,
@@ -16,7 +17,7 @@ import {
 const initialPageState: DashboardPageState = {
   data: null,
   errorMessage: null,
-  status: 'loading'
+  status: DashboardLoadStatuses.LOADING
 };
 
 const initialCreateRoomState: DashboardCreateRoomState = {
@@ -52,12 +53,12 @@ const dashboardSlice = createSlice({
     builder
       .addCase(fetchDashboardPage.pending, (state) => {
         state.page.errorMessage = null;
-        state.page.status = 'loading';
+        state.page.status = DashboardLoadStatuses.LOADING;
       })
       .addCase(fetchDashboardPage.fulfilled, (state, action) => {
         state.page.data = action.payload;
         state.page.errorMessage = null;
-        state.page.status = 'ready';
+        state.page.status = DashboardLoadStatuses.READY;
       })
       .addCase(fetchDashboardPage.rejected, (state, action) => {
         state.page.data = null;
@@ -65,7 +66,7 @@ const dashboardSlice = createSlice({
           typeof action.payload === 'string'
             ? action.payload
             : 'Dashboard data could not be loaded right now.';
-        state.page.status = 'error';
+        state.page.status = DashboardLoadStatuses.ERROR;
       })
       .addCase(fetchCreateRoomTeams.pending, (state) => {
         state.createRoom.isLoadingTeams = true;

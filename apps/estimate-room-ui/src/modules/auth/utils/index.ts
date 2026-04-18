@@ -11,6 +11,7 @@ export {
   resolveApiErrorMessage
 } from './errorMessages';
 export { getResetLinkCopy } from './getResetLinkCopy';
+export { getPasswordRecommendations } from './passwordRecommendations';
 export {
   createEmailValidationRules,
   createPasswordValidationRules,

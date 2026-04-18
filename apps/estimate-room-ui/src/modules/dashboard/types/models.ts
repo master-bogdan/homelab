@@ -1,4 +1,8 @@
-import type { DashboardRoomTaskStatus, DashboardSessionStatus } from './status';
+import type {
+  DashboardRoomStatus,
+  DashboardRoomTaskStatus,
+  DashboardSessionStatus
+} from './status';
 
 export interface DashboardSession {
   readonly approxDurationSeconds: number;
@@ -55,7 +59,7 @@ export interface DashboardActiveRoom {
   readonly lastActivityAt: string;
   readonly name: string;
   readonly participants: DashboardRoomParticipant[];
-  readonly status: string;
+  readonly status: DashboardRoomStatus;
   readonly tasksCount: number;
   readonly teamId: string | null;
 }

@@ -11,7 +11,10 @@ import {
 
 import { createEmailValidationRules } from '../../utils';
 import type { ForgotPasswordFormValues } from '../../types';
-import { AuthBackToSignInLink } from '../AuthBackToSignInLink';
+import {
+  AuthBackToSignInLink,
+  AuthBackToSignInLinkPlacements
+} from '../AuthBackToSignInLink';
 
 interface ForgotPasswordFormProps {
   readonly errorMessage: string | null;
@@ -54,7 +57,7 @@ export const ForgotPasswordForm = ({
         >
           Send Reset Link
         </AppButton>
-        <AuthBackToSignInLink placement="form" />
+        <AuthBackToSignInLink placement={AuthBackToSignInLinkPlacements.FORM} />
       </AppStack>
     </AppBox>
   );

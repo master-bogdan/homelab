@@ -40,15 +40,13 @@ export const CreateRoomSuccessDialog = ({
     return null;
   }
 
-  const handleCopy = (value: string) => {
-    navigator.clipboard
-      .writeText(value)
-      .then(() => {
-        setCopiedValue(value);
-      })
-      .catch(() => {
-        setCopiedValue(null);
-      });
+  const handleCopy = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedValue(value);
+    } catch {
+      setCopiedValue(null);
+    }
   };
   const handleCopyRoomCode = () => {
     handleCopy(result.roomCode);

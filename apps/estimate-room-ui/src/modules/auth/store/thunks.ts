@@ -2,6 +2,7 @@ import { AppRoutes } from '@/app/router/routePaths';
 import { createAppAsyncThunk } from '@/shared/store';
 import type { AppDispatch } from '@/shared/types';
 
+import { AuthRequestStatuses } from '../constants';
 import type {
   CompleteOAuthCallbackPayload,
   CompleteOAuthCallbackResult,
@@ -72,13 +73,19 @@ export const completeOAuthCallback = createAppAsyncThunk(
     const requestKey = `${state}:${code}`;
     const callbackState = selectOAuthCallbackState(getState());
 
-    if (callbackState.status === 'succeeded' && callbackState.requestKey === requestKey) {
+    if (
+      callbackState.status === AuthRequestStatuses.SUCCEEDED &&
+      callbackState.requestKey === requestKey
+    ) {
       return {
         redirectTo: callbackState.redirectTo ?? AppRoutes.DASHBOARD
       };
     }
 
-    if (callbackState.status === 'pending' && callbackState.requestKey === requestKey) {
+    if (
+      callbackState.status === AuthRequestStatuses.PENDING &&
+      callbackState.requestKey === requestKey
+    ) {
       return rejectWithValue('Sign-in is already being completed.');
     }
 

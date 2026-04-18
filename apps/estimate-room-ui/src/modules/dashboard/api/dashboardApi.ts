@@ -1,6 +1,6 @@
 import { api } from '@/shared/api';
 
-import { DASHBOARD_ROOM_TASK_STATUSES } from '../constants';
+import { DashboardRoomTaskStatuses } from '../constants';
 import type {
   DashboardActiveRoom,
   DashboardCreateRoomApiResponse,
@@ -85,7 +85,7 @@ const mapActiveRoom = (room: DashboardRoomApiResponse): DashboardActiveRoom => {
     currentTaskTitle: currentTask?.title ?? null,
     estimatedTasksCount: tasks.filter(
       (task) =>
-        task.status === DASHBOARD_ROOM_TASK_STATUSES.ESTIMATED ||
+        task.status === DashboardRoomTaskStatuses.ESTIMATED ||
         task.finalEstimateValue != null
     ).length,
     id: room.roomId,

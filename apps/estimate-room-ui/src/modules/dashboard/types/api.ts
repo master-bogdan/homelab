@@ -1,5 +1,6 @@
 import type {
   DashboardInvitationKind,
+  DashboardRoomStatus,
   DashboardRoomTaskStatus,
   DashboardSessionStatus
 } from './status';
@@ -63,7 +64,7 @@ export interface DashboardRoomApiResponse {
   readonly name: string;
   readonly participants?: DashboardRoomParticipantApiResponse[];
   readonly roomId: string;
-  readonly status: string;
+  readonly status: DashboardRoomStatus;
   readonly tasks?: DashboardRoomTaskApiResponse[];
   readonly teamId?: string | null;
 }

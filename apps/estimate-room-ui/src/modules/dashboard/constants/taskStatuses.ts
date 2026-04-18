@@ -1,4 +1,4 @@
-export const DASHBOARD_ROOM_TASK_STATUSES = {
+export const DashboardRoomTaskStatuses = {
   ESTIMATED: 'ESTIMATED',
   VOTING: 'VOTING'
 } as const;

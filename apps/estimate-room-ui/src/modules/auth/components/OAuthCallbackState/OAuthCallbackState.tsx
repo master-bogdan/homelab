@@ -3,7 +3,10 @@ import { Link as RouterLink } from 'react-router-dom';
 import { AppRoutes } from '@/app/router/routePaths';
 import { AppButton, AppPageState } from '@/shared/components';
 
-import { AuthBackToSignInLink } from '../AuthBackToSignInLink';
+import {
+  AuthBackToSignInLink,
+  AuthBackToSignInLinkPlacements
+} from '../AuthBackToSignInLink';
 
 interface OAuthCallbackStateProps {
   readonly errorMessage: string | null;
@@ -21,7 +24,11 @@ export const OAuthCallbackState = ({
           <AppButton component={RouterLink} fullWidth to={AppRoutes.LOGIN} variant="contained">
             Return to Sign In
           </AppButton>
-          <AuthBackToSignInLink color="text.secondary" placement="centered" variant="body2" />
+          <AuthBackToSignInLink
+            color="text.secondary"
+            placement={AuthBackToSignInLinkPlacements.CENTERED}
+            variant="body2"
+          />
         </>
       ) : null
     }
