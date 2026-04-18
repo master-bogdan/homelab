@@ -1,4 +1,4 @@
-import type { Room } from '@/shared/types';
+import type { Room } from './room';
 
 export interface NewRoomFormValues {
   readonly height: number;
@@ -12,3 +12,5 @@ export interface RoomPageData {
   readonly room: Room | null;
   readonly roomId: string;
 }
+
+export type { Room, RoomDimensions } from './room';

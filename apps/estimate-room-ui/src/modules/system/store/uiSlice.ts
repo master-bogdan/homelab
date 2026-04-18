@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import type { ThemeMode } from '@/shared/theme';
+import type { ThemeMode } from '@/shared/types';
 
 import type { SystemUiState } from '../types';
 

@@ -5,8 +5,8 @@ export {
   enqueueNotification,
   openDialog,
   systemReducer
-} from './systemSlice';
-export { systemStateKey, systemStore } from './systemStore';
+} from './slice';
+export { systemStateKey, systemStore } from './types';
 export {
   closeSidebar,
   openSidebar,
@@ -20,5 +20,5 @@ export {
   selectIsDialogOpen,
   selectSystemNotifications,
   selectSystemState
-} from './systemSelectors';
+} from './selectors';
 export { selectIsSidebarOpen, selectSystemUiState, selectThemeMode } from './uiSelectors';

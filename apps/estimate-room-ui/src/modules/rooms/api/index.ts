@@ -1,0 +1,1 @@
+export { roomsService } from './roomsApi';

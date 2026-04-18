@@ -1,1 +1,0 @@
-export { ResetPasswordSuccessContent } from './ResetPasswordSuccessContent';

@@ -26,3 +26,8 @@ export type {
   ResetPasswordPayload,
   ResetPasswordValidationReason
 } from './resetPassword';
+export type { ForgotPasswordFormValues } from './forgotPasswordForm';
+export type { LoginFormValues } from './loginForm';
+export type { RegisterFormValues } from './registerForm';
+export type { ResetPasswordFormValues } from './resetPasswordForm';
+export type { AuthUser } from './user';

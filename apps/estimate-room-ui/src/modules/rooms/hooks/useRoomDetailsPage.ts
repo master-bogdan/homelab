@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 
 import { usePageTitle } from '@/shared/hooks';
 
-import { roomsService } from '../services/roomsService';
+import { roomsService } from '../api/roomsApi';
 
 export const useRoomDetailsPage = () => {
   const { id = '' } = useParams();

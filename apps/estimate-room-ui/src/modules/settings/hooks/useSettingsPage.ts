@@ -1,4 +1,4 @@
-import { useAppDispatch, useAppSelector } from '@/shared/store';
+import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 import { toggleThemeMode } from '@/modules/system';
 import { selectThemeMode } from '@/modules/system';
 import { AppConfig } from '@/config';

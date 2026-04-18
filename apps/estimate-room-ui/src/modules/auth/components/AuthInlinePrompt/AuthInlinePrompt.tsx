@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { AppTypography } from '@/shared/ui';
+import { AppTypography } from '@/shared/components';
 
 import { authInlinePromptSx } from './styles';
 

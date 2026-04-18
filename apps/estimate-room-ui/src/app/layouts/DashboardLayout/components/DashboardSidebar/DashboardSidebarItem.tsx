@@ -5,7 +5,7 @@ import {
   AppListItemIcon,
   AppListItemText,
   AppTypography
-} from '@/shared/ui';
+} from '@/shared/components';
 
 import type { DashboardLayoutNavigationItem } from '../../constants';
 import {

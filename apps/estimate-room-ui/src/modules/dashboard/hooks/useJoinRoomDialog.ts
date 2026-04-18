@@ -2,9 +2,9 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 
-import { useAppDispatch, useAppSelector } from '@/shared/store';
+import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 import { closeDialog, selectIsDialogOpen } from '@/modules/system/store';
-import { AppRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/app/router/routePaths';
 
 import {
   resetJoinRoomDialogState,

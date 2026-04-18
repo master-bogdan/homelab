@@ -10,7 +10,7 @@ This table is the current decision map for auth and dashboard requests.
 | Login | RTK Query mutation hook | One endpoint. Endpoint lifecycle can set session. Component owns form error display. |
 | Register | RTK Query mutation hook | One endpoint. Endpoint lifecycle can set session. Component owns form error display. |
 | Logout | RTK Query mutation hook | One endpoint. Endpoint lifecycle can clear token, reset API cache, and clear session. |
-| Forgot password | RTK Query mutation hook inside focused flow hook | One endpoint. `useForgotPasswordFlow` owns submitted email state, resend behavior, and error normalization. |
+| Forgot password | RTK Query mutation hook inside focused flow hook | One endpoint. `useForgotPasswordPage` owns submitted email state, resend behavior, and error normalization. |
 | Resend forgot password | Same focused flow hook | Same endpoint as forgot password. No separate thunk. |
 | Validate reset token | RTK Query query hook | One endpoint. Page renders query state. |
 | Reset password | RTK Query mutation hook | One endpoint. Endpoint lifecycle can clear session if needed. |
@@ -21,10 +21,10 @@ This table is the current decision map for auth and dashboard requests.
 | Flow | Owner | Reason |
 | --- | --- | --- |
 | Dashboard page load | Thunk | Composes sessions, teams, ledger, active room, errors, and view state. |
-| Create room | RTK Query mutation hook | One endpoint. UI opens success dialog from mutation result. |
+| Create room | Thunk backed by RTK Query mutation | Creates a room, refreshes dashboard page state, and lets UI open the success dialog from the thunk result. |
 | Refresh dashboard after create room | Dashboard thunk or RTK invalidation | Refresh is dashboard page state, not create-room request ownership. |
 | Join room | Thunk | Multi-step workflow: parse invite, preview invite, reject wrong kind, accept room invite. |
-| Fetch create-room teams | RTK Query query hook | One endpoint. Dialog can use query state directly. |
+| Fetch create-room teams | Thunk backed by RTK Query query | Loads team options into dashboard dialog state for the existing dialog workflow. |
 | Preview invitation only | RTK Query query hook | One endpoint if used alone. |
 
 ## Decision Checklist
@@ -54,12 +54,12 @@ Use domain names for thunks:
 
 - `fetchDashboardPage`
 - `completeOAuthCallback`
-- `joinRoomFromInvite`
+- `submitJoinRoom`
 
 Avoid transport names for thunks:
 
 - `submitLogout`
-- `submitCreateRoom`
+- `callCreateRoomEndpoint`
 - `sendForgotPassword`
 
 Those belong to RTK Query mutation hooks unless they coordinate a larger workflow.
@@ -79,6 +79,5 @@ Current auth decisions:
   validation, page state, reset form state, RTK mutation handling, and navigation.
 - `useOAuthCallbackPage`: keep. It connects router state to the
   `completeOAuthCallback` thunk and navigation.
-- `useForgotPasswordFlow`: keep. It is not a page hook and does not own form
-  setup or rendering. It owns the coherent forgot-password behavior: mutation,
+- `useForgotPasswordPage`: keep. It combines form setup, mutation submission,
   submitted email state, resend behavior, and request error normalization.

@@ -2,8 +2,8 @@ import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import { useState, type MouseEvent } from 'react';
 
-import { AppIconButton, AppInputAdornment, AppTextField } from '@/shared/ui';
-import type { AppTextFieldProps } from '@/shared/ui';
+import { AppIconButton, AppInputAdornment, AppTextField } from '@/shared/components';
+import type { AppTextFieldProps } from '@/shared/components';
 
 import { passwordFieldToggleButtonSx } from './styles';
 

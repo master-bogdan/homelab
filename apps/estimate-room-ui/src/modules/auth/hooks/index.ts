@@ -1,4 +1,9 @@
 export { useConfirmPasswordRevalidation } from './useConfirmPasswordRevalidation';
 export { useAuthContinuation } from './useAuthContinuation';
+export { useForgotPasswordPage } from './useForgotPasswordPage';
 export { useFormRootError } from './useFormRootError';
 export { useGithubAuthRedirect } from './useGithubAuthRedirect';
+export { useLoginPage } from './useLoginPage';
+export { useOAuthCallbackPage } from './useOAuthCallbackPage';
+export { useRegisterPage } from './useRegisterPage';
+export { useResetPasswordPage } from './useResetPasswordPage';

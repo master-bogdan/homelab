@@ -1,5 +1,5 @@
 import type { DashboardCreateRoomResult } from '@/modules/dashboard/types';
-import type { ThemeMode } from '@/shared/theme';
+import type { ThemeMode } from '@/shared/types';
 
 export type SystemDialogKey =
   | 'dashboardCreateRoom'

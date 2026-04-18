@@ -1,259 +1,127 @@
 # Frontend Conventions
 
-## Module Structure
+## Domain Structure
 
-Each module should keep ownership clear:
-
-```text
-module/
-  components/
-  constants/
-  hooks/
-  pages/
-  store/
-  types/
-  utils/
-  routes.tsx
-```
-
-Use `routes.tsx`, not names with extra dot notation such as `auth.routes.tsx`.
-
-Route page implementations live under `pages/`. Module root files are for
-reusable module API, not page implementation files.
-
-Use this shape for route pages:
+The app is domain-first:
 
 ```text
-module/pages/LoginPage/
-  components/
-    LoginForm/
-      LoginForm.tsx
+src/
+  app/
+    pages/
+      DashboardPage/
+        DashboardPage.tsx
+        DashboardPage.styles.ts
+        index.ts
+      LoginPage/
+        LoginPage.tsx
+        index.ts
+    router/
+      AppRouter.tsx
+      router.tsx
+      routePaths.ts
+      routes/
+        authRoutes.tsx
+        dashboardRoutes.tsx
+        index.ts
+    layouts/
+    providers/
+    guards/
+    store/
+      store.ts
       index.ts
-  hooks/
-    useLoginPage.ts
+  config/
+    appConfig.ts
     index.ts
-  styles/
+  modules/
+    <module>/
+      api/
+      store/
+      components/
+      constants/
+      types/
+      utils/
+      hooks/
+      index.ts
+  shared/
+    api/
+    ws/
+    store/
+    components/
+    constants/
+    types/
+    utils/
+    hooks/
     index.ts
-  types/
-    index.ts
-  LoginPage.tsx
-  index.ts
 ```
 
-Page rules:
+`app/pages` contains route-entry composers. Organize pages as one folder per page, with page-owned styles beside that page.
 
-- Page components own render structure and simple view wiring.
-- Page-specific business logic lives beside the page in a focused hook.
-- Page-specific UI blocks live under the page `components/` folder.
-- Page-specific components use their own folders with an `index.ts`.
-- Page-specific hooks live in the page `hooks/` folder.
-- Shared hooks live in `module/hooks` only when more than one page or feature uses them.
-- Page styles live in the page `styles/` folder.
-- Page-specific types live in the page `types/` folder.
-- Page-specific constants live in the page `constants/` folder when needed.
-- Do not dump loose `use*.ts`, `types.ts`, `styles.ts`, or constants files beside the page component.
-- Reusable module components stay in `module/components`.
+Do not group route-entry pages by module under `app/pages/auth`, `app/pages/dashboard`, or similar folders. A page is a composer and can import from any module it needs.
 
-Route arrays use PascalCase:
+Do not add module `pages` folders for route screens.
 
-```ts
-export const AuthRoutes = [...]
-export const DashboardRoutes = [...]
-```
+`app/router` owns route constants and route composition. Keep `AppRouter.tsx`, `router.tsx`, and `routePaths.ts` at the `app/router` root. Route-array files belong under `app/router/routes`.
 
-## Types Folder
+Modules do not export route arrays.
 
-`types/` is type-only.
+## Modules
 
-Allowed:
+Use module folders for domain ownership:
 
-- `type`
-- `interface`
-- type-only imports
+- `api`: RTK Query endpoint injection or module API boundary code.
+- `store`: `slice.ts`, `selectors.ts`, `types.ts`, `thunks.ts`, and `index.ts`.
+- `components`: module-specific reusable UI.
+- `constants`: module-specific runtime constants.
+- `types`: module-owned typings.
+- `utils`: module-specific helpers.
+- `hooks`: reusable domain/page orchestration hooks.
+- `index.ts`: public module API only.
 
-Not allowed:
+Do not export every internal utility by default. Export only what outside code intentionally consumes.
 
-- `const`
-- runtime values
-- `as const`
-- functions
-- request logic
+## Shared
 
-Runtime constants live in `constants/`.
+Use `shared` only for generic, cross-domain code. Do not move domain models or business rules to shared.
 
-Type files can derive from constants using type-only imports:
+Generic examples:
 
-```ts
-import type { AuthStates } from '../constants';
+- UI primitives in `shared/components`
+- base API client in `shared/api`
+- WebSocket client and transport types in `shared/ws`
+- theme tokens in `shared/constants`
+- app-typed Redux hooks in `shared/hooks`
+- typed thunk factory in `shared/store`
+- API, theme, and app Redux types in `shared/types`
+- date formatting and theme creation in `shared/utils`
 
-export type AuthStatus = (typeof AuthStates)[keyof typeof AuthStates];
-```
+Env-backed app config belongs in root `config/appConfig.ts`.
 
-## API Type Names
+## State And Requests
 
-Do not use `Dto` naming in the UI.
+- Use RTK Query for endpoint-driven server state.
+- Use thunks for multi-step business workflows.
+- Use slice state for durable domain/UI state that RTK Query does not own.
+- Keep React Hook Form state out of Redux unless another app surface needs it.
 
-Use:
-
-- `ApiRequest`
-- `ApiResponse`
-- `Payload`
-- `Result`
-- `Model`
-
-Examples:
-
-```ts
-SessionApiResponse
-OAuthTokenApiResponse
-DashboardCreateRoomApiResponse
-DashboardCreateRoomResult
-```
-
-Transport response types can live in `types/api.ts`.
-
-Domain models should live in `types/models.ts`.
-
-Form values should live in `types/forms.ts`.
-
-## Constants
-
-Runtime constants use PascalCase for exported objects and uppercase keys:
-
-```ts
-export const AppRoutes = {
-  DASHBOARD: '/dashboard',
-  LOGIN: '/login'
-} as const;
-
-export const AuthStates = {
-  AUTHENTICATED: 'authenticated',
-  UNAUTHENTICATED: 'unauthenticated',
-  UNKNOWN: 'unknown'
-} as const;
-```
-
-Do not export lowercase constant bags such as:
-
-```ts
-appRoutes
-authStatuses
-appConfig
-```
-
-Use:
-
-```ts
-AppRoutes
-AuthStates
-AppConfig
-```
-
-`AppConfig` keys are uppercase.
-
-## Component Props
-
-Props are owned by the component file.
-
-Do not export props from module barrels.
-
-Allowed:
-
-```ts
-export interface AuthCardProps {
-  readonly children: ReactNode;
-}
-```
-
-Not allowed in `components/index.ts`:
-
-```ts
-export type { AuthCardProps } from './AuthCard';
-```
-
-## Components
-
-Components should:
-
-- render UI
-- call RTK hooks for simple endpoint requests
-- dispatch high-level domain thunks when the flow is multi-step
-- read selectors
-- pass explicit event handlers to child components
-
-Components should not:
-
-- call `.unwrap()`
-- contain API orchestration
-- duplicate RTK Query loading state
-- own cross-module request coordination
-- use nested ternaries for meaningful UI branches
-
-Extract meaningful local variables for complex conditions:
-
-```ts
-const isResolvingSession =
-  shouldFetchSession &&
-  (sessionQuery.isUninitialized || sessionQuery.isLoading || sessionQuery.isFetching);
-
-if (isResolvingSession) {
-  return <AppPageState isLoading title="Loading session" />;
-}
-```
-
-## Forms
-
-Use React Hook Form for form state.
-
-Keep submitted form values in form or local page state unless another part of the app needs that state.
-
-Do not move form-only state into Redux.
-
-## Barrels
-
-Barrels export public module API only.
-
-Good exports:
-
-- pages
-- routes
-- public hooks
-- public selectors
-- public domain thunks
-- RTK hooks intended for module consumers
-
-Avoid exporting:
-
-- component prop types
-- private helpers
-- transport-only types unless another module truly needs them
+See [State Management](./architecture/state-management.md) for locations and examples.
 
 ## Styling
 
-Separate styles when a page or component has meaningful styling logic.
-
-Preferred local style file:
-
-```text
-ComponentName.tsx
-ComponentName.styles.ts
-index.ts
-```
-
-Avoid embedding large style objects in component render files.
+- MUI theme and `sx` are the primary styling path.
+- SCSS Modules are allowed for local page/layout styling.
+- `styled()` is limited to reusable wrappers such as shared component building blocks.
 
 ## Verification
 
-For request/state refactors, run:
+For structural or request/state refactors, run:
 
 ```bash
 npm run typecheck
-npm test -- AuthLayout DashboardLayout AuthForms useOAuthCallbackPage dashboardThunks
+npm test
 ```
 
-For broader UI changes, run:
+For broader UI or routing changes, run:
 
 ```bash
-npm test
 npm run e2e
 ```

@@ -1,6 +1,6 @@
 import { matchPath } from 'react-router-dom';
 
-import { AppRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/app/router/routePaths';
 
 export interface DashboardLayoutMeta {
   readonly description: string;

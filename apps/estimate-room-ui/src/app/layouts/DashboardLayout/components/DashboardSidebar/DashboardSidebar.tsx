@@ -6,7 +6,7 @@ import {
   AppList,
   AppStack,
   AppTypography
-} from '@/shared/ui';
+} from '@/shared/components';
 
 import {
   primaryNavigationItems,

@@ -1,7 +1,7 @@
 import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { AppRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/app/router/routePaths';
 import {
   AppBox,
   AppButton,
@@ -9,7 +9,7 @@ import {
   AppStack,
   AppSurface,
   AppTypography
-} from '@/shared/ui';
+} from '@/shared/components';
 
 import type { DashboardTeamSummary } from '../../types';
 import { formatRelativeTime, getInitials } from '../../utils';

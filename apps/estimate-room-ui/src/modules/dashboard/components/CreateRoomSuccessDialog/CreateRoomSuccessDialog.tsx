@@ -10,7 +10,7 @@ import {
   AppIconButton,
   AppStack,
   AppTypography
-} from '@/shared/ui';
+} from '@/shared/components';
 
 import type { DashboardCreateRoomResult } from '../../types';
 

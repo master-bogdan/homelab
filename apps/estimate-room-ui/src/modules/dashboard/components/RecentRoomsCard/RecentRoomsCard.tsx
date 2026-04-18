@@ -3,7 +3,7 @@ import MeetingRoomRoundedIcon from '@mui/icons-material/MeetingRoomRounded';
 import NoteAltRoundedIcon from '@mui/icons-material/NoteAltRounded';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { AppRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/app/router/routePaths';
 import {
   AppBox,
   AppButton,
@@ -12,7 +12,7 @@ import {
   AppStack,
   AppSurface,
   AppTypography
-} from '@/shared/ui';
+} from '@/shared/components';
 
 import type { DashboardSession } from '../../types';
 import { formatRelativeTime, formatStatusLabel } from '../../utils';

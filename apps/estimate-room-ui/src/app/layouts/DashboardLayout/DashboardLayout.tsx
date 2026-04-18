@@ -1,14 +1,14 @@
 import { Navigate, useLocation } from 'react-router-dom';
 
-import { useAppSelector } from '@/shared/store';
+import { useAppSelector } from '@/shared/hooks';
 import {
   AuthStates,
   selectAuthStatus,
   selectIsAuthenticated,
   useFetchSessionQuery
 } from '@/modules/auth';
-import { AppRoutes } from '@/shared/constants/routes';
-import { AppPageState } from '@/shared/ui';
+import { AppRoutes } from '@/app/router/routePaths';
+import { AppPageState } from '@/shared/components';
 
 import { DashboardLayoutContent } from './components/DashboardLayoutContent';
 

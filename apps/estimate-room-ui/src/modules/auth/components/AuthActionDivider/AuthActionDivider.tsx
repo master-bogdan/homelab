@@ -1,4 +1,4 @@
-import { AppBox, AppStack, OverlineText } from '@/shared/ui';
+import { AppBox, AppStack, OverlineText } from '@/shared/components';
 
 import { authActionDividerLineSx } from './styles';
 

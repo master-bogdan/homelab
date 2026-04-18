@@ -2,7 +2,7 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 
 import { AuthStates } from '@/modules/auth';
-import { AppRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/app/router/routePaths';
 import { renderWithProviders, screen, waitFor } from '@/test/test-utils';
 
 import { DashboardLayout } from '../DashboardLayout';

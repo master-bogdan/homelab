@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
 import { useAppMediaQuery } from '@/shared/hooks';
-import { AppBox } from '@/shared/ui';
-import { useAppDispatch, useAppSelector } from '@/shared/store';
+import { AppBox } from '@/shared/components';
+import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 import { closeSidebar, setSidebarOpen } from '@/modules/system';
 import { selectIsSidebarOpen } from '@/modules/system';
 import { selectAuthUser, useLogoutMutation } from '@/modules/auth';

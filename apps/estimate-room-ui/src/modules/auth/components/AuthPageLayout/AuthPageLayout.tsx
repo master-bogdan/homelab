@@ -2,8 +2,8 @@ import ArchitectureRoundedIcon from '@mui/icons-material/ArchitectureRounded';
 import type { PropsWithChildren } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { AppRoutes } from '@/shared/constants/routes';
-import { AppBox, AppLink, AppStack, AppTypography, OverlineText } from '@/shared/ui';
+import { AppRoutes } from '@/app/router/routePaths';
+import { AppBox, AppLink, AppStack, AppTypography, OverlineText } from '@/shared/components';
 
 import {
   type AuthPageLayoutPattern,

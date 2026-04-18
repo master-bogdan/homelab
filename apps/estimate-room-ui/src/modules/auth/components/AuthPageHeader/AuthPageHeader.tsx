@@ -1,6 +1,6 @@
 import ArchitectureRoundedIcon from '@mui/icons-material/ArchitectureRounded';
 
-import { AppBox, AppStack, AppTypography } from '@/shared/ui';
+import { AppBox, AppStack, AppTypography } from '@/shared/components';
 
 import { authPageHeaderIconSx, authPageHeaderRootSx } from './styles';
 

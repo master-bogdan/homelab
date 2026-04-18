@@ -1,7 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 
 import { AuthStates } from '@/modules/auth';
-import { AppRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/app/router/routePaths';
 import { renderWithProviders, screen } from '@/test/test-utils';
 
 import { AuthLayout } from '../AuthLayout';

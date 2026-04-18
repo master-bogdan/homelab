@@ -10,7 +10,7 @@ import {
   AppStack,
   AppToolbar,
   AppTypography
-} from '@/shared/ui';
+} from '@/shared/components';
 
 import type { DashboardLayoutMeta } from '../../constants';
 import {

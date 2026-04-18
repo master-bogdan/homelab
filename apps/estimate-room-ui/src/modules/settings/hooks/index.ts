@@ -1,0 +1,1 @@
+export { useSettingsPage } from './useSettingsPage';

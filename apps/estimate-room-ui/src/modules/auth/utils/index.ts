@@ -10,6 +10,7 @@ export {
   isInvalidCredentialsError,
   resolveApiErrorMessage
 } from './errorMessages';
+export { getResetLinkCopy } from './getResetLinkCopy';
 export {
   createEmailValidationRules,
   createPasswordValidationRules,

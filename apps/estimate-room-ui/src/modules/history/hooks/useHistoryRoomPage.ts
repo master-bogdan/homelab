@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 
 import { usePageTitle } from '@/shared/hooks';
 
-import { historyService } from '../services/historyService';
+import { historyService } from '../api/historyApi';
 
 export const useHistoryRoomPage = () => {
   const { id = '' } = useParams();

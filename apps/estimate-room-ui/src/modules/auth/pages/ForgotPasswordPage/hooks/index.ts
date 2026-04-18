@@ -1,1 +1,0 @@
-export { useForgotPasswordPage } from './useForgotPasswordPage';

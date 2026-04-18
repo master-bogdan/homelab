@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
-import { useAppDispatch, useAppSelector } from '@/shared/store';
-import type { AppDispatch } from '@/shared/store';
+import { useAppDispatch, useAppSelector } from '@/shared/hooks';
+import type { AppDispatch } from '@/shared/types';
 import { usePageTitle } from '@/shared/hooks';
 
 import { fetchDashboardPage, selectDashboardPageState } from '../store';

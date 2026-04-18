@@ -1,7 +1,7 @@
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import type { UseFormReturn } from 'react-hook-form';
 
-import { AppAlert, AppBox, AppDialog, AppStack, AppTextField, AppTypography } from '@/shared/ui';
+import { AppAlert, AppBox, AppDialog, AppStack, AppTextField, AppTypography } from '@/shared/components';
 
 import type { DashboardJoinRoomFormValues } from '../../types';
 

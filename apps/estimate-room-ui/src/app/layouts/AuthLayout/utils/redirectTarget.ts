@@ -1,4 +1,4 @@
-import { AppRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/app/router/routePaths';
 
 export interface RedirectStateLike {
   readonly from?: {

@@ -1,8 +1,10 @@
-export { DashboardRoutes } from './routes';
-export { DashboardPage } from './DashboardPage';
-export { JoinRoomPage } from './JoinRoomPage';
 export { DashboardDialogs } from './components';
-export { useDashboardActions } from './hooks/useDashboardActions';
+export {
+  useCreateRoomDialog,
+  useDashboardActions,
+  useDashboardPage,
+  useJoinRoomDialog
+} from './hooks';
 export { getInitials } from './utils';
 export {
   dashboardStore,

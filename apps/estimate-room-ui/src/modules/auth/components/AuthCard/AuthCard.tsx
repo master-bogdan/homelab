@@ -1,4 +1,4 @@
-import type { AppSurfaceProps } from '@/shared/ui';
+import type { AppSurfaceProps } from '@/shared/components';
 
 import { AuthCardRoot } from './styles';
 

@@ -7,7 +7,7 @@ import {
   AppStack,
   AppSurface,
   AppTypography
-} from '@/shared/ui';
+} from '@/shared/components';
 
 import type { DashboardLedger } from '../../types';
 import { getArchitectLevelLabel, getXpHint } from '../../utils';

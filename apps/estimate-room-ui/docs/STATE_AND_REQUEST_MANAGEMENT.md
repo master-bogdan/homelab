@@ -81,7 +81,7 @@ when it just renames the mutation and returns the same request state.
 Good focused flow hook:
 
 ```ts
-const { errorMessage, isSubmitted, resend, submit } = useForgotPasswordFlow();
+const { errorMessage, isSubmitted, resend, submit } = useForgotPasswordPage();
 ```
 
 when the hook owns mutation submission, submitted email state, resend behavior,
@@ -112,7 +112,7 @@ The important rule is that components dispatch the highest-level intent they kno
 
 ```ts
 dispatch(fetchDashboardPage());
-dispatch(joinRoomFromInvite(code));
+dispatch(submitJoinRoom(code));
 ```
 
 Avoid transport-only thunk names and behavior such as:

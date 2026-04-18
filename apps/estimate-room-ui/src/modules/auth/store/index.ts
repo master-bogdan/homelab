@@ -6,16 +6,16 @@ export {
   setOAuthCallbackPending,
   setOAuthCallbackSucceeded,
   setSession
-} from './authSlice';
-export { AUTH_STATE_KEY, authStore } from './authStore';
+} from './slice';
+export { AUTH_STATE_KEY, authStore } from './types';
 export {
   selectAuthState,
   selectAuthStatus,
   selectAuthUser,
   selectIsAuthenticated,
   selectOAuthCallbackState
-} from './authSelectors';
-export { completeOAuthCallback } from './authThunks';
+} from './selectors';
+export { completeOAuthCallback } from './thunks';
 export {
   authApi,
   useFetchSessionQuery,
@@ -26,5 +26,5 @@ export {
   useRegisterMutation,
   useResetPasswordMutation,
   useValidateResetPasswordTokenQuery
-} from './authService';
+} from '../api/authApi';
 export { AuthStates } from '../constants';

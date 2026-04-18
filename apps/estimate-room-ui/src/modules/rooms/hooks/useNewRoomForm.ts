@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 
 import { usePageTitle } from '@/shared/hooks';
 
-import { roomsService } from '../services/roomsService';
+import { roomsService } from '../api/roomsApi';
 import type { NewRoomFormValues } from '../types';
 
 export const newRoomDefaultValues: NewRoomFormValues = {

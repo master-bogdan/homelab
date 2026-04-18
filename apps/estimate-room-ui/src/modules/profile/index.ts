@@ -1,2 +1,1 @@
-export { ProfileRoutes } from './routes';
-export { ProfilePage } from './ProfilePage';
+export { useProfilePage } from './hooks/useProfilePage';

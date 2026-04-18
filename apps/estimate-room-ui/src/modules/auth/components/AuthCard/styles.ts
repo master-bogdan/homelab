@@ -1,6 +1,6 @@
 import { styled } from '@mui/material';
 
-import { AppSurface } from '@/shared/ui';
+import { AppSurface } from '@/shared/components';
 
 export const AuthCardRoot = styled(AppSurface)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,

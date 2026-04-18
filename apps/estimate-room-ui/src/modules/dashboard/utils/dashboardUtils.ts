@@ -1,5 +1,5 @@
 import type { ApiError } from '@/shared/types';
-import { AppRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/app/router/routePaths';
 
 import type {
   DashboardDeckPreset,

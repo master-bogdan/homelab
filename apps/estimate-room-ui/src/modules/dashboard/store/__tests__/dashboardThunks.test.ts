@@ -1,7 +1,7 @@
 import { createTestStore } from '@/test/test-utils';
 
 import { DASHBOARD_ROOM_TASK_STATUSES } from '../../constants';
-import { fetchDashboardPage, submitCreateRoom, submitJoinRoom } from '../dashboardThunks';
+import { fetchDashboardPage, submitCreateRoom, submitJoinRoom } from '../thunks';
 
 const createRoomApiResponse = {
   adminUserId: 'user-1',

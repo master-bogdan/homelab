@@ -2,8 +2,8 @@ export {
   dashboardReducer,
   resetCreateRoomDialogState,
   resetJoinRoomDialogState,
-} from './dashboardSlice';
-export { DASHBOARD_STATE_KEY, dashboardStore } from './dashboardStore';
+} from './slice';
+export { DASHBOARD_STATE_KEY, dashboardStore } from './types';
 export {
   selectActiveSession,
   selectCreateRoomDialogState,
@@ -12,13 +12,13 @@ export {
   selectDashboardView,
   selectJoinRoomDialogState,
   selectRecentRooms
-} from './dashboardSelectors';
+} from './selectors';
 export {
   fetchCreateRoomTeams,
   fetchDashboardPage,
   submitCreateRoom,
   submitJoinRoom
-} from './dashboardThunks';
+} from './thunks';
 export {
   dashboardApi,
   useCreateRoomMutation,
@@ -27,4 +27,4 @@ export {
   useFetchDashboardSessionsQuery,
   useFetchDashboardTeamsQuery,
   usePreviewInvitationQuery
-} from './dashboardService';
+} from '../api/dashboardApi';

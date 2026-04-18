@@ -4,7 +4,7 @@ import HistoryRoundedIcon from '@mui/icons-material/HistoryRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 
-import { AppRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/app/router/routePaths';
 
 export interface DashboardLayoutNavigationItem {
   readonly icon: SvgIconComponent;

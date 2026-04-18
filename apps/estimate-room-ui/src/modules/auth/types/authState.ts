@@ -1,4 +1,4 @@
-import type { AuthUser } from '@/shared/types';
+import type { AuthUser } from '@/modules/auth/types';
 
 import type { AuthStates } from '../constants';
 

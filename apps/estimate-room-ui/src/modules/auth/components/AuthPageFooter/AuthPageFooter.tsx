@@ -1,7 +1,7 @@
 import { Link as RouterLink } from 'react-router-dom';
 import type { To } from 'react-router-dom';
 
-import { AppLink } from '@/shared/ui';
+import { AppLink } from '@/shared/components';
 
 import { AuthInlinePrompt } from '../AuthInlinePrompt';
 

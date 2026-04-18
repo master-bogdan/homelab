@@ -1,8 +1,8 @@
-import { useAppSelector } from '@/shared/store';
+import { useAppSelector } from '@/shared/hooks';
 import { selectAuthUser } from '@/modules/auth';
 import { usePageTitle } from '@/shared/hooks';
 
-import { profileService } from '../services/profileService';
+import { profileService } from '../api/profileApi';
 
 export const useProfilePage = () => {
   const user = useAppSelector(selectAuthUser);

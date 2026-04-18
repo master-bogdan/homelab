@@ -3,14 +3,14 @@ import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { AppRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/app/router/routePaths';
 import {
   AppListItemIcon,
   AppMenu,
   AppMenuItem,
   AppStack,
   AppTypography
-} from '@/shared/ui';
+} from '@/shared/components';
 
 import {
   dashboardUserMenuPaperSx,

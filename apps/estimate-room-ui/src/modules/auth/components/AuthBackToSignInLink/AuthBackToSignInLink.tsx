@@ -1,8 +1,8 @@
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { AppRoutes } from '@/shared/constants/routes';
-import { AppLink } from '@/shared/ui';
+import { AppRoutes } from '@/app/router/routePaths';
+import { AppLink } from '@/shared/components';
 
 import {
   authBackToSignInCenteredLinkSx,

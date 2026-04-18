@@ -1,4 +1,4 @@
-import { useAppDispatch } from '@/shared/store';
+import { useAppDispatch } from '@/shared/hooks';
 import { openDialog } from '@/modules/system/store';
 
 import {

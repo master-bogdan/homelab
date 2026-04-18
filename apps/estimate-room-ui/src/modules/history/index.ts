@@ -1,3 +1,3 @@
-export { HistoryRoutes } from './routes';
-export { HistoryPage } from './HistoryPage';
-export { HistoryRoomPage } from './HistoryRoomPage';
+export { useHistoryPage } from './hooks/useHistoryPage';
+export { useHistoryRoomPage } from './hooks/useHistoryRoomPage';
+export { mapHistoryStatusColor } from './utils';

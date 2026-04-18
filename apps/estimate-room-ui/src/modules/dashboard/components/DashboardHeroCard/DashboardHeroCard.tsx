@@ -11,7 +11,7 @@ import {
   AppStack,
   AppSurface,
   AppTypography
-} from '@/shared/ui';
+} from '@/shared/components';
 
 import type { DashboardActiveRoom } from '../../types';
 import { formatRelativeTime, formatStatusLabel, getInitials } from '../../utils';

@@ -1,6 +1,16 @@
-export { AuthRoutes } from './routes';
+export { AuthStates } from './constants';
 export {
-  AuthStates,
+  useAuthContinuation,
+  useConfirmPasswordRevalidation,
+  useForgotPasswordPage,
+  useFormRootError,
+  useGithubAuthRedirect,
+  useLoginPage,
+  useOAuthCallbackPage,
+  useRegisterPage,
+  useResetPasswordPage
+} from './hooks';
+export {
   authStore,
   clearSession,
   completeOAuthCallback,
@@ -19,3 +29,14 @@ export {
   useResetPasswordMutation,
   useValidateResetPasswordTokenQuery
 } from './store';
+export type {
+  AuthState,
+  AuthStatus,
+  AuthUser,
+  CompleteOAuthCallbackPayload,
+  CompleteOAuthCallbackResult,
+  ForgotPasswordPayload,
+  LoginPayload,
+  RegisterPayload,
+  ResetPasswordPayload
+} from './types';

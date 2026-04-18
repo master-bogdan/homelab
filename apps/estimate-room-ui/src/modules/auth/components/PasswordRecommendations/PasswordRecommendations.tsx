@@ -1,7 +1,7 @@
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUncheckedRounded';
 
-import { AppBox, AppStack, AppTypography, OverlineText } from '@/shared/ui';
+import { AppBox, AppStack, AppTypography, OverlineText } from '@/shared/components';
 
 import {
   passwordRecommendationsGridSx,

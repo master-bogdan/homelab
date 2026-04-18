@@ -11,7 +11,7 @@ import {
   AppSwitch,
   AppTextField,
   AppTypography
-} from '@/shared/ui';
+} from '@/shared/components';
 
 import type {
   DashboardCreateRoomFormValues,

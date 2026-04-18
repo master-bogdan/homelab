@@ -1,6 +1,6 @@
 import GitHubIcon from '@mui/icons-material/GitHub';
 
-import { AppButton } from '@/shared/ui';
+import { AppButton } from '@/shared/components';
 
 interface AuthGithubButtonProps {
   readonly children: string;

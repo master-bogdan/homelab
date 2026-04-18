@@ -1,6 +1,6 @@
 # estimate-room-ui
 
-Frontend scaffold for room estimation workflows, history review, team pages, profile/settings, and future Go backend API plus WebSocket integration.
+Frontend for EstimateRoom room planning, dashboard workflows, history review, team pages, profile/settings, and backend API/WebSocket integration.
 
 ## Install
 
@@ -28,10 +28,24 @@ npm run typecheck
 ```text
 src/
   app/
+    pages/
+      DashboardPage/
+      LoginPage/
+      NewRoomPage/
+    router/
+      AppRouter.tsx
+      router.tsx
+      routePaths.ts
+      routes/
     layouts/
     providers/
-    router/
+    guards/
     store/
+      store.ts
+      index.ts
+  config/
+    appConfig.ts
+    index.ts
   modules/
     auth/
     dashboard/
@@ -39,45 +53,47 @@ src/
     profile/
     rooms/
     settings/
+    system/
     teams/
   shared/
     api/
-    config/
-    constants/
-    hooks/
-    types/
-    ui/
-    utils/
     ws/
-  assets/
-  styles/
-  test/
-  theme/
+    store/
+    components/
+    constants/
+    types/
+    utils/
+    hooks/
 ```
 
 ## Conventions
 
 - Vite + React + TypeScript + npm, with no Next.js.
-- One repository-level `tsconfig.json` covers both app code and `vite.config.ts`.
-- MUI theme and `sx` are the primary styling path.
-- SCSS Modules are reserved for local page or layout styling.
-- `styled()` is limited to reusable wrappers such as shared UI building blocks.
-- Redux Toolkit is kept deliberate: `auth` and `ui` are the initial global slices.
+- `app` wires pages, router, layouts, providers, guards, and Redux bootstrap.
+- `app/pages` contains route-entry page composers only, organized as one folder per page.
+- Page-owned styles live beside the page, for example `app/pages/NewRoomPage/NewRoomPage.module.scss`.
+- `modules/*` owns business/domain logic.
+- `shared/*` owns generic reusable primitives only.
+- RTK Query endpoint injection lives in module `api` folders.
+- WebSocket client and transport types live in `shared/ws`.
+- Redux selectors, slices, thunks, and store metadata live in module `store` folders.
+- App-typed Redux hooks live in `shared/hooks`.
+- App Redux types live in `shared/types/store.ts`.
+- The typed thunk factory lives in `shared/store`.
+- Env-backed app config lives in root `config/appConfig.ts`.
 - Components stay presentation-focused.
-- Hooks orchestrate effects and page logic.
-- Services own API and WebSocket boundaries.
-- Selectors live outside slices.
+- Hooks orchestrate page and domain behavior.
 - Form state stays in React Hook Form instead of Redux.
-- Path aliases are available through `@`, including `@/app`, `@/modules`, `@/shared`, and `@/theme`.
 
-Detailed engineering rules live in [`docs/`](./docs/):
+Architecture docs:
+
+- [`docs/architecture/project-structure.md`](./docs/architecture/project-structure.md)
+- [`docs/architecture/state-management.md`](./docs/architecture/state-management.md)
+- [`docs/architecture/routing.md`](./docs/architecture/routing.md)
+- [`docs/architecture/refactoring-log.md`](./docs/architecture/refactoring-log.md)
+
+Additional engineering notes:
 
 - [`docs/STATE_AND_REQUEST_MANAGEMENT.md`](./docs/STATE_AND_REQUEST_MANAGEMENT.md)
 - [`docs/REQUEST_FLOW_DECISIONS.md`](./docs/REQUEST_FLOW_DECISIONS.md)
 - [`docs/FRONTEND_CONVENTIONS.md`](./docs/FRONTEND_CONVENTIONS.md)
-
-## Notes
-
-- Authentication is scaffolded, but there is no fake login implementation.
-- Shared API and WebSocket clients are ready for Go backend integration.
-- `src/modules/rooms/NewRoomPage.tsx` demonstrates the preferred form pattern for future feature pages.
