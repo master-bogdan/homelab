@@ -1,70 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { useAppDispatch } from '@/app/store/hooks';
-import type { AuthUser } from '@/shared/types';
+import { useAppDispatch, useAppSelector } from '@/shared/hooks';
 
-import { authService } from '../services';
-import { clearSession, setSession } from '../store';
-import type { PendingAuthorizationRequest } from '../types';
-import {
-  clearPendingAuthorizationRequest,
-  readPendingAuthorizationRequest,
-  resolveApiErrorMessage
-} from '../utils';
+import { AuthRequestStatuses } from '../constants';
+import { clearSession, completeOAuthCallback, selectOAuthCallbackState } from '../store';
+import { resolveApiErrorMessage } from '../utils';
 
-type OAuthCallbackResult = {
-  readonly pendingRequest: PendingAuthorizationRequest;
-  readonly user: AuthUser;
-};
-
-const callbackRequests = new Map<string, Promise<OAuthCallbackResult>>();
-
-const createCallbackRequestKey = (code: string, state: string) => `${state}:${code}`;
-
-const finalizeOAuthCallbackRequest = async (
-  code: string,
-  state: string
-): Promise<OAuthCallbackResult> => {
-  const pendingRequest = readPendingAuthorizationRequest();
-
-  if (!pendingRequest || pendingRequest.state !== state) {
-    throw new Error('Your sign-in session expired. Please try signing in again.');
+const getOAuthCallbackErrorMessage = (
+  isMissingAuthorizationParams: boolean,
+  errorMessage: string | null,
+  status: string
+) => {
+  if (isMissingAuthorizationParams) {
+    return 'Your sign-in session expired. Please try signing in again.';
   }
 
-  await authService.exchangeAuthorizationCode({
-    clientId: pendingRequest.clientId,
-    code,
-    codeVerifier: pendingRequest.codeVerifier,
-    redirectUri: pendingRequest.redirectUri
-  });
-
-  const user = await authService.fetchSession();
-
-  if (!user) {
-    throw new Error('Sign-in completed, but the session could not be restored.');
+  if (status !== AuthRequestStatuses.FAILED) {
+    return null;
   }
 
-  return { pendingRequest, user };
-};
-
-const getOrCreateCallbackRequest = (code: string, state: string) => {
-  const requestKey = createCallbackRequestKey(code, state);
-  const inFlightRequest = callbackRequests.get(requestKey);
-
-  if (inFlightRequest) {
-    return inFlightRequest;
-  }
-
-  const request = finalizeOAuthCallbackRequest(code, state).finally(() => {
-    if (callbackRequests.get(requestKey) === request) {
-      callbackRequests.delete(requestKey);
-    }
-  });
-
-  callbackRequests.set(requestKey, request);
-
-  return request;
+  return resolveApiErrorMessage(
+    errorMessage,
+    'Unable to complete sign-in right now.'
+  );
 };
 
 export const useOAuthCallbackPage = () => {
@@ -73,49 +32,46 @@ export const useOAuthCallbackPage = () => {
   const [searchParams] = useSearchParams();
   const authorizationCode = searchParams.get('code');
   const authorizationState = searchParams.get('state');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const oauthCallback = useAppSelector(selectOAuthCallbackState);
+  const isMissingAuthorizationParams = !authorizationCode || !authorizationState;
+  const errorMessage = getOAuthCallbackErrorMessage(
+    isMissingAuthorizationParams,
+    oauthCallback.errorMessage,
+    oauthCallback.status
+  );
 
   useEffect(() => {
-    let isMounted = true;
+    if (isMissingAuthorizationParams) {
+      dispatch(clearSession());
+      return;
+    }
 
-    const finalizeLogin = async () => {
-      try {
-        const code = authorizationCode;
-        const state = authorizationState;
+    if (oauthCallback.status !== AuthRequestStatuses.IDLE) {
+      return;
+    }
 
-        if (!code || !state) {
-          throw new Error('Your sign-in session expired. Please try signing in again.');
-        }
+    dispatch(completeOAuthCallback({
+      code: authorizationCode,
+      state: authorizationState
+    }));
+  }, [
+    authorizationCode,
+    authorizationState,
+    dispatch,
+    isMissingAuthorizationParams,
+    oauthCallback.status
+  ]);
 
-        const { pendingRequest, user } = await getOrCreateCallbackRequest(code, state);
+  useEffect(() => {
+    if (
+      oauthCallback.status !== AuthRequestStatuses.SUCCEEDED ||
+      !oauthCallback.redirectTo
+    ) {
+      return;
+    }
 
-        if (!isMounted) {
-          return;
-        }
-
-        dispatch(setSession(user));
-        clearPendingAuthorizationRequest();
-        navigate(pendingRequest.redirectTo, { replace: true });
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        clearPendingAuthorizationRequest();
-        dispatch(clearSession());
-
-        setErrorMessage(
-          resolveApiErrorMessage(error, 'Unable to complete sign-in right now.')
-        );
-      }
-    };
-
-    void finalizeLogin();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [authorizationCode, authorizationState, dispatch, navigate]);
+    navigate(oauthCallback.redirectTo, { replace: true });
+  }, [navigate, oauthCallback.redirectTo, oauthCallback.status]);
 
   return {
     errorMessage,

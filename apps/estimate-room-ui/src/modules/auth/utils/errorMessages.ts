@@ -1,37 +1,76 @@
 import type { ApiError } from '@/shared/types';
 
-import type { ResetPasswordValidationReason } from '../types';
+type RtkQueryError = {
+  readonly data?: unknown;
+  readonly error?: string;
+  readonly status: number | string;
+};
+
+type ErrorPayload = {
+  readonly detail?: unknown;
+  readonly message?: unknown;
+  readonly title?: unknown;
+};
+
+const ErrorMessageKeys = ['detail', 'message', 'title'] as const;
+
+const isRecord = (value: unknown): value is Record<PropertyKey, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const hasStatus = (value: unknown): value is { readonly status: unknown } =>
+  isRecord(value) && 'status' in value;
 
 const isApiError = (error: unknown): error is ApiError =>
-  typeof error === 'object' &&
-  error !== null &&
-  'status' in error &&
-  typeof (error as { status?: unknown }).status === 'number';
+  hasStatus(error) && typeof error.status === 'number';
+
+const isRtkQueryError = (error: unknown): error is RtkQueryError =>
+  hasStatus(error) &&
+  (typeof error.status === 'string' || 'data' in error || 'error' in error);
 
 const normalizeErrorText = (value: string) => value.trim().toLowerCase();
 
-const extractErrorText = (error: unknown) => {
+const getPayloadMessage = (payload: ErrorPayload) => {
+  const messageKey = ErrorMessageKeys.find((key) => typeof payload[key] === 'string');
+
+  return messageKey ? String(payload[messageKey]) : '';
+};
+
+const getApiErrorMessage = (error: ApiError) => getPayloadMessage(error);
+
+const getRtkQueryErrorMessage = (error: RtkQueryError) => {
+  if (isRecord(error.data)) {
+    return getPayloadMessage(error.data);
+  }
+
+  return error.error ?? '';
+};
+
+const getErrorMessage = (error: unknown) => {
+  if (isRtkQueryError(error)) {
+    return getRtkQueryErrorMessage(error);
+  }
+
   if (isApiError(error)) {
-    return normalizeErrorText(error.detail ?? error.message ?? error.title ?? '');
+    return getApiErrorMessage(error);
   }
 
   if (error instanceof Error) {
-    return normalizeErrorText(error.message);
+    return error.message;
   }
 
   return '';
 };
 
+const extractErrorText = (error: unknown) => {
+  const message = getErrorMessage(error);
+
+  return message ? normalizeErrorText(message) : '';
+};
+
 export const resolveApiErrorMessage = (error: unknown, fallbackMessage: string) => {
-  if (isApiError(error)) {
-    return error.detail ?? error.message ?? error.title ?? fallbackMessage;
-  }
+  const message = getErrorMessage(error);
 
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallbackMessage;
+  return message || fallbackMessage;
 };
 
 export const isInvalidCredentialsError = (error: unknown) =>
@@ -39,27 +78,3 @@ export const isInvalidCredentialsError = (error: unknown) =>
 
 export const isEmailAlreadyInUseError = (error: unknown) =>
   extractErrorText(error).includes('email already in use');
-
-export const getResetLinkCopy = (reason: ResetPasswordValidationReason | undefined) => {
-  switch (reason) {
-    case 'expired':
-      return {
-        description:
-          'This password reset link has expired. Request a new link to continue.',
-        title: 'Expired Link'
-      };
-    case 'used':
-      return {
-        description:
-          'This password reset link has already been used. Request a new link to set another password.',
-        title: 'Link Already Used'
-      };
-    case 'invalid':
-    default:
-      return {
-        description:
-          'This password reset link is invalid or has expired. Please request a new link to reset your password.',
-        title: 'Invalid Link'
-      };
-  }
-};

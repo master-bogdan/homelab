@@ -1,1 +1,1 @@
-export { TeamDetailsPage } from './TeamDetailsPage';
+export { useTeamDetailsPage } from './hooks/useTeamDetailsPage';

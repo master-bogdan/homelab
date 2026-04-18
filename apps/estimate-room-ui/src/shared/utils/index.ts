@@ -1,1 +1,2 @@
-export { formatDateTime, formatDimensions } from './formatters';
+export { createAppTheme } from './createAppTheme';
+export { formatDateTime } from './formatters';

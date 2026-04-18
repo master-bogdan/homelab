@@ -32,22 +32,22 @@ type e2eTeamDetailResponse struct {
 }
 
 type e2eRoomResponse struct {
-	RoomID       string `json:"RoomID"`
-	Name         string `json:"Name"`
-	TeamID       *string `json:"TeamID"`
+	RoomID       string  `json:"roomId"`
+	Name         string  `json:"name"`
+	TeamID       *string `json:"teamId"`
 	Participants []struct {
-		Role      string  `json:"Role"`
-		UserID    *string `json:"UserID"`
-		GuestName *string `json:"GuestName"`
-	} `json:"Participants"`
+		Role      string  `json:"role"`
+		UserID    *string `json:"userId"`
+		GuestName *string `json:"guestName"`
+	} `json:"participants"`
 }
 
 type e2eRoomJoinResponse struct {
 	Room        e2eRoomResponse `json:"room"`
 	Participant struct {
-		Role      string  `json:"Role"`
-		UserID    *string `json:"UserID"`
-		GuestName *string `json:"GuestName"`
+		Role      string  `json:"role"`
+		UserID    *string `json:"userId"`
+		GuestName *string `json:"guestName"`
 	} `json:"participant"`
 }
 

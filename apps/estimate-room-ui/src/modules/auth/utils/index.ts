@@ -1,4 +1,4 @@
-export { createApiPath, createApiUrl, resolveApiHref } from './apiUrl';
+export { createApiPath, createApiUrl, createGithubLoginUrl, resolveApiHref } from './apiUrl';
 export {
   clearPendingAuthorizationRequest,
   createPendingAuthorizationRequest,
@@ -6,11 +6,12 @@ export {
   readPendingAuthorizationRequest
 } from './oauthFlow';
 export {
-  getResetLinkCopy,
   isEmailAlreadyInUseError,
   isInvalidCredentialsError,
   resolveApiErrorMessage
 } from './errorMessages';
+export { getResetLinkCopy } from './getResetLinkCopy';
+export { getPasswordRecommendations } from './passwordRecommendations';
 export {
   createEmailValidationRules,
   createPasswordValidationRules,

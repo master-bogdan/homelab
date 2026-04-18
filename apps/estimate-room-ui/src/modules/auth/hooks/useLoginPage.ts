@@ -1,23 +1,22 @@
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { useAppDispatch } from '@/app/store/hooks';
+import { useLoginMutation } from '../store';
+import {
+  isInvalidCredentialsError,
+  resolveApiErrorMessage,
+  resolveApiHref
+} from '../utils';
 
-import { authService } from '../services';
-import { setSession } from '../store';
-import { isInvalidCredentialsError, resolveApiErrorMessage, resolveApiHref } from '../utils';
-
-import { useAuthContinuation } from './useAuthContinuation';
-
-interface LoginFormValues {
-  readonly email: string;
-  readonly password: string;
-}
+import {
+  useAuthContinuation,
+  useFormRootError,
+  useGithubAuthRedirect
+} from './index';
+import type { LoginFormValues } from '../types';
 
 export const useLoginPage = () => {
-  const dispatch = useAppDispatch();
   const { createPendingRequest } = useAuthContinuation();
-  const [isGithubLoading, setIsGithubLoading] = useState(false);
+  const [login] = useLoginMutation();
   const form = useForm<LoginFormValues>({
     mode: 'onChange',
     defaultValues: {
@@ -26,57 +25,53 @@ export const useLoginPage = () => {
     },
     reValidateMode: 'onChange'
   });
+  const { setRootError } = useFormRootError(form);
+  const {
+    isGithubLoading,
+    startGithubRedirect
+  } = useGithubAuthRedirect({
+    clearErrors: form.clearErrors,
+    createPendingRequest,
+    fallbackMessage: 'Unable to start GitHub sign-in.',
+    setRootError
+  });
 
   const submit = form.handleSubmit(async (values) => {
     form.clearErrors();
 
+    let pendingRequest;
+
     try {
-      const pendingRequest = await createPendingRequest();
-      const user = await authService.login({
-        continue: pendingRequest.continueUrl,
-        email: values.email,
-        password: values.password
-      });
-
-      dispatch(setSession(user));
-      window.location.assign(resolveApiHref(pendingRequest.continueUrl));
+      pendingRequest = await createPendingRequest();
     } catch (error) {
-      const message = isInvalidCredentialsError(error)
-        ? 'Email or password is incorrect.'
-        : resolveApiErrorMessage(error, 'Unable to sign in right now.');
+      const message = resolveApiErrorMessage(error, 'Unable to sign in right now.');
 
-      form.setError('root', {
-        message,
-        type: 'server'
-      });
-    }
-  });
-
-  const signInWithGithub = async () => {
-    if (isGithubLoading) {
+      setRootError(message);
       return;
     }
 
-    form.clearErrors();
-    setIsGithubLoading(true);
+    const result = await login({
+      continue: pendingRequest.continueUrl,
+      email: values.email,
+      password: values.password
+    });
 
-    try {
-      const pendingRequest = await createPendingRequest();
+    if (result.error) {
+      const message = isInvalidCredentialsError(result.error)
+        ? 'Email or password is incorrect.'
+        : resolveApiErrorMessage(result.error, 'Unable to sign in right now.');
 
-      window.location.assign(authService.getGithubLoginUrl(pendingRequest.continueUrl));
-    } catch (error) {
-      setIsGithubLoading(false);
-      form.setError('root', {
-        message: resolveApiErrorMessage(error, 'Unable to start GitHub sign-in.'),
-        type: 'server'
-      });
+      setRootError(message);
+      return;
     }
-  };
+
+    window.location.assign(resolveApiHref(pendingRequest.continueUrl));
+  });
 
   return {
     form,
     isGithubLoading,
     onSubmit: submit,
-    onSubmitWithGithub: signInWithGithub
+    onSubmitWithGithub: startGithubRedirect
   };
 };

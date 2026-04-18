@@ -1,0 +1,20 @@
+import type { AuthUser } from '@/modules/auth/types';
+
+import type { AuthRequestStatuses, AuthStates } from '../constants';
+
+export type AuthStatus = (typeof AuthStates)[keyof typeof AuthStates];
+export type AuthRequestStatus =
+  (typeof AuthRequestStatuses)[keyof typeof AuthRequestStatuses];
+
+export interface OAuthCallbackState {
+  readonly errorMessage: string | null;
+  readonly redirectTo: string | null;
+  readonly requestKey: string | null;
+  readonly status: AuthRequestStatus;
+}
+
+export interface AuthState {
+  readonly oauthCallback: OAuthCallbackState;
+  readonly status: AuthStatus;
+  readonly user: AuthUser | null;
+}

@@ -1,4 +1,4 @@
-import type { RoomEstimateHistoryEntry } from '@/shared/types';
+import type { RoomEstimateHistoryEntry } from '@/modules/history/types';
 
 export const mapHistoryStatusColor = (status: RoomEstimateHistoryEntry['status']) => {
   switch (status) {

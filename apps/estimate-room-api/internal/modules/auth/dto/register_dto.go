@@ -8,7 +8,7 @@ type RegisterDTO struct {
 	DisplayName  string `json:"displayName" validate:"omitempty,min=1,max=100"`
 	Organization string `json:"organization" validate:"omitempty,max=120"`
 	Occupation   string `json:"occupation" validate:"omitempty,max=120"`
-	ContinueURL  string `json:"continue" validate:"required,url,max=2000"`
+	ContinueURL  string `json:"continue" validate:"required,max=2000"`
 }
 
 func (s *RegisterDTO) Validate() error {

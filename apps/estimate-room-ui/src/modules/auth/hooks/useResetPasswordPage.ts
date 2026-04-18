@@ -1,141 +1,70 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { useAppDispatch } from '@/app/store/hooks';
-import { appRoutes } from '@/shared/constants/routes';
+import { AppRoutes } from '@/app/router/routePaths';
 
-import { authService } from '../services';
-import type { ResetPasswordValidationReason } from '../types';
-import { clearSession } from '../store';
-import { getResetLinkCopy, resolveApiErrorMessage } from '../utils';
-
-interface ResetPasswordFormValues {
-  readonly confirmPassword: string;
-  readonly password: string;
-}
-
-type ResetPasswordPageState = 'invalid' | 'ready' | 'validating';
+import {
+  ResetPasswordErrorMessages,
+  ResetPasswordSearchParams
+} from '../constants/resetPasswordValidation';
+import { useResetPasswordMutation } from '../store';
+import { getResetLinkCopy } from '../utils/getResetLinkCopy';
+import { resolveApiErrorMessage } from '../utils/errorMessages';
+import { resolveResetPasswordValidationReason } from '../utils/resetPasswordValidation';
+import { useFormRootError } from './useFormRootError';
+import { useResetPasswordForm } from './useResetPasswordForm';
+import { useResetPasswordTokenValidation } from './useResetPasswordTokenValidation';
 
 export const useResetPasswordPage = () => {
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [resetPassword] = useResetPasswordMutation();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token')?.trim() ?? '';
-  const [pageState, setPageState] = useState<ResetPasswordPageState>(
-    token ? 'validating' : 'invalid'
-  );
-  const [validationReason, setValidationReason] =
-    useState<ResetPasswordValidationReason>('invalid');
-  const [pageError, setPageError] = useState<string | null>(null);
-  const form = useForm<ResetPasswordFormValues>({
-    mode: 'onChange',
-    defaultValues: {
-      confirmPassword: '',
-      password: ''
-    },
-    reValidateMode: 'onChange'
-  });
-
-  useEffect(() => {
-    let isMounted = true;
-
-    if (!token) {
-      return;
-    }
-
-    const validateToken = async () => {
-      try {
-        const response = await authService.validateResetPasswordToken(token);
-
-        if (!isMounted) {
-          return;
-        }
-
-        if (response.valid) {
-          setPageState('ready');
-          return;
-        }
-
-        setValidationReason(response.reason ?? 'invalid');
-        setPageState('invalid');
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        setPageError(resolveApiErrorMessage(error, 'Unable to validate this reset link.'));
-        setValidationReason('invalid');
-        setPageState('invalid');
-      }
-    };
-
-    void validateToken();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [token]);
-
-  const password = useWatch({
-    control: form.control,
-    name: 'password'
-  });
-  const confirmPasswordTouched = form.formState.touchedFields.confirmPassword;
+  const token = searchParams.get(ResetPasswordSearchParams.TOKEN)?.trim() ?? '';
+  const { form, password } = useResetPasswordForm();
+  const { setRootError } = useFormRootError(form);
+  const {
+    markResetLinkInvalid,
+    pageError,
+    pageState,
+    validationReason
+  } = useResetPasswordTokenValidation(token);
   const invalidLinkCopy = useMemo(
     () => getResetLinkCopy(validationReason),
     [validationReason]
   );
 
-  useEffect(() => {
-    if (!confirmPasswordTouched) {
-      return;
-    }
-
-    void form.trigger('confirmPassword');
-  }, [confirmPasswordTouched, form, password]);
-
   const submit = form.handleSubmit(async ({ password: nextPassword }) => {
     form.clearErrors();
 
     if (!token) {
-      setPageState('invalid');
-      setValidationReason('invalid');
+      markResetLinkInvalid();
       return;
     }
 
-    try {
-      await authService.resetPassword({
-        password: nextPassword,
-        token
-      });
+    const result = await resetPassword({
+      password: nextPassword,
+      token
+    });
 
-      dispatch(clearSession());
-      navigate(appRoutes.resetPasswordSuccess, { replace: true });
-    } catch (error) {
-      const message = resolveApiErrorMessage(error, 'Unable to reset your password right now.');
+    if (result.error) {
+      const message = resolveApiErrorMessage(
+        result.error,
+        ResetPasswordErrorMessages.RESET_FAILED
+      );
 
-      if (
-        message.toLowerCase().includes('invalid reset token') ||
-        message.toLowerCase().includes('expired reset token') ||
-        message.toLowerCase().includes('used reset token')
-      ) {
-        setValidationReason(
-          message.toLowerCase().includes('expired')
-            ? 'expired'
-            : message.toLowerCase().includes('used')
-              ? 'used'
-              : 'invalid'
-        );
-        setPageState('invalid');
+      const resetPasswordValidationReason =
+        resolveResetPasswordValidationReason(message);
+
+      if (resetPasswordValidationReason) {
+        markResetLinkInvalid(resetPasswordValidationReason);
         return;
       }
 
-      form.setError('root', {
-        message,
-        type: 'server'
-      });
+      setRootError(message);
+      return;
     }
+
+    navigate(AppRoutes.RESET_PASSWORD_SUCCESS, { replace: true });
   });
 
   return {

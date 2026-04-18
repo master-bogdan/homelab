@@ -1,22 +1,19 @@
-import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
-import { useAppDispatch } from '@/app/store/hooks';
+import { useRegisterMutation } from '../store';
+import {
+  isEmailAlreadyInUseError,
+  resolveApiErrorMessage,
+  resolveApiHref
+} from '../utils';
 
-import { authService } from '../services';
-import { setSession } from '../store';
-import { isEmailAlreadyInUseError, resolveApiErrorMessage, resolveApiHref } from '../utils';
-
-import { useAuthContinuation } from './useAuthContinuation';
-
-interface RegisterFormValues {
-  readonly confirmPassword: string;
-  readonly displayName: string;
-  readonly email: string;
-  readonly occupation: string;
-  readonly organization: string;
-  readonly password: string;
-}
+import {
+  useAuthContinuation,
+  useConfirmPasswordRevalidation,
+  useFormRootError,
+  useGithubAuthRedirect
+} from './index';
+import type { RegisterFormValues } from '../types';
 
 const normalizeOptionalField = (value: string) => {
   const trimmedValue = value.trim();
@@ -25,9 +22,8 @@ const normalizeOptionalField = (value: string) => {
 };
 
 export const useRegisterPage = () => {
-  const dispatch = useAppDispatch();
   const { createPendingRequest } = useAuthContinuation();
-  const [isGithubLoading, setIsGithubLoading] = useState(false);
+  const [registerAccount] = useRegisterMutation();
   const form = useForm<RegisterFormValues>({
     mode: 'onChange',
     defaultValues: {
@@ -44,74 +40,79 @@ export const useRegisterPage = () => {
     control: form.control,
     name: 'password'
   });
-  const confirmPasswordTouched = form.formState.touchedFields.confirmPassword;
+  const { setRootError } = useFormRootError(form);
+  const {
+    isGithubLoading,
+    startGithubRedirect
+  } = useGithubAuthRedirect({
+    clearErrors: form.clearErrors,
+    createPendingRequest,
+    fallbackMessage: 'Unable to start GitHub sign-in.',
+    setRootError
+  });
 
-  useEffect(() => {
-    if (!confirmPasswordTouched) {
-      return;
-    }
+  useConfirmPasswordRevalidation({
+    confirmPasswordField: 'confirmPassword',
+    form,
+    password
+  });
 
-    void form.trigger('confirmPassword');
-  }, [confirmPasswordTouched, form, password]);
-
-  const submit = form.handleSubmit(async ({ confirmPassword: _confirmPassword, ...values }) => {
+  const submit = form.handleSubmit(async (values) => {
     form.clearErrors();
 
-    try {
-      const pendingRequest = await createPendingRequest();
-      const user = await authService.register({
-        continue: pendingRequest.continueUrl,
-        displayName: values.displayName.trim(),
-        email: values.email,
-        occupation: normalizeOptionalField(values.occupation),
-        organization: normalizeOptionalField(values.organization),
-        password: values.password
-      });
+    let pendingRequest;
 
-      dispatch(setSession(user));
-      window.location.assign(resolveApiHref(pendingRequest.continueUrl));
+    try {
+      pendingRequest = await createPendingRequest();
     } catch (error) {
-      if (isEmailAlreadyInUseError(error)) {
+      const message = resolveApiErrorMessage(error, 'Unable to create your account right now.');
+
+      if (message === 'This email is already registered.') {
         form.setError('email', {
-          message: 'This email is already registered.',
+          message,
           type: 'server'
         });
         return;
       }
 
-      form.setError('root', {
-        message: resolveApiErrorMessage(error, 'Unable to create your account right now.'),
-        type: 'server'
-      });
-    }
-  });
-
-  const signUpWithGithub = async () => {
-    if (isGithubLoading) {
+      setRootError(message);
       return;
     }
 
-    form.clearErrors();
-    setIsGithubLoading(true);
+    const result = await registerAccount({
+      continue: pendingRequest.continueUrl,
+      displayName: values.displayName.trim(),
+      email: values.email,
+      occupation: normalizeOptionalField(values.occupation),
+      organization: normalizeOptionalField(values.organization),
+      password: values.password
+    });
 
-    try {
-      const pendingRequest = await createPendingRequest();
+    if (result.error) {
+      const message = isEmailAlreadyInUseError(result.error)
+        ? 'This email is already registered.'
+        : resolveApiErrorMessage(result.error, 'Unable to create your account right now.');
 
-      window.location.assign(authService.getGithubLoginUrl(pendingRequest.continueUrl));
-    } catch (error) {
-      setIsGithubLoading(false);
-      form.setError('root', {
-        message: resolveApiErrorMessage(error, 'Unable to start GitHub sign-in.'),
-        type: 'server'
-      });
+      if (message === 'This email is already registered.') {
+        form.setError('email', {
+          message,
+          type: 'server'
+        });
+        return;
+      }
+
+      setRootError(message);
+      return;
     }
-  };
+
+    window.location.assign(resolveApiHref(pendingRequest.continueUrl));
+  });
 
   return {
     form,
     isGithubLoading,
     onSubmit: submit,
-    onSubmitWithGithub: signUpWithGithub,
+    onSubmitWithGithub: startGithubRedirect,
     password
   };
 };

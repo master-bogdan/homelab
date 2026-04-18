@@ -1,0 +1,1 @@
+export { historyService } from './historyApi';

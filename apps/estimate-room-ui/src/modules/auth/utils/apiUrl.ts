@@ -1,4 +1,4 @@
-import { appConfig } from '@/shared/config/env';
+import { AppConfig } from '@/config';
 
 type QueryValue = boolean | number | string | null | undefined;
 
@@ -24,7 +24,7 @@ const resolveOrigin = (baseUrl: string) => {
 export const createApiUrl = (path: string, query?: Record<string, QueryValue>) => {
   const url = new URL(
     path.replace(/^\//, ''),
-    `${resolveBaseUrl(appConfig.apiBaseUrl).replace(/\/$/, '')}/`
+    `${resolveBaseUrl(AppConfig.API_BASE_URL).replace(/\/$/, '')}/`
   );
 
   if (query) {
@@ -52,8 +52,11 @@ export const resolveApiHref = (pathOrUrl: string) => {
   }
 
   if (pathOrUrl.startsWith('/')) {
-    return new URL(pathOrUrl, `${resolveOrigin(appConfig.apiBaseUrl)}/`).toString();
+    return new URL(pathOrUrl, `${resolveOrigin(AppConfig.API_BASE_URL)}/`).toString();
   }
 
   return createApiUrl(pathOrUrl).toString();
 };
+
+export const createGithubLoginUrl = (continueUrl: string) =>
+  createApiUrl('auth/github/login', { continue: continueUrl }).toString();

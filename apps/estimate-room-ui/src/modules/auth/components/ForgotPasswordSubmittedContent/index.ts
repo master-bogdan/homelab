@@ -1,0 +1,1 @@
+export { ForgotPasswordSubmittedContent } from './ForgotPasswordSubmittedContent';

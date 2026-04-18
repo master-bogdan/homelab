@@ -2,12 +2,10 @@ package rooms
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/master-bogdan/estimate-room-api/internal/modules/gamification"
@@ -15,6 +13,7 @@ import (
 	invitesmodels "github.com/master-bogdan/estimate-room-api/internal/modules/invites/models"
 	roomsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/models"
 	roomsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/repositories"
+	roomsutils "github.com/master-bogdan/estimate-room-api/internal/modules/rooms/utils"
 	teamsmodels "github.com/master-bogdan/estimate-room-api/internal/modules/teams/models"
 	teamsrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/teams/repositories"
 	usersrepositories "github.com/master-bogdan/estimate-room-api/internal/modules/users/repositories"
@@ -127,8 +126,10 @@ func (s *roomsService) CreateRoom(ctx context.Context, input CreateRoomInput) (*
 		model.TeamID = &teamID
 	}
 
-	timestamp := time.Now().String()
-	code := base64.RawURLEncoding.EncodeToString([]byte(model.Name + timestamp))
+	code, err := roomsutils.GenerateRoomCode()
+	if err != nil {
+		return nil, err
+	}
 
 	model.Code = code
 

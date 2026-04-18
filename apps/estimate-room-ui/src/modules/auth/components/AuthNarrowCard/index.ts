@@ -1,0 +1,1 @@
+export { AuthNarrowCard } from './AuthNarrowCard';

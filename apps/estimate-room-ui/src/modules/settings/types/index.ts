@@ -1,4 +1,4 @@
-import type { ThemeMode } from '@/theme';
+import type { ThemeMode } from '@/shared/types';
 
 export interface SettingsSummary {
   readonly apiBaseUrl: string;

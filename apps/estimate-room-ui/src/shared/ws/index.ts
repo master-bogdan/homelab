@@ -1,6 +1,7 @@
-export { appWebSocketClient, WebSocketClient } from './webSocketClient';
-export type {
-  WebSocketMessageHandler,
-  WebSocketStatus,
-  WebSocketStatusHandler
+export {
+  appWebSocketClient,
+  WebSocketClient,
+  type WebSocketMessageHandler,
+  type WebSocketStatus,
+  type WebSocketStatusHandler
 } from './webSocketClient';

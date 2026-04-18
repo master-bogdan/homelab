@@ -1,0 +1,22 @@
+export const AppRoutes = {
+  ROOT: '/',
+  LOGIN: '/login',
+  REGISTER: '/register',
+  FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
+  RESET_PASSWORD_SUCCESS: '/reset-password/success',
+  AUTH_CALLBACK: '/auth/callback',
+  DASHBOARD: '/dashboard',
+  JOIN_ROOM: '/join/:token',
+  JOIN_ROOM_PATH: (token: string) => `/join/${encodeURIComponent(token)}`,
+  ROOMS_NEW: '/rooms/new',
+  ROOM_DETAILS: '/rooms/:id',
+  ROOM_DETAILS_PATH: (id: string) => `/rooms/${id}`,
+  HISTORY: '/history',
+  HISTORY_ROOM: '/history/rooms/:id',
+  HISTORY_ROOM_PATH: (id: string) => `/history/rooms/${id}`,
+  TEAM_DETAILS: '/teams/:id',
+  TEAM_DETAILS_PATH: (id: string) => `/teams/${id}`,
+  PROFILE: '/profile',
+  SETTINGS: '/settings'
+} as const;

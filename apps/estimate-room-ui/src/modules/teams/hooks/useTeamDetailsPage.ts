@@ -2,7 +2,7 @@ import { useParams } from 'react-router-dom';
 
 import { usePageTitle } from '@/shared/hooks';
 
-import { teamsService } from '../services/teamsService';
+import { teamsService } from '../api/teamsApi';
 
 export const useTeamDetailsPage = () => {
   const { id = '' } = useParams();

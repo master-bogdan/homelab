@@ -1,0 +1,1 @@
+export { ResetPasswordFooter } from './ResetPasswordFooter';

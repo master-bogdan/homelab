@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 
-import { appConfig } from '@/shared/config/env';
+import { AppConfig } from '@/config';
 
 import { usePageTitle } from '../usePageTitle';
 
@@ -9,7 +9,7 @@ describe('usePageTitle', () => {
     const originalTitle = document.title;
     const { unmount } = renderHook(() => usePageTitle('Dashboard'));
 
-    expect(document.title).toBe(`Dashboard | ${appConfig.appName}`);
+    expect(document.title).toBe(`Dashboard | ${AppConfig.APP_NAME}`);
 
     unmount();
 

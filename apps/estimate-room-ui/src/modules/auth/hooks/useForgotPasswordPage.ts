@@ -1,16 +1,13 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { authService } from '../services';
+import { useForgotPasswordMutation } from '../store';
 import { resolveApiErrorMessage } from '../utils';
-
-interface ForgotPasswordFormValues {
-  readonly email: string;
-}
+import type { ForgotPasswordFormValues } from '../types';
 
 export const useForgotPasswordPage = () => {
+  const [forgotPassword, forgotPasswordState] = useForgotPasswordMutation();
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
-  const [isResending, setIsResending] = useState(false);
   const form = useForm<ForgotPasswordFormValues>({
     mode: 'onChange',
     defaultValues: {
@@ -18,41 +15,42 @@ export const useForgotPasswordPage = () => {
     },
     reValidateMode: 'onChange'
   });
+  const isSubmitted = submittedEmail !== null;
+  const isResending = forgotPasswordState.isLoading;
+  const errorMessage = forgotPasswordState.error
+    ? resolveApiErrorMessage(
+        forgotPasswordState.error,
+        'Unable to send a reset link right now.'
+      )
+    : null;
 
-  const submit = form.handleSubmit(async ({ email }) => {
-    form.clearErrors();
+  const submit = async (email: string) => {
+    const result = await forgotPassword({ email });
 
-    try {
-      await authService.forgotPassword({ email });
+    if (result.data) {
       setSubmittedEmail(email);
-    } catch (error) {
-      form.setError('root', {
-        message: resolveApiErrorMessage(error, 'Unable to send a reset link right now.'),
-        type: 'server'
-      });
-    }
-  });
-
-  const resend = async () => {
-    if (!submittedEmail || isResending) {
-      return;
-    }
-
-    setIsResending(true);
-
-    try {
-      await authService.forgotPassword({ email: submittedEmail });
-    } finally {
-      setIsResending(false);
     }
   };
 
+  const onSubmit = form.handleSubmit(async ({ email }) => {
+    form.clearErrors();
+    await submit(email);
+  });
+
+  const resend = async () => {
+    if (!submittedEmail || forgotPasswordState.isLoading) {
+      return;
+    }
+
+    await forgotPassword({ email: submittedEmail });
+  };
+
   return {
+    errorMessage,
     form,
     isResending,
-    isSubmitted: submittedEmail !== null,
-    onResend: resend,
-    onSubmit: submit,
-    submittedEmail
+    isSubmitted,
+    onSubmit,
+    resend
   };
 };

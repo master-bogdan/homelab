@@ -1,0 +1,1 @@
+export { PasswordRecommendations } from './PasswordRecommendations';

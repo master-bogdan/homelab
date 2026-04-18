@@ -1,3 +1,5 @@
+import { PasswordRecommendationRules } from '../constants';
+
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
 
 export const normalizeEmailAddress = (value: string) => value.trim();
@@ -13,20 +15,10 @@ export const createEmailValidationRules = (requiredMessage = 'Email is required.
 });
 
 export const validatePasswordStrength = (value: string) => {
-  if (value.length < 8) {
-    return 'Password must be at least 8 characters.';
-  }
+  const failedRule = PasswordRecommendationRules.find((rule) => !rule.test(value));
 
-  if (!/[0-9]/u.test(value)) {
-    return 'Password must include at least one number.';
-  }
-
-  if (!/[A-Z]/u.test(value)) {
-    return 'Password must include at least one uppercase letter.';
-  }
-
-  if (!/[^A-Za-z0-9]/u.test(value)) {
-    return 'Password must include at least one special character.';
+  if (failedRule) {
+    return failedRule.validationMessage;
   }
 
   return true;

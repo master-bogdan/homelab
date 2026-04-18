@@ -1,0 +1,1 @@
+export { teamsService } from './teamsApi';

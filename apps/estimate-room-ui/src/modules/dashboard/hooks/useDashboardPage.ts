@@ -1,12 +1,42 @@
+import { useEffect } from 'react';
+
+import { useAppDispatch, useAppSelector } from '@/shared/hooks';
+import type { AppDispatch } from '@/shared/types';
 import { usePageTitle } from '@/shared/hooks';
 
-import { dashboardService } from '../services/dashboardService';
+import { fetchDashboardPage, selectDashboardPageState } from '../store';
+
+let dashboardPageRequest: Promise<unknown> | null = null;
+
+const getOrCreateDashboardPageRequest = (dispatch: AppDispatch) => {
+  if (dashboardPageRequest) {
+    return dashboardPageRequest;
+  }
+
+  const request = dispatch(fetchDashboardPage()).finally(() => {
+    if (dashboardPageRequest === request) {
+      dashboardPageRequest = null;
+    }
+  });
+
+  dashboardPageRequest = request;
+
+  return request;
+};
 
 export const useDashboardPage = () => {
   usePageTitle('Dashboard');
+  const dispatch = useAppDispatch();
+  const state = useAppSelector(selectDashboardPageState);
+
+  useEffect(() => {
+    getOrCreateDashboardPageRequest(dispatch);
+  }, [dispatch]);
 
   return {
-    metrics: dashboardService.getOverviewMetrics(),
-    workstreams: dashboardService.getWorkstreams()
+    ...state,
+    retry: () => {
+      dispatch(fetchDashboardPage());
+    }
   };
 };

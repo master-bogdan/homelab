@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 	"time"
 
@@ -348,6 +349,41 @@ func TestCreateRoom_DoesNotCreateShareLinkUnlessRequested(t *testing.T) {
 	}
 	if invitationCount != 0 {
 		t.Fatalf("expected no invitations, got %d", invitationCount)
+	}
+}
+
+func TestCreateRoom_AssignsULIDCodeAndReturnsReadableRoom(t *testing.T) {
+	router, db := setupRoomsTasksTest(t)
+	defer db.Close()
+
+	accessToken, _ := createAccessToken(t, db)
+
+	response := createRoomViaAPI(t, router, accessToken, `{"name":"Readable Room"}`)
+
+	if !regexp.MustCompile(`^[0-9A-HJKMNP-TV-Z]{26}$`).MatchString(response.Room.Code) {
+		t.Fatalf("expected ULID-style room code, got %q", response.Room.Code)
+	}
+
+	getRoomReq := httptest.NewRequest(http.MethodGet, "/api/v1/rooms/"+response.Room.RoomID, nil)
+	getRoomReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	getRoomRR := httptest.NewRecorder()
+	router.ServeHTTP(getRoomRR, getRoomReq)
+
+	if getRoomRR.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK when reading created room, got %d: %s", getRoomRR.Code, getRoomRR.Body.String())
+	}
+
+	var room roomsdto.RoomResponse
+	if err := json.NewDecoder(getRoomRR.Body).Decode(&room); err != nil {
+		t.Fatalf("failed to decode get room response: %v", err)
+	}
+
+	if room.Code != response.Room.Code {
+		t.Fatalf("expected room code %q, got %q", response.Room.Code, room.Code)
+	}
+	if len(room.Participants) != 1 {
+		t.Fatalf("expected 1 active participant, got %d", len(room.Participants))
 	}
 }
 

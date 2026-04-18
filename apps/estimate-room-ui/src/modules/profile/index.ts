@@ -1,1 +1,1 @@
-export { ProfilePage } from './ProfilePage';
+export { useProfilePage } from './hooks/useProfilePage';

@@ -1,6 +1,6 @@
 import { usePageTitle } from '@/shared/hooks';
 
-import { historyService } from '../services/historyService';
+import { historyService } from '../api/historyApi';
 
 export const useHistoryPage = () => {
   usePageTitle('History');

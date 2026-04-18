@@ -445,6 +445,38 @@ func TestListMySessions_FiltersByStatusAndRole(t *testing.T) {
 	}
 }
 
+func TestListMySessions_AllStatusFilterReturnsOK(t *testing.T) {
+	router, db := setupHistoryTest(t)
+	defer db.Close()
+
+	token, userID := createHistoryAccessToken(t, db, "history-all-status@example.com")
+
+	roomID := uuid.NewString()
+	createdAt := time.Date(2026, 3, 18, 8, 0, 0, 0, time.UTC)
+	lastActivityAt := time.Date(2026, 3, 18, 9, 0, 0, 0, time.UTC)
+	seedHistoryRoom(t, db, roomID, "All Status Room", userID, nil, "ACTIVE", createdAt, lastActivityAt, nil)
+	seedHistoryParticipant(t, db, roomID, userID, "ADMIN", createdAt)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/history/me/sessions?status=ALL", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for status=ALL, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var response historydto.PaginatedResponse[historydto.SessionListItem]
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if response.Total != 1 || len(response.Items) != 1 {
+		t.Fatalf("expected one session for status=ALL, got total=%d len=%d", response.Total, len(response.Items))
+	}
+}
+
 func TestListMySessions_PaginatesResults(t *testing.T) {
 	router, db := setupHistoryTest(t)
 	defer db.Close()
@@ -591,6 +623,40 @@ func TestListTeamSessions_RequiresTeamOwnerAndSupportsStatusFilter(t *testing.T)
 	router.ServeHTTP(outsiderRR, outsiderReq)
 	if outsiderRR.Code != http.StatusForbidden {
 		t.Fatalf("expected 403 for outsider, got %d: %s", outsiderRR.Code, outsiderRR.Body.String())
+	}
+}
+
+func TestListTeamSessions_AllStatusFilterReturnsOK(t *testing.T) {
+	router, db := setupHistoryTest(t)
+	defer db.Close()
+
+	ownerToken, ownerUserID := createHistoryAccessToken(t, db, "team-all-owner@example.com")
+
+	teamID := seedHistoryTeam(t, db, ownerUserID, "Platform")
+
+	roomID := uuid.NewString()
+	createdAt := time.Date(2026, 3, 18, 8, 0, 0, 0, time.UTC)
+	lastActivityAt := time.Date(2026, 3, 18, 9, 30, 0, 0, time.UTC)
+	seedHistoryRoom(t, db, roomID, "Team All Status Room", ownerUserID, &teamID, "ACTIVE", createdAt, lastActivityAt, nil)
+	seedHistoryParticipant(t, db, roomID, ownerUserID, "ADMIN", createdAt)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/history/teams/"+teamID+"/sessions?status=ALL", nil)
+	req.Header.Set("Authorization", "Bearer "+ownerToken)
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for team status=ALL, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	var response historydto.PaginatedResponse[historydto.SessionListItem]
+	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if response.Total != 1 || len(response.Items) != 1 {
+		t.Fatalf("expected one team session for status=ALL, got total=%d len=%d", response.Total, len(response.Items))
 	}
 }
 
